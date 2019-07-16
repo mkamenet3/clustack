@@ -66,6 +66,13 @@ plotmap <- function(res, pdfname=NULL){
     #dev.off()
 }
 
+likweights2 <- function(liki){
+    minmod <- min(liki, na.rm=TRUE)
+    deltai <- liki-minmod
+    wi <- exp(-0.5*deltai)/sum(exp(-0.5*deltai), na.rm = TRUE)
+    return(wi)
+}
+
 likweights <- function(liki){
     # minmod <- min(liki, na.rm=TRUE)
     # print(minmod)
@@ -85,13 +92,18 @@ poisLik <-function(Ex, Yx, sparsemat){
     #return likelihood for each potential cluster
     outExp <- sparsemat%*%Ex
     outObs <- sparsemat%*%Yx
-    lambdahat <- ifelse(outObs==0, 0, outObs/outExp)
-    outlogLik <- outObs * log(lambdahat * outExp) - (lambdahat * outExp)
-    if(any(is.na(outlogLik))){
-        ix <- which(is.na(outlogLik))
-        #print(ix)
-        outlogLik[ix] <- (lambdahat[ix]*outExp[ix])
-    }
+    #lambdahat <- ifelse(outObs==0, 0, outObs/outExp)
+    lambdahat <- outObs/outExp
+    #outlogLik <- outObs * log(lambdahat * outExp) - (lambdahat * outExp)
+    #outlogLik <- outObs * log((outObs/outExp) * outExp) - ((outObs/outExp)* outExp)
+    
+    outlogLik <- outObs * ifelse(is.infinite(log(lambdahat * outExp)),0,log(lambdahat * outExp)) - (lambdahat * outExp)
+    # if(any(is.na(outlogLik))){
+    #     ix <- which(is.na(outlogLik))
+    #     #print(ix)
+    #     #outlogLik[ix] <- (lambdahat[ix]*outExp[ix])
+    #     outlogLik[ix] <- (outObs[ix]/outExp[ix])*outExp[ix]
+    # }
     outlogLik_scaled <- outlogLik-max(outlogLik)
     outLik <- exp(outlogLik_scaled)
     return(list(outLik=outLik,
@@ -102,9 +114,10 @@ bylocation <- function(outLik, sparsemat, locLambdas, Lambda,maxclust){
     for(i in 1:maxclust){
         message(paste0("Searching for cluster ",i))
         #01) Get weight for each PC
-        wi <- likweights(outLik)
+        #wi <- likweights(outLik)
+        wi <- likweights2(outLik)
         #1) Find LOCATION with highest weight
-        lwi <- t(wi)%*%Lambda
+        lwi <- t(wi)%*%sparsemat#Lambda
         maxlwi <- which.max(lwi@x) #552
         message(paste0("Location identified: ",(maxlwi)))
         #2) Find All PC's that Cover the max location
@@ -112,6 +125,7 @@ bylocation <- function(outLik, sparsemat, locLambdas, Lambda,maxclust){
         findoverlap <- sparsemat%*%locmax
         ix <- which(findoverlap!=0)
         wxi <- likweights(outLik[ix])
+        #wxi <- likweights2(outLik[ix])
         wi[ix] <- wxi
         #4) Find weighted Lambda by locations
         locLambdas[[i]] <- t(wi)%*%Lambda #locLambdas[[i]] <- lwi
