@@ -1,6 +1,5 @@
 # clustack functions
 #Load Libraries
-set.seed(20190326)
 library(clusso)
 library(testthat)
 library(Matrix)
