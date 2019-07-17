@@ -116,6 +116,7 @@ plotmap(log(tomap))
 
 ########################################
 #LONG FORM Update 7-16-2019
+#this works but lik function is the long one
 ########################################
 maxclust <- 4
 locLambdas <- vector("list", maxclust)
@@ -125,15 +126,32 @@ outObs <- sparsemat%*%Yx #XY
 lambdahat <- outObs/outExp
 Lambda <- as.vector(lambdahat)*sparsemat
 #calc Lik
+#Maybe I need to standardize the expected rates
+
+
+
 #outlogLik <- outObs * log(lambdahat*outExp) - (lambdahat*outExp)
 
-outlogLik <- log(outObs*outLambda + (sum(outObs)-outObs)*log((sum(outObs)-outObs)/(sum(outExp)-outExp)))
+outlogLik <- outObs * log(1*outExp) - (1*outExp)
+#outlogLik <- outObs*(log(outExp) + ifelse(is.infinite(log(lambdahat)),0,log(lambdahat))) - (lambdahat*outExp)
+
+outlogLik <- log(outObs*log(lambdahat)+((sum(outObs)-outObs)*1))
+
+#
+#outlogLik <- log(outObs*outLambda + (sum(outObs)-outObs)*log((sum(outObs)-outObs)/(sum(outExp)-outExp)))
 if(any(is.na(outlogLik))){
     ix <- which(is.na(outlogLik))
     outlogLik[ix] <- (lambdahat[ix]*outExp[ix])
 } #568 zeros after this in log lik
 outlogLik_scaled <- outlogLik - max(outlogLik)
 Lik <- exp(outlogLik_scaled)
+
+#calculate Lik directly
+#mu <- outExp*lambdahat
+#test <- mu^outObs*exp(-mu)
+#loglike <- dpoisson(outObs, lambdahat, outExp)
+
+
 
 for(i in 1:maxclust){
     wi <- likweights(Lik)
@@ -158,8 +176,8 @@ for(i in 1:maxclust){
     Lik[ix] <- 0
 }
 
-
-
+lapply(locLambdas, function(x) summary(x@x))
+lapply(locLambdas, function(x){plotmap(x)})
 
 
 
