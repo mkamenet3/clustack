@@ -66,12 +66,12 @@ plotmap <- function(res, pdfname=NULL){
     #dev.off()
 }
 
-likweights2 <- function(liki){
-    minmod <- min(liki, na.rm=TRUE)
-    deltai <- liki-minmod
-    wi <- exp(-0.5*deltai)/sum(exp(-0.5*deltai), na.rm = TRUE)
-    return(wi)
-}
+# likweights2 <- function(liki){
+#     minmod <- min(liki, na.rm=TRUE)
+#     deltai <- liki-minmod
+#     wi <- exp(-0.5*deltai)/sum(exp(-0.5*deltai), na.rm = TRUE)
+#     return(wi)
+# }
 
 likweights <- function(liki){
     # minmod <- min(liki, na.rm=TRUE)
@@ -97,7 +97,14 @@ poisLik <-function(Ex, Yx, sparsemat){
     #outlogLik <- outObs * log(lambdahat * outExp) - (lambdahat * outExp)
     #outlogLik <- outObs * log((outObs/outExp) * outExp) - ((outObs/outExp)* outExp)
     
-    outlogLik <- outObs * ifelse(is.infinite(log(lambdahat * outExp)),0,log(lambdahat * outExp)) - (lambdahat * outExp)
+    
+    
+    
+    
+    Lik <- (((outObs/outExp)/(sum(outObs)/sum(outExp)))^(outObs))*(((sum(outObs) - outObs)/(sum(outExp)-outExp))/(sum(outObs)/sum(outExp)))^(sum(outObs)-outObs)
+    outlogLik <- log(Lik)
+    
+    #outlogLik <- outObs * ifelse(is.infinite(log(lambdahat * outExp)),0,log(lambdahat * outExp)) - (lambdahat * outExp) #old 2019-07-22
     # if(any(is.na(outlogLik))){
     #     ix <- which(is.na(outlogLik))
     #     #print(ix)
@@ -114,8 +121,8 @@ bylocation <- function(outLik, sparsemat, locLambdas, Lambda,maxclust){
     for(i in 1:maxclust){
         message(paste0("Searching for cluster ",i))
         #01) Get weight for each PC
-        #wi <- likweights(outLik)
-        wi <- likweights2(outLik)
+        wi <- likweights(outLik)
+        #wi <- likweights2(outLik)
         #1) Find LOCATION with highest weight
         lwi <- t(wi)%*%sparsemat#Lambda
         maxlwi <- which.max(lwi@x) #552
@@ -150,7 +157,7 @@ detectclusters <- function(sparseMAT, Ex, Yx,numCenters,Time, maxclust,bylocatio
     out <- poisLik(Ex, Yx, sparsemat)
     outLik <- out$outLik
     lambdahat <- out$lambdahat
-    Lambda <- lambdahat*sparsemat #big Lambda matrix
+    Lambda <- as.vector(lambdahat)*sparsemat #big Lambda matrix
     locLambdas <- vector("list", maxclust)
     if(bylocation==FALSE){
         message("Cluster detection by potential cluster")

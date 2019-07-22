@@ -34,14 +34,14 @@ sparsemat <- Matrix::t(sparseMAT) #66870x1040
 out <- poisLik(Ex, Yx, sparsemat)
 outLik <- out$outLik
 lambdahat <- out$lambdahat
-Lambda <- lambdahat*sparsemat #big Lambda matrix
+Lambda <- as.vector(lambdahat)*sparsemat #big Lambda matrix
 locLambdas <- vector("list", maxclust)
 
 res <- bylocation(outLik, sparsemat, locLambdas, Lambda, maxclust)
 
 ###################################################
 #PLOTTING
-lapply(res, function(x){plotmap(exp(x))})
+lapply(res, function(x){plotmap((x))})
 lapply(res_loc, function(x){plotmap(x)})
 
 #Saving plots for each maxclust
@@ -132,7 +132,7 @@ Lambda <- as.vector(lambdahat)*sparsemat
 
 #outlogLik <- outObs * log(lambdahat*outExp) - (lambdahat*outExp)
 
-outlogLik <- outObs * log(1*outExp) - (1*outExp)
+#outlogLik <- outObs * log(1*outExp) - (1*outExp)
 #outlogLik <- outObs*(log(outExp) + ifelse(is.infinite(log(lambdahat)),0,log(lambdahat))) - (lambdahat*outExp)
 
 outlogLik <- log(outObs*log(lambdahat)+((sum(outObs)-outObs)*1))
