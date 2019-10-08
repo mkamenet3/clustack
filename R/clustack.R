@@ -8,16 +8,19 @@ library(Matrix)
 #Functions
 ########################################
 
-colorsmk <- function (x) {
+
+colorsgrey <- function (x) {
     y = colorRamp(RColorBrewer::brewer.pal(9, "Greys")[1:9])(x)
     rgb(y[, 1], y[, 2], y[, 3], maxColorValue = 255)
 }
 
+
+#'@title plotmap
+#'@param res result 
+#'@param pdfname String for name of pdf to be generated.
+#'@param genpdf Boolean. If results should be generated to console, set to \code{FALSE}. Default is \code{TRUE} for pdf to be generated.
 plotmap <- function(res, pdfname=NULL, genpdf=TRUE){
-    #cluster_ix <- redblue(log(2 *  pmax(1/2, pmin(res, 2)))/log(4))
     cluster_ix <- redblue(log(2 *  pmax(1/2, pmin(res, 2)))/log(4))
-    #colmax <- 4;cluster_ix <- colorsmk(log(colmax *  pmax(1/colmax, pmin(res, colmax)))/log(colmax^2))
-    
     colors_0 <- matrix(cluster_ix, ncol=5, byrow = FALSE)
     if(genpdf==TRUE){
         pdf(pdfname, height=11, width=10)    
@@ -64,18 +67,16 @@ plotmap <- function(res, pdfname=NULL, genpdf=TRUE){
     rect(seq(.6,1.4,length=50)[-50],.5,seq(.65,1.4,length=50)[-1],.62,col=redblue(0:50/50),border=F)
     text(seq(.6,1.4,length=5),rep(.45,5),seq(0,2,length.out=5),srt=330,adj=0)
     
-    #rect(seq(.6,1.4,length=50)[-50],.5,seq(.65,1.4,length=50)[-1],.62,col=redblue(0:50/50),border=F)
-    #rect(seq(.6,1.4,length=50)[-50],.5,seq(.65,1.4,length=50)[-1],.62,col=pal(50),border=F)
-    
-    #rect(seq(.6,1.4,length=50)[-50],.5,seq(.65,1.4,length=50)[-1],.62,col=colorsmk(0:50/50),border=F)
-    #text(seq(.6,1.4,length=5),rep(.45,5),seq(0,4,length.out=5),srt=330,adj=0)
     if(genpdf==TRUE){
         dev.off()    
     }
     
 }
 
-
+#' @title likeweights
+#' @description Generate likelihood-based initial weights.
+#' @param liki Likelihood for each potential cluster.
+#' @return A vector of weights.
 likweights <- function(liki){
     wi <- liki/sum(liki)
     if(any(is.na(liki))){
@@ -84,12 +85,14 @@ likweights <- function(liki){
     return(wi)
 }
 
+#'@title poisLik
+#'@description Poisson-based likelihood
+#'@param Ex Vector of expected counts.
+#'@param Yx Vector of observed counts.
+#'@param sparsemat Large sparsematrix where rows are potential clusters and columns are space-time locations.
+#'@export
+#'@return Likelihood for each potential cluster.
 poisLik <-function(Ex, Yx, sparsemat){
-    #outLambda observed over expected;exponentiated rates
-    #Ex expected counts
-    #Yx observed counts
-    #sparsemat large sparsematrix where rows are potential clusters and columns are space-time locations
-    #return likelihood for each potential cluster
     outExp <- sparsemat%*%Ex
     outObs <- sparsemat%*%Yx
     #calc Lambda
@@ -106,6 +109,14 @@ poisLik <-function(Ex, Yx, sparsemat){
                 Lambda_dense=Lambda_dense))
 }
 
+#'@title bylocation
+#'@description Cluster detection based on maximum location.
+#'@param Lik Likelihood for each potential cluster.
+#'@param sparsemat Large sparsematrix where rows are potential clusters and columns are space-time locations.
+#'@param locLambdas TODO
+#'@param Lambda_dense TODO
+#'@param maxclust Maximum number of clusters to be detected.
+#'@return Weighted relative risks for identified locations.
 bylocation <- function(Lik, sparsemat, locLambdas, Lambda_dense,maxclust){
     wi <- likweights(Lik) #tiny weights
     for (i in 1:maxclust){
@@ -132,6 +143,14 @@ bylocation <- function(Lik, sparsemat, locLambdas, Lambda_dense,maxclust){
     return(locLambdas=locLambdas)
 }
 
+#'@title bycluster
+#'@description Cluster detection based on maximum potential cluster.
+#'@param Lik Likelihood for each potential cluster.
+#'@param sparsemat Large sparsematrix where rows are potential clusters and columns are space-time locations.
+#'@param locLambdas TODO
+#'@param Lambda_dense TODO
+#'@param maxclust Maximum number of clusters to be detected.
+#'@return Weighted relative risks for identified locations.
 bycluster <-  function(Lik, sparsemat, locLambdas, Lambda_dense,maxclust){
     wi <- likweights(Lik) #tiny weights
     for (i in 1:maxclust){
@@ -164,6 +183,16 @@ bycluster <-  function(Lik, sparsemat, locLambdas, Lambda_dense,maxclust){
     return(locLambdas=locLambdas)
 }
     
+#'@title detectclusters
+#'@description TODO
+#'@param sparseMAT Large sparsematrix TODO
+#'@param Ex Vector of expected counts.
+#'@param Yx Vector of observed counts.
+#'@param numCenters Number of centroids.
+#'@param Time Number of time periods.
+#'@param maxclust Maximum number of clusters allowed. TODO - allow this to be unknown.
+#'@param bylocation If clusters should be identified by maximum location (\code{TRUE}) or maximum potential cluster (\code{FALSE}). Default is \code{TRUE}.
+#'@ return TODO
 detectclusters <- function(sparseMAT, Ex, Yx,numCenters,Time, maxclust,bylocation=TRUE){
     #sparsemat large sparsematrix where rows are potential clusters and columns are space-time locations
     #Ex expected counts
