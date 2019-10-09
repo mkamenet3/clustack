@@ -3,15 +3,21 @@ source("R/clustack.R")
 
 
 #0) Setup
+data("jbc")
+data("utmJapan")
+data("japan.poly2")
+data("japan.prefect2")
+
 #set data
-cases <- japanbreastcancer$death
-expected <- japanbreastcancer$expdeath
-centroids <- japanbreastcancer
-periods <- japanbreastcancer
+cases <- jbc$death
+expected <- jbc$expdeath
+
+#centroids <- jreastcancer
+#periods <- japanbreastcancer
 x <- utmJapan$utmx/1000
 y <- utmJapan$utmy/1000
-japan.poly2 <- dframe.poly2[,2:3]
-japan.prefect2 <- dframe.prefect2[,2:5]
+# japan.poly2 <- dframe.poly2[,2:3]
+# japan.prefect2 <- dframe.prefect2[,2:5]
 #set global
 rMax <- 20 
 Time <- 5
@@ -20,7 +26,7 @@ locLambdas <- vector("list", maxclust)
 #create set of potential clusters based on distances
 potentialclusters <- clusso::clusters2df(x,y,rMax, utm = TRUE, length(x))
 n <- length(x)
-init <- clusso::setVectors(periods$period, expected, cases,covars=NULL, Time)
+init <- clusso::setVectors(jbc$period, expected, cases,covars=NULL, Time)
 E1 <- init$E0
 Ex <- clusso::scale(init, Time)
 Yx <- init$Y.vec

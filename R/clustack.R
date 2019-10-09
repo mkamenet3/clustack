@@ -142,6 +142,10 @@ bylocation <- function(Lik, sparsemat, locLambdas, Lambda_dense,maxclust){
         wi[which(pclocmax!=0)] <- likweights(Lik[which(pclocmax!=0)])
         
         out <- t(wi)%*%Lambda_dense
+        
+        
+        
+        
         locLambdas[[i]] <- out 
         #e) Set Lik for overlapping locations to zero
         Lik[which(pclocmax!=0)] <-0
@@ -221,14 +225,16 @@ detectclusters <- function(sparseMAT, Ex, Yx,numCenters,Time, maxclust,bylocatio
     locLambdas <- vector("list", maxclust)
     if(bylocation==FALSE){
         message("Cluster detection by potential cluster")
-        res <- bycluster(outLik, sparsemat, locLambdas, Lambda_dense, maxclust)
+        #res <- bycluster(outLik, sparsemat, locLambdas, Lambda_dense, maxclust)
+        res <- bycluster(Lik, sparsemat, locLambdas, Lambda_dense, maxclust)
         return(res)
     }
     else{
         #default
         #outLik, sparsemat, locLambdas, Lambda,maxclust
         message("Cluster detection by location")
-        res <- bylocation(outLik, sparsemat, locLambdas, Lambda_dense, maxclust) #Lik, sparsemat, locLambdas, Lambda_dense, maxclust)
+        #res <- bylocation(outLik, sparsemat, locLambdas, Lambda_dense, maxclust) #Lik, sparsemat, locLambdas, Lambda_dense, maxclust)
+        res <- bylocation(Lik, sparsemat, locLambdas, Lambda_dense, maxclust) #Lik, sparsemat, locLambdas, Lambda_dense, maxclust)
         return(res)
     }
 }
