@@ -19,8 +19,16 @@ colorsgrey <- function (x) {
 #'@param res result 
 #'@param pdfname String for name of pdf to be generated.
 #'@param genpdf Boolean. If results should be generated to console, set to \code{FALSE}. Default is \code{TRUE} for pdf to be generated.
-plotmap <- function(res, pdfname=NULL, genpdf=TRUE){
-    cluster_ix <- redblue(log(2 *  pmax(1/2, pmin(res, 2)))/log(4))
+#'@param maxrr For the color ramp, what is the maximum relative risk. Default is for the ramp to be between 0.5 and 2. 
+plotmap <- function(res, pdfname=NULL, genpdf=TRUE, maxrr=2){
+    if(!is.null(maxrr)){
+        maxrr=maxrr
+    }
+    else{
+        maxrr=2
+    }
+    #cluster_ix <- redblue(log(2 *  pmax(1/2, pmin(res, 2)))/log(4))
+    cluster_ix <- redblue(log(maxrr *  pmax(1/maxrr, pmin(res, maxrr)))/log(maxrr^2))
     colors_0 <- matrix(cluster_ix, ncol=5, byrow = FALSE)
     if(genpdf==TRUE){
         pdf(pdfname, height=11, width=10)    
@@ -62,10 +70,10 @@ plotmap <- function(res, pdfname=NULL, genpdf=TRUE){
     #text(355,4120,paste0("Period 5"),cex=1.00)
     
     #legend
-    par(fig=c(.35,.75,0,.1), new=T)
+    par(fig=c(.35,.75,0,0.2), new=T)
     plot(1, xlim=c(0.6,1.5), ylim=c(0.2,1), axes=F, type='n',  xlab="", ylab="")
     rect(seq(.6,1.4,length=50)[-50],.5,seq(.65,1.4,length=50)[-1],.62,col=redblue(0:50/50),border=F)
-    text(seq(.6,1.4,length=5),rep(.45,5),seq(0,2,length.out=5),srt=330,adj=0)
+    text(seq(.6,1.4,length=5),rep(.45,5),seq(1/maxrr,maxrr,length.out=5),srt=330,adj=0)
     
     if(genpdf==TRUE){
         dev.off()    
@@ -192,7 +200,7 @@ bycluster <-  function(Lik, sparsemat, locLambdas, Lambda_dense,maxclust){
 #'@param Time Number of time periods.
 #'@param maxclust Maximum number of clusters allowed. TODO - allow this to be unknown.
 #'@param bylocation If clusters should be identified by maximum location (\code{TRUE}) or maximum potential cluster (\code{FALSE}). Default is \code{TRUE}.
-#'@ return TODO
+#'@return TODO
 detectclusters <- function(sparseMAT, Ex, Yx,numCenters,Time, maxclust,bylocation=TRUE){
     #sparsemat large sparsematrix where rows are potential clusters and columns are space-time locations
     #Ex expected counts
