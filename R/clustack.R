@@ -73,7 +73,8 @@ plotmap <- function(res, pdfname=NULL, genpdf=TRUE, maxrr=2){
     par(fig=c(.35,.75,0,0.2), new=T)
     plot(1, xlim=c(0.6,1.5), ylim=c(0.2,1), axes=F, type='n',  xlab="", ylab="")
     rect(seq(.6,1.4,length=50)[-50],.5,seq(.65,1.4,length=50)[-1],.62,col=redblue(0:50/50),border=F)
-    text(seq(.6,1.4,length=5),rep(.45,5),seq(1/maxrr,maxrr,length.out=5),srt=330,adj=0)
+    #text(seq(.6,1.4,length=5),rep(.45,5),seq(1/maxrr,maxrr,length.out=5),srt=330,adj=0)
+    text(seq(.6,1.4,length=5),rep(.45,5),seq(0,maxrr,length.out=5),srt=330,adj=0)
     
     if(genpdf==TRUE){
         dev.off()    
@@ -127,10 +128,11 @@ poisLik <-function(Ex, Yx, sparsemat){
 #'@return Weighted relative risks for identified locations.
 bylocation <- function(Lik, sparsemat, locLambdas, Lambda_dense,maxclust){
     wi <- likweights(Lik) #tiny weights
+    
     for (i in 1:maxclust){
         message(paste0("Searching for cluster ",i))
         #find location with largest weight
-        wi_loc <-t(wi)%*%sparsemat
+        wi_loc <- t(wi)%*%sparsemat
         maxloc <- which.max(as.vector(wi_loc))
         message(paste0("Location identified: ",(maxloc)))
         #find all potential clusters that overlap that location
@@ -143,10 +145,18 @@ bylocation <- function(Lik, sparsemat, locLambdas, Lambda_dense,maxclust){
         
         out <- t(wi)%*%Lambda_dense
         
+        #what is overlapping? The same
+        # test <- ifelse(t(matrix(pclocmax, ncol=1))%*%sparsemat!=0,1,0)
+        # ixtest <- which(test!=0)
+        # ixout <- which(round(out@x,4)!=1)
+        
+        #only keep elements inside cluster:
+        ix <- which(ifelse(t(matrix(pclocmax,ncol=1))%*%sparsemat!=0,1,0)!=0)
+        out2 <- rep(1,length(out))
+        out2[ix] <- out[ix]
         
         
-        
-        locLambdas[[i]] <- out 
+        locLambdas[[i]] <- out2 
         #e) Set Lik for overlapping locations to zero
         Lik[which(pclocmax!=0)] <-0
         #f) Recalculate scaled likelihoods
@@ -174,8 +184,12 @@ bycluster <-  function(Lik, sparsemat, locLambdas, Lambda_dense,maxclust){
         message(paste0("Potential cluster identified: ",(maxpc)))
         #find all potential clusters that overlap that PC
         pcmax <- rep(0,length(wi)); pcmax[maxpc] <-1; pcmax <- matrix(pcmax,ncol=1)
-        pclocmax_locs <- as.vector((as.vector(t(pcmax))%*%sparsemat)%*%t(sparsemat))
-        pclocmax <- ifelse(pclocmax_locs!=0,1,0)
+        test1 <- (as.vector(t(pcmax))%*%sparsemat)
+        pclocmax <- test1%*%t(sparsemat)
+        
+        #pclocmax_locs <- as.vector((as.vector(t(pcmax))%*%sparsemat)%*%t(sparsemat))
+        
+        #pclocmax <- ifelse(pclocmax_locs!=0,1,0)
         
         
         #pcmax <- rep(0,numCenters*Time); locmax[maxloc] <-1; locmax <- matrix(locmax,ncol=1)
@@ -186,7 +200,18 @@ bycluster <-  function(Lik, sparsemat, locLambdas, Lambda_dense,maxclust){
         wi[which(pclocmax!=0)] <- likweights(Lik[which(pclocmax!=0)])
         
         out <- t(wi)%*%Lambda_dense
-        locLambdas[[i]] <- out 
+        
+        
+        #take only things inside the cluster
+        #ix <- which(ifelse(t(matrix(pclocmax,ncol=1))%*%sparsemat!=0,1,0)!=0)
+        ix <- which(test1@x!=0)
+        out2 <- rep(1,length(out))
+        out2[ix] <- out[ix]
+        
+        
+        locLambdas[[i]] <- out2 
+        
+        #locLambdas[[i]] <- out 
         #e) Set Lik for overlapping locations to zero
         Lik[which(pclocmax!=0)] <-0
         #f) Recalculate scaled likelihoods
