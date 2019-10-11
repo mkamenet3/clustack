@@ -12,19 +12,7 @@ x <- utmJapan$utmx/1000
 y <- utmJapan$utmy/1000
 japan.poly2 <- dframe.poly2[,2:3]
 japan.prefect2 <- dframe.prefect2[,2:5]
-# # japanbreastcancer <- read.csv("data/jap.breast.F.9.10.11.csv")
-# # data("utmJapan")
-# # data("japan.poly2")
-# # data("japan.prefect2")
-# 
-# #set data
-# cases <- japanbreastcancer$death
-# expected <- japanbreastcancer$expdeath
-# 
-# #centroids <- jreastcancer
-# #periods <- japanbreastcancer
-# x <- utmJapan$utmx/1000
-# y <- utmJapan$utmy/1000
+
 
 #set global
 rMax <- 20 
@@ -46,14 +34,16 @@ sparseMAT <- spacetimeMat(potentialclusters, numCenters, Time)
 
 
 ###################################################
+#RUN SL
+###################################################
 #By location
 test_loc <-detectclusters(sparseMAT, Ex, Yx, numCenters, Time, maxclust, bylocation = TRUE)
-lapply(test_loc, function(x){plotmap((x), genpdf = FALSE, maxrr=2)})
+lapply(test_loc, function(x){plotmap((x), genpdf = FALSE, maxrr=1.1)})
 lapply(test_loc, function(x){summary((x))})
 
 #By PC
 test_pc <-detectclusters(sparseMAT, Ex, Yx, numCenters, Time, maxclust, bylocation = FALSE)
-lapply(test_pc, function(x){plotmap((x), genpdf = FALSE, maxrr=1.5)})
+lapply(test_pc, function(x){plotmap((x), genpdf = FALSE, maxrr=2)})
 lapply(test_pc, function(x){summary((x))})
 
 
