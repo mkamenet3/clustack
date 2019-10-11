@@ -38,7 +38,8 @@ sparseMAT <- spacetimeMat(potentialclusters, numCenters, Time)
 ###################################################
 #By location
 test_loc <-detectclusters(sparseMAT, Ex, Yx, numCenters, Time, maxclust, bylocation = TRUE)
-lapply(test_loc, function(x){plotmap((x), genpdf = FALSE, maxrr=1.1)})
+lapply(test_loc, function(x){plotmap((x), genpdf = FALSE)})
+lapply(test_loc, function(x){plotmap((x), genpdf = FALSE, maxrr = 1.5, minrr = 0.5)})
 lapply(test_loc, function(x){summary((x))})
 
 #By PC

@@ -19,17 +19,25 @@ colorsgrey <- function (x) {
 #'@param res result 
 #'@param pdfname String for name of pdf to be generated.
 #'@param genpdf Boolean. If results should be generated to console, set to \code{FALSE}. Default is \code{TRUE} for pdf to be generated.
-#'@param maxrr For the color ramp, what is the maximum relative risk. Default is for the ramp to be between 0 and 2. 
+#'@param maxrr For the color ramp, what is the maximum relative risk color. Default is for the ramp to be between 0 and 2. 
+#'@param minrr For the color ramp, what is the minimum relative risk color. Default is for the ramp to be between 0 and 2. 
 #'@return Maps for central region of Japan for each time period.
-plotmap <- function(res, pdfname=NULL, genpdf=TRUE, maxrr=2){
+plotmap <- function(res, pdfname=NULL, genpdf=TRUE, maxrr=2, minrr=0){
     if(!is.null(maxrr)){
         maxrr=maxrr
     }
     else{
         maxrr=2
     }
+    if(!is.null(minrr)){
+        minrr=minrr
+    }
+    else{
+        minrr=0
+    }
     #cluster_ix <- redblue(log(2 *  pmax(1/2, pmin(res, 2)))/log(4))
-    cluster_ix <- redblue(log(maxrr *  pmax(1/maxrr, pmin(res, maxrr)))/log(maxrr^2))
+    #cluster_ix <- redblue(log(maxrr *  pmax(1/maxrr, pmin(res, maxrr)))/log(maxrr^2))
+    cluster_ix <- redblue(log(maxrr *  pmax(minrr, pmin(res, maxrr)))/log(maxrr^2))
     colors_0 <- matrix(cluster_ix, ncol=5, byrow = FALSE)
     if(genpdf==TRUE){
         pdf(pdfname, height=11, width=10)    
@@ -68,7 +76,8 @@ plotmap <- function(res, pdfname=NULL, genpdf=TRUE, maxrr=2){
     par(fig=c(.35,.75,0,0.2), new=T)
     plot(1, xlim=c(0.6,1.5), ylim=c(0.2,1), axes=F, type='n',  xlab="", ylab="")
     rect(seq(.6,1.4,length=50)[-50],.5,seq(.65,1.4,length=50)[-1],.62,col=redblue(0:50/50),border=F)
-    text(seq(.6,1.4,length=5),rep(.45,5),seq(0,maxrr,length.out=5),srt=330,adj=0)
+    #text(seq(.6,1.4,length=5),rep(.45,5),seq(0,maxrr,length.out=5),srt=330,adj=0)
+    text(seq(.6,1.4,length=5),rep(.45,5),seq(minrr,maxrr,length.out=5),srt=330,adj=0)
     
     if(genpdf==TRUE){
         dev.off()    
