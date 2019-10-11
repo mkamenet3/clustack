@@ -8,84 +8,88 @@ library(Matrix)
 #Functions
 ########################################
 
-colorsmk <- function (x) {
+
+colorsgrey <- function (x) {
     y = colorRamp(RColorBrewer::brewer.pal(9, "Greys")[1:9])(x)
     rgb(y[, 1], y[, 2], y[, 3], maxColorValue = 255)
 }
 
-plotmap <- function(res, pdfname=NULL, genpdf=TRUE){
+
+#'@title plotmap
+#'@param res result 
+#'@param pdfname String for name of pdf to be generated.
+#'@param genpdf Boolean. If results should be generated to console, set to \code{FALSE}. Default is \code{TRUE} for pdf to be generated.
+#'@param maxrr For the color ramp, what is the maximum relative risk color. Default is for the ramp to be between 0 and 2. 
+#'@param minrr For the color ramp, what is the minimum relative risk color. Default is for the ramp to be between 0 and 2. 
+#'@return Maps for central region of Japan for each time period.
+plotmap <- function(res, pdfname=NULL, genpdf=TRUE, maxrr=2, minrr=0){
+    if(!is.null(maxrr)){
+        maxrr=maxrr
+    }
+    else{
+        maxrr=2
+    }
+    if(!is.null(minrr)){
+        minrr=minrr
+    }
+    else{
+        minrr=0
+    }
     #cluster_ix <- redblue(log(2 *  pmax(1/2, pmin(res, 2)))/log(4))
-    cluster_ix <- redblue(log(2 *  pmax(1/2, pmin(res, 2)))/log(4))
-    #colmax <- 4;cluster_ix <- colorsmk(log(colmax *  pmax(1/colmax, pmin(res, colmax)))/log(colmax^2))
-    
+    #cluster_ix <- redblue(log(maxrr *  pmax(1/maxrr, pmin(res, maxrr)))/log(maxrr^2))
+    cluster_ix <- redblue(log(maxrr *  pmax(minrr, pmin(res, maxrr)))/log(maxrr^2))
     colors_0 <- matrix(cluster_ix, ncol=5, byrow = FALSE)
     if(genpdf==TRUE){
         pdf(pdfname, height=11, width=10)    
     }
     
-    
     par(fig=c(0,.2,.6,1), mar=c(.5,0.5,0.5,0))
     plot(japan.poly2,type='n',asp=1,axes=F,xlab='',ylab='')
     polygon(japan.poly2,col=colors_0[,1] ,border=F)
     segments(japan.prefect2$x1,japan.prefect2$y1,japan.prefect2$x2,japan.prefect2$y2)
-    #text(355,4120,paste0("Period 1"),cex=1.00)
     
     #P2
     par(fig=c(0.2,.4,.6,1), mar=c(.5,0.5,0.5,0), new=T)
     plot(japan.poly2,type='n',asp=1,axes=F,xlab='',ylab='')
     polygon(japan.poly2,col=colors_0[,2] ,border=F)
     segments(japan.prefect2$x1,japan.prefect2$y1,japan.prefect2$x2,japan.prefect2$y2)
-    #text(355,4120,paste0("Period 2"),cex=1.00)
     
     #P3
     par(fig=c(0.4,.6,.6,1), mar=c(.5,0.5,0.5,0), new=T)
     plot(japan.poly2,type='n',asp=1,axes=F,xlab='',ylab='')
     polygon(japan.poly2,col=colors_0[,3] ,border=F)
     segments(japan.prefect2$x1,japan.prefect2$y1,japan.prefect2$x2,japan.prefect2$y2)
-    #text(355,4120,paste0("Period 3"),cex=1.00)
     
     #P4
     par(fig=c(0.6,.8,.6,1), mar=c(.5,0.5,0.5,0), new=T)
     plot(japan.poly2,type='n',asp=1,axes=F,xlab='',ylab='')
     polygon(japan.poly2,col=colors_0[,4] ,border=F)
     segments(japan.prefect2$x1,japan.prefect2$y1,japan.prefect2$x2,japan.prefect2$y2)
-    #text(355,4120,paste0("Period 4"),cex=1.00)
     
     #P5
     par(fig=c(0.8,1,.6,1), mar=c(.5,0.5,0.5,0), new=T)
     plot(japan.poly2,type='n',asp=1,axes=F,xlab='',ylab='')
     polygon(japan.poly2,col=colors_0[,5] ,border=F)
     segments(japan.prefect2$x1,japan.prefect2$y1,japan.prefect2$x2,japan.prefect2$y2)
-    #text(355,4120,paste0("Period 5"),cex=1.00)
     
     #legend
-    par(fig=c(.35,.75,0,.1), new=T)
+    par(fig=c(.35,.75,0,0.2), new=T)
     plot(1, xlim=c(0.6,1.5), ylim=c(0.2,1), axes=F, type='n',  xlab="", ylab="")
     rect(seq(.6,1.4,length=50)[-50],.5,seq(.65,1.4,length=50)[-1],.62,col=redblue(0:50/50),border=F)
-    text(seq(.6,1.4,length=5),rep(.45,5),seq(0,2,length.out=5),srt=330,adj=0)
+    #text(seq(.6,1.4,length=5),rep(.45,5),seq(0,maxrr,length.out=5),srt=330,adj=0)
+    text(seq(.6,1.4,length=5),rep(.45,5),seq(minrr,maxrr,length.out=5),srt=330,adj=0)
     
-    #rect(seq(.6,1.4,length=50)[-50],.5,seq(.65,1.4,length=50)[-1],.62,col=redblue(0:50/50),border=F)
-    #rect(seq(.6,1.4,length=50)[-50],.5,seq(.65,1.4,length=50)[-1],.62,col=pal(50),border=F)
-    
-    #rect(seq(.6,1.4,length=50)[-50],.5,seq(.65,1.4,length=50)[-1],.62,col=colorsmk(0:50/50),border=F)
-    #text(seq(.6,1.4,length=5),rep(.45,5),seq(0,4,length.out=5),srt=330,adj=0)
     if(genpdf==TRUE){
         dev.off()    
     }
     
 }
 
-# likweights2 <- function(liki){
-#     minmod <- min(liki, na.rm=TRUE)
-#     deltai <- liki-minmod
-#     wi <- exp(-0.5*deltai)/sum(exp(-0.5*deltai), na.rm = TRUE)
-#     return(wi)
-# }
-
+#' @title likeweights
+#' @description Generate likelihood-based initial weights.
+#' @param liki Likelihood for each potential cluster.
+#' @return A vector of weights.
 likweights <- function(liki){
-    # minmod <- min(liki, na.rm=TRUE)
-    # print(minmod)
-    # deltai <- liki-minmod
     wi <- liki/sum(liki)
     if(any(is.na(liki))){
         print("There are NA likelihoods")
@@ -93,12 +97,14 @@ likweights <- function(liki){
     return(wi)
 }
 
+#'@title poisLik
+#'@description Poisson-based likelihood
+#'@param Ex Vector of expected counts.
+#'@param Yx Vector of observed counts.
+#'@param sparsemat Large sparsematrix where rows are potential clusters and columns are space-time locations.
+#'@export
+#'@return Likelihood for each potential cluster.
 poisLik <-function(Ex, Yx, sparsemat){
-    #outLambda observed over expected;exponentiated rates
-    #Ex expected counts
-    #Yx observed counts
-    #sparsemat large sparsematrix where rows are potential clusters and columns are space-time locations
-    #return likelihood for each potential cluster
     outExp <- sparsemat%*%Ex
     outObs <- sparsemat%*%Yx
     #calc Lambda
@@ -115,12 +121,20 @@ poisLik <-function(Ex, Yx, sparsemat){
                 Lambda_dense=Lambda_dense))
 }
 
+#'@title bylocation
+#'@description Cluster detection based on maximum location.
+#'@param Lik Likelihood for each potential cluster.
+#'@param sparsemat Large sparsematrix where rows are potential clusters and columns are space-time locations.
+#'@param locLambdas Empty list filled by each iteration estimated weighted relative risks inside identified cluster.
+#'@param Lambda_dense Initial estimates for relative risk for each potential cluster;\eqn{\Lambda}.
+#'@param maxclust Maximum number of clusters to be detected.
+#'@return Weighted relative risks for identified locations.
 bylocation <- function(Lik, sparsemat, locLambdas, Lambda_dense,maxclust){
     wi <- likweights(Lik) #tiny weights
     for (i in 1:maxclust){
         message(paste0("Searching for cluster ",i))
-        #find location wiht largest weight
-        wi_loc <-t(wi)%*%sparsemat
+        #find location with largest weight
+        wi_loc <- t(wi)%*%sparsemat
         maxloc <- which.max(as.vector(wi_loc))
         message(paste0("Location identified: ",(maxloc)))
         #find all potential clusters that overlap that location
@@ -130,9 +144,11 @@ bylocation <- function(Lik, sparsemat, locLambdas, Lambda_dense,maxclust){
         Lik[which(pclocmax!=0)] <-1
         #reweight whats in the cluster so that sums to 1
         wi[which(pclocmax!=0)] <- likweights(Lik[which(pclocmax!=0)])
-        
         out <- t(wi)%*%Lambda_dense
-        locLambdas[[i]] <- out 
+        #only keep elements inside cluster
+        ix <- ifelse(t(matrix(pclocmax,ncol=1))%*%sparsemat!=0,1,0)
+        outID <- ifelse(ix*out==0,1,ix*out)
+        locLambdas[[i]] <- outID 
         #e) Set Lik for overlapping locations to zero
         Lik[which(pclocmax!=0)] <-0
         #f) Recalculate scaled likelihoods
@@ -140,33 +156,68 @@ bylocation <- function(Lik, sparsemat, locLambdas, Lambda_dense,maxclust){
     }
     return(locLambdas=locLambdas)
 }
+
+#'@title bycluster
+#'@description Cluster detection based on maximum potential cluster.
+#'@param Lik Likelihood for each potential cluster.
+#'@param sparsemat Large sparsematrix where rows are potential clusters and columns are space-time locations.
+#'@param locLambdas Empty list filled by each iteration estimated weighted relative risks inside identified cluster.
+#'@param Lambda_dense Initial estimates for relative risk for each potential cluster;\eqn{\Lambda}.
+#'@param maxclust Maximum number of clusters to be detected.
+#'@return Weighted relative risks for identified locations.
+bycluster <-  function(Lik, sparsemat, locLambdas, Lambda_dense,maxclust){
+    wi <- likweights(Lik) #tiny weights
+    for (i in 1:maxclust){
+        message(paste0("Searching for cluster ",i))
+        #find potential cluster with largest weight
+        maxpc <- which.max(as.vector(wi))
+        #maxloc <- which.max(as.vector(wi_loc))
+        message(paste0("Potential cluster identified: ",(maxpc)))
+        #find all potential clusters that overlap that PC
+        pcmax <- rep(0,length(wi)); pcmax[maxpc] <-1; pcmax <- matrix(pcmax,ncol=1)
+        #partition weights vector st for pclocmax=1, those weights sum to 1
+        Lik[which(pcmax!=0)] <-1
+        #reweight whats in the cluster so that sums to 1
+        wi[which(pcmax!=0)] <- likweights(Lik[which(pcmax!=0)])
+        out <- t(wi)%*%Lambda_dense
+        #take only things inside the cluster
+        ix <- t(pcmax)%*%sparsemat
+        outID <- ifelse(ix*out==0,1,ix*out)
+        locLambdas[[i]] <- outID
+        #e) Set Lik for overlapping locations to zero
+        Lik[which(pcmax!=0)] <-0
+        #f) Recalculate scaled likelihoods
+        wi <- likweights(Lik)
+    }
+    return(locLambdas=locLambdas)
+}
     
+#'@title detectclusters
+#'@description Detect disease clusters either by location or by potential cluster.
+#'@param sparseMAT Large sparsematrix TODO
+#'@param Ex Vector of expected counts.
+#'@param Yx Vector of observed counts.
+#'@param numCenters Number of centroids.
+#'@param Time Number of time periods.
+#'@param maxclust Maximum number of clusters allowed. TODO - allow this to be unknown.
+#'@param bylocation If clusters should be identified by maximum location (\code{TRUE}) or maximum potential cluster (\code{FALSE}). Default is \code{TRUE}.
+#'@return Returns list for each iteration with weighted relative risks by location inside identified cluster.
+#'@export
 detectclusters <- function(sparseMAT, Ex, Yx,numCenters,Time, maxclust,bylocation=TRUE){
-    #sparsemat large sparsematrix where rows are potential clusters and columns are space-time locations
-    #Ex expected counts
-    #Yx observed counts
-    #numCenters number of centroids
-    #Time number of time periods
-    #maxclust maximum number of clusters to search for
-    #bylocation if TRUE, clusters identified by location; if FALSE clusters identified by potential cluster
-    
-    #output empties
-    sparsemat <- Matrix::t(sparseMAT) #66870x1040
+    sparsemat <- Matrix::t(sparseMAT) 
     out <- poisLik(Ex, Yx, sparsemat)
-    outLik <- out$outLik
-    lambdahat <- out$lambdahat
-    Lambda <- as.vector(lambdahat)*sparsemat #big Lambda matrix
+    Lik <- out$Lik
+    Lambda_dense <- out$Lambda_dense
     locLambdas <- vector("list", maxclust)
     if(bylocation==FALSE){
         message("Cluster detection by potential cluster")
-        res <- bypotentialcluster(outLik, sparsemat, Lambda, locLambdas,outLambda, maxclust)
+        res <- bycluster(Lik, sparsemat, locLambdas, Lambda_dense, maxclust)
         return(res)
     }
     else{
         #default
-        #outLik, sparsemat, locLambdas, Lambda,maxclust
         message("Cluster detection by location")
-        res <- bylocation(outLik, sparsemat, locLambdas, Lambda, maxclust)
+        res <- bylocation(Lik, sparsemat, locLambdas, Lambda_dense, maxclust) 
         return(res)
     }
 }
