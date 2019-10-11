@@ -212,9 +212,10 @@ bycluster <-  function(Lik, sparsemat, locLambdas, Lambda_dense,maxclust){
 #'@param Time Number of time periods.
 #'@param maxclust Maximum number of clusters allowed. TODO - allow this to be unknown.
 #'@param bylocation If clusters should be identified by maximum location (\code{TRUE}) or maximum potential cluster (\code{FALSE}). Default is \code{TRUE}.
+#'@param cv option for cross-validation instead of AIC/BIC. Default is set to FALSE
 #'@return Returns list for each iteration with weighted relative risks by location inside identified cluster.
 #'@export
-detectclusters <- function(sparseMAT, Ex, Yx,numCenters,Time, maxclust,bylocation=TRUE){
+detectclusters <- function(sparseMAT, Ex, Yx,numCenters,Time, maxclust,bylocation=TRUE, cv=FALSE){
     sparsemat <- Matrix::t(sparseMAT) 
     out <- poisLik(Ex, Yx, sparsemat)
     Lik <- out$Lik
@@ -223,18 +224,23 @@ detectclusters <- function(sparseMAT, Ex, Yx,numCenters,Time, maxclust,bylocatio
     if(bylocation==FALSE){
         message("Cluster detection by potential cluster")
         res <- bycluster(Lik, sparsemat, locLambdas, Lambda_dense, maxclust)
+        #perform selection by IC/CV
+        #selection <- clusterselect(..., cv=FALSE)
         return(res)
     }
     else{
         #default
         message("Cluster detection by location")
         res <- bylocation(Lik, sparsemat, locLambdas, Lambda_dense, maxclust) 
+        #perform selection by IC/CV
         return(res)
     }
 }
 
 
-
+clusterselect <- function(wiMAT){
+    #TODO
+}
 
 
 
