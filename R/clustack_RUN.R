@@ -44,29 +44,13 @@ numCenters <- n_uniq
 #create giant sparse design matrix (single potential clusters)
 sparseMAT <- spacetimeMat(potentialclusters, numCenters, Time) 
 
-# sparsemat <- Matrix::t(sparseMAT) #66870x1040
-# out <- poisLik(Ex, Yx, sparsemat)
-# Lik <- out$Lik
-# Lambda_dense <- out$Lambda_dense
-
-# res <- bylocation(Lik, sparsemat, locLambdas, Lambda_dense, maxclust)
-# res_pc <- bycluster(Lik, sparsemat, locLambdas, Lambda_dense, maxclust)
-# 
-# ###################################################
-# #PLOTTING
-# lapply(res, function(x){plotmap((x), genpdf = FALSE)})
-# lapply(res, function(x){summary((x@x))})
-# 
-# #PLOTTING by PC
-# lapply(res_pc, function(x){plotmap((x), genpdf = FALSE)})
-# lapply(res_pc, function(x){summary((x@x))})
 
 ###################################################
 #By location
 test_loc <-detectclusters(sparseMAT, Ex, Yx, numCenters, Time, maxclust, bylocation = TRUE)
 lapply(test_loc, function(x){plotmap((x), genpdf = FALSE, maxrr=2)})
 lapply(test_loc, function(x){summary((x))})
-#lapply(test_loc, function(x){summary((x@x))})
+
 #By PC
 test_pc <-detectclusters(sparseMAT, Ex, Yx, numCenters, Time, maxclust, bylocation = FALSE)
 lapply(test_pc, function(x){plotmap((x), genpdf = FALSE, maxrr=1.5)})
