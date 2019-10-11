@@ -128,9 +128,12 @@ poisLik <-function(Ex, Yx, sparsemat){
 #'@param locLambdas Empty list filled by each iteration estimated weighted relative risks inside identified cluster.
 #'@param Lambda_dense Initial estimates for relative risk for each potential cluster;\eqn{\Lambda}.
 #'@param maxclust Maximum number of clusters to be detected.
-#'@return Weighted relative risks for identified locations.
+#'@return List. First element is a Weighted relative risks for identified locations. Second element is a large matrix of weights for each iteration.
 bylocation <- function(Lik, sparsemat, locLambdas, Lambda_dense,maxclust){
     wi <- likweights(Lik) #tiny weights
+    wiMAT <- matrix(rep(NA, (ncol(sparsemat)+1)*nrow(sparsemat)),ncol=(ncol(sparsemat)+1))
+    #store initial weights into wiMAT first columns
+    wiMAT[,1] <- wi@x
     for (i in 1:maxclust){
         message(paste0("Searching for cluster ",i))
         #find location with largest weight
@@ -153,8 +156,11 @@ bylocation <- function(Lik, sparsemat, locLambdas, Lambda_dense,maxclust){
         Lik[which(pclocmax!=0)] <-0
         #f) Recalculate scaled likelihoods
         wi <- likweights(Lik)
+        #g) Store weights into wiMAT (i+1 because this wi corresponds to next iteration)
+        wiMAT[,(i+1)] <- wi@x
     }
-    return(locLambdas=locLambdas)
+    return(list(locLambdas=locLambdas,
+                wiMAT = wiMAT))
 }
 
 #'@title bycluster
@@ -167,6 +173,9 @@ bylocation <- function(Lik, sparsemat, locLambdas, Lambda_dense,maxclust){
 #'@return Weighted relative risks for identified locations.
 bycluster <-  function(Lik, sparsemat, locLambdas, Lambda_dense,maxclust){
     wi <- likweights(Lik) #tiny weights
+    wiMAT <- matrix(rep(NA, (ncol(sparsemat)+1)*nrow(sparsemat)),ncol=(ncol(sparsemat)+1))
+    #store initial weights into wiMAT first columns
+    wiMAT[,1] <- wi@x
     for (i in 1:maxclust){
         message(paste0("Searching for cluster ",i))
         #find potential cluster with largest weight
@@ -188,6 +197,8 @@ bycluster <-  function(Lik, sparsemat, locLambdas, Lambda_dense,maxclust){
         Lik[which(pcmax!=0)] <-0
         #f) Recalculate scaled likelihoods
         wi <- likweights(Lik)
+        #g) Store weights into wiMAT (i+1 because this wi corresponds to next iteration)
+        wiMAT[,(i+1)] <- wi@x
     }
     return(locLambdas=locLambdas)
 }

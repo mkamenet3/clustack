@@ -48,5 +48,21 @@ lapply(test_pc, function(x){plotmap((x), genpdf = FALSE, maxrr=2)})
 lapply(test_pc, function(x){summary((x))})
 
 
+######################################################################################################
+
+###################################################
+#Test out new funcs
+###################################################
+sparsemat <- Matrix::t(sparseMAT) #66870x1040
+out <- poisLik(Ex, Yx, sparsemat)	# out <- poisLik(Ex, Yx, sparsemat)
+Lik <- out$Lik	# Lik <- out$Lik
+Lambda_dense <- out$Lambda_dense	# Lambda_dense <- out$Lambda_dense
+#by loc
+res <- bylocation(Lik, sparsemat, locLambdas, Lambda_dense, maxclust)
+lapply(res_pc, function(x){plotmap((x), genpdf = FALSE)})	
+#by pc
+res_pc <- bycluster(Lik, sparsemat, locLambdas, Lambda_dense, maxclust)
+
+
 
 
