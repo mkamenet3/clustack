@@ -131,9 +131,11 @@ poisLik <-function(Ex, Yx, sparsemat){
 #'@return List. First element is a Weighted relative risks for identified locations. Second element is a large matrix of weights for each iteration.
 bylocation <- function(Lik, sparsemat, locLambdas, Lambda_dense,maxclust){
     wi <- likweights(Lik) #tiny weights
-    LikMAT <- matrix(rep(NA, (ncol(sparsemat)+1)*nrow(sparsemat)),ncol=(ncol(sparsemat)+1))
+    #LikMAT <- matrix(rep(NA, (ncol(sparsemat)+1)*nrow(sparsemat)),ncol=(ncol(sparsemat)+1))
+    wiMAT <-  matrix(rep(NA, (ncol(sparsemat)+1)*nrow(sparsemat)),ncol=(ncol(sparsemat)+1))
     #store initial weights into wiMAT first columns
-    LikMAT[,1] <- Lik@x
+    #LikMAT[,1] <- Lik@x
+    wiMAT[,1] <- wi@x
     for (i in 1:maxclust){
         message(paste0("Searching for cluster ",i))
         #find location with largest weight
@@ -156,11 +158,13 @@ bylocation <- function(Lik, sparsemat, locLambdas, Lambda_dense,maxclust){
         Lik[which(pclocmax!=0)] <-0
         #f) Recalculate scaled likelihoods
         wi <- likweights(Lik)
-        #g) Store weights into wiMAT (i+1 because this wi corresponds to next iteration)
-        LikMAT[,(i+1)] <- Lik@x
+        #g) Store weights into wiMAT and Lik into LikMAT(i+1 because this wi corresponds to next iteration)
+        #LikMAT[,(i+1)] <- Lik@x
+        wiMAT[,(i+1)] <- wi@x
     }
     return(list(locLambdas=locLambdas,
-                LikMAT = LikMAT))
+                #LikMAT = LikMAT,
+                wiMAT = wiMAT))
 }
 
 #'@title bycluster
@@ -173,9 +177,11 @@ bylocation <- function(Lik, sparsemat, locLambdas, Lambda_dense,maxclust){
 #'@return Weighted relative risks for identified locations.
 bycluster <-  function(Lik, sparsemat, locLambdas, Lambda_dense,maxclust){
     wi <- likweights(Lik) #tiny weights
-    LikMAT <- matrix(rep(NA, (ncol(sparsemat)+1)*nrow(sparsemat)),ncol=(ncol(sparsemat)+1))
+    #LikMAT <- matrix(rep(NA, (ncol(sparsemat)+1)*nrow(sparsemat)),ncol=(ncol(sparsemat)+1))
+    wiMAT <-  matrix(rep(NA, (ncol(sparsemat)+1)*nrow(sparsemat)),ncol=(ncol(sparsemat)+1))
     #store initial weights into wiMAT first columns
     LikMAT[,1] <- Lik@x
+    wiMAT[,1] <- wi@x
     for (i in 1:maxclust){
         message(paste0("Searching for cluster ",i))
         #find potential cluster with largest weight
@@ -197,11 +203,13 @@ bycluster <-  function(Lik, sparsemat, locLambdas, Lambda_dense,maxclust){
         Lik[which(pcmax!=0)] <-0
         #f) Recalculate scaled likelihoods
         wi <- likweights(Lik)
-        #g) Store weights into wiMAT (i+1 because this wi corresponds to next iteration)
-        LikMAT[,(i+1)] <- Lik@x
+        #g) Store weights into wiMAT and Lik into LikMAT(i+1 because this wi corresponds to next iteration)
+        #LikMAT[,(i+1)] <- Lik@x
+        wiMAT[,(i+1)] <- wi@x
     }
     return(list(locLambdas=locLambdas,
-                LikMAT = LikMAT))
+                #LikMAT = LikMAT,
+                wiMAT = wiMAT))
 }
     
 #'@title detectclusters
@@ -238,24 +246,37 @@ detectclusters <- function(sparseMAT, Ex, Yx,numCenters,Time, maxclust,bylocatio
     }
 }
 
-
-clusterselect <- function(LikMAT,maxclust, numCenters, Time,cv=FALSE){
-    if(!is.null(maxclust)){
-        maxclust1=maxclust+1
-    }
-    else{
-        maxclust1 = ncol(LikMAT)+1
-    }
-    loglik <- log(apply(LikMAT[,1:maxclust1],2,sum))
-    K <- rep(0,11)#seq(from=0, to=(maxclust1-1))
+#wiMAT <- res$wiMAT
+#a <- res$locLambdas[[1]] 
+locLambdas <- res$locLambdas
+clusterselect <- function(locLambdas,maxclust, numCenters, Time,cv=FALSE){
+    # if(!is.null(maxclust)){
+    #     maxclust=maxclust#+1
+    # }
+    # else{
+    #     maxclust = length(locLambdas)#+1
+    # }
+    
+    loglik <- sapply(1:maxclust, function(i) sum(dpoisson(Yx, locLambdas[[i]], Ex)))#sum(dpoisson(Yx, a, Ex))
+    
+    
+    
+    #loglik <- log(apply(wiMAT[,1:maxclust1],2,sum))
+    K <- seq(from=1, to=maxclust)#rep(0,maxclust1)#seq(from=0, to=(maxclust1-1))
     if(cv==TRUE){
         #TODO
     }
     else{
+        #calc
         PLL.bic <- (-2*loglik) + K*log(numCenters*Time)
         PLL.aic <- 2*K - 2*loglik
         PLL.aicc <- 2*(K) - 2*(loglik) +
             ((2*K*(K + 1))/(n_uniq*Time - K - 1))
+        #select
+        select.bic <- which.min(PLL.aic)
+        select.aic <- which.min(PLL.aic)
+        select.aicc <- which.min(PLL.aicc)
+        print(c(select.bic,select.aic, select.aicc))
     }
     
 }

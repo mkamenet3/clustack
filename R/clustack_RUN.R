@@ -59,9 +59,12 @@ Lik <- out$Lik	# Lik <- out$Lik
 Lambda_dense <- out$Lambda_dense	# Lambda_dense <- out$Lambda_dense
 #by loc
 res <- bylocation(Lik, sparsemat, locLambdas, Lambda_dense, maxclust)
-lapply(res_pc, function(x){plotmap((x), genpdf = FALSE)})	
+
+
+
+#lapply(res_pc, function(x){plotmap((x), genpdf = FALSE)})	
 #by pc
-res_pc <- bycluster(Lik, sparsemat, locLambdas, Lambda_dense, maxclust)
+#res_pc <- bycluster(Lik, sparsemat, locLambdas, Lambda_dense, maxclust)
 
 
 
