@@ -246,9 +246,28 @@ detectclusters <- function(sparseMAT, Ex, Yx,numCenters,Time, maxclust,bylocatio
     }
 }
 
-#wiMAT <- res$wiMAT
-#a <- res$locLambdas[[1]] 
-locLambdas <- res$locLambdas
+Yx1 <- Yx[1:10]
+Ex1 <- Ex[1:10]
+#lam <- c(1,1.5,1,0.9,1,1.3)
+lam1 <- rep(1,10)
+dpoisson(Yx1, lam1, Ex1)
+lam2 <- c(rep(1,9),1.5)
+dpoisson(Yx1, lam2, Ex1)
+lam3 <- c(rep(1,8),rep(1.5,2))
+
+
+aa <- function(y,lambda,E){
+    -sum(stats::dpois(y, (lambda*E), log=TRUE))   
+} 
+aa(Yx1,lam1, Ex1)
+aa(Yx1,lam2, Ex1)
+aa(Yx1,lam3, Ex1)
+
+aa(Yx, rep(1,1040) ,Ex)
+aa(Yx, rep(1,1040) ,Ex)
+# #wiMAT <- res$wiMAT
+# #a <- res$locLambdas[[1]] 
+# locLambdas <- res$locLambdas
 clusterselect <- function(locLambdas,maxclust, numCenters, Time,cv=FALSE){
     # if(!is.null(maxclust)){
     #     maxclust=maxclust#+1
@@ -256,13 +275,14 @@ clusterselect <- function(locLambdas,maxclust, numCenters, Time,cv=FALSE){
     # else{
     #     maxclust = length(locLambdas)#+1
     # }
-    
+
     loglik <- sapply(1:maxclust, function(i) sum(dpoisson(Yx, locLambdas[[i]], Ex)))#sum(dpoisson(Yx, a, Ex))
-    
-    
-    
+
+
+
     #loglik <- log(apply(wiMAT[,1:maxclust1],2,sum))
-    K <- seq(from=1, to=maxclust)#rep(0,maxclust1)#seq(from=0, to=(maxclust1-1))
+    #K <- rep(1, maxclust)#seq(from=1, to=maxclust)#rep(0,maxclust1)#seq(from=0, to=(maxclust1-1))
+    K <- seq(from=1, to=maxclust)
     if(cv==TRUE){
         #TODO
     }
@@ -273,14 +293,76 @@ clusterselect <- function(locLambdas,maxclust, numCenters, Time,cv=FALSE){
         PLL.aicc <- 2*(K) - 2*(loglik) +
             ((2*K*(K + 1))/(n_uniq*Time - K - 1))
         #select
-        select.bic <- which.min(PLL.aic)
+        select.bic <- which.min(PLL.bic)
         select.aic <- which.min(PLL.aic)
         select.aicc <- which.min(PLL.aicc)
         print(c(select.bic,select.aic, select.aicc))
     }
-    
+
 }
+# 
+# #(dpoisson(Yx, locLambdas[[1]], Ex)) + (dpoisson(Yx, locLambdas[[2]], Ex))
+# (dpoisson(Yx, locLambdas[[1]], Ex))
+# (dpoisson(Yx, locLambdas[[1]]*locLambdas[[2]], Ex))
+# (dpoisson(Yx, (locLambdas[[1]]*locLambdas[[2]]*locLambdas[[3]]), Ex))
+# 
+# aa <-(locLambdas[[1]]*locLambdas[[2]]*locLambdas[[3]])
+# #b <- Reduce( "*", matrix(unlist(locLambdas), byrow = FALSE, ncol=10), accumulate=TRUE )
+# 
+# 
+# 
+loglik<- rep(NA,(maxclust+1))
+loglik[1] <- (dpoisson(Yx, rep(1,1040), Ex))
+#loglik[1] <- (dpoisson(Yx, locLambdas[[1]], Ex))
+#prodRR <- locLambdas[[1]]
+prodRR <- rep(1,1040)
+for (i in 1:maxclust){
+    prodRR <- prodRR*locLambdas[[i]]
+    loglik[i+1] <- dpoisson(Yx, prodRR, Ex) #a[i-1]
 
-
-
-
+}
+# 
+# (l1 <- Yx*log(locLambdas[[1]]*Ex) - (locLambdas[[1]]*Ex))
+# (l2 <- sum(Yx*log((locLambdas[[1]]*locLambdas[[2]])*Ex) - ((locLambdas[[1]]*locLambdas[[2]])*Ex)))
+# (l3 <- sum(Yx*log((locLambdas[[1]]*locLambdas[[2]]*locLambdas[[3]])*Ex) - ((locLambdas[[1]]*locLambdas[[2]]*locLambdas[[3]])*Ex)))
+# # loglik_i <- (Yx * log(locLambdas[[1]] * Ex) - (locLambdas[[1]] * Ex)) +(Yx * log(locLambdas[[2]] * Ex) - (locLambdas[[2]] * Ex))
+# #     
+# baseline <- rep(1,1040)
+# z0 <- (dpoisson(Yx, baseline, Ex))
+#     
+# aa <- exp(log(locLambdas[[2]]) - (log(baseline)))
+# z1 <- (dpoisson(Yx, aa, Ex))
+# 
+# 
+# ab <- exp(log(locLambdas[[3]]) - (log(locLambdas[[2]]) - log(locLambdas[[1]])))
+# z2 <- (dpoisson(Yx, ab, Ex))
+# 
+# ac <- exp(log(locLambdas[[4]]) - (log(locLambdas[[3]])-log(locLambdas[[2]]) - log(locLambdas[[1]])))
+# z3 <- (dpoisson(Yx, ac, Ex))
+# 
+# 
+# ad <- exp(log(locLambdas[[5]]) - (log(locLambdas[[4]])-log(locLambdas[[3]])-log(locLambdas[[2]]) - log(locLambdas[[1]])))
+# z4 <- (dpoisson(Yx, ad, Ex))
+# 
+# ae <- exp(log(locLambdas[[6]]) - (log(locLambdas[[5]]) -log(locLambdas[[4]])-log(locLambdas[[3]])-log(locLambdas[[2]]) - log(locLambdas[[1]])))
+# z5 <- (dpoisson(Yx, ae, Ex))
+# 
+# af <- exp(log(locLambdas[[7]]) - (log(locLambdas[[6]])-log(locLambdas[[5]]) -log(locLambdas[[4]])-log(locLambdas[[3]])-log(locLambdas[[2]]) - log(locLambdas[[1]])))
+# z6 <- (dpoisson(Yx, af, Ex))
+# 
+# 
+# zz <- c(z0,z1,z2,z3,z4,z5,z6)
+# 
+# #######################
+# init <- setVectors(jbc$period, Ex, Yx, covars=NULL, Time=5)
+# Ex <- clusso::scale(init, Time)
+# Yx <- init$Y.vec
+# vectors <- list(Period = init$Year, Ex=Ex, E0_0=init$E0, Y.vec=init$Y.vec, covars = NULL)  
+# Ex <- vectors$Ex
+# Yx <- vectors$Y.vec
+# Period <- vectors$Period
+# baseline <- rep(1,1040)
+# z0 <- (dpoisson(Yx, baseline, Ex))
+# (dpoisson(Yx, locLambdas[[1]], Ex))
+# (dpoisson(Yx, locLambdas[[1]]*locLambdas[[2]], Ex))
+# (dpoisson(Yx, (locLambdas[[1]]*locLambdas[[2]]*locLambdas[[3]]), Ex))
