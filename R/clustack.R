@@ -235,7 +235,8 @@ detectclusters <- function(sparseMAT, Ex, Yx,numCenters,Time, maxclust,bylocatio
         res <- bycluster(Lik, sparsemat, locLambdas, Lambda_dense, maxclust)
         #perform selection by IC/CV
         selection <- clusterselect(res$locLambdas, maxclust, numCenters, Time, cv=FALSE)
-        return(res)
+        return(list(res = res,
+                    selection = selection))
     }
     else{
         #default
@@ -243,7 +244,8 @@ detectclusters <- function(sparseMAT, Ex, Yx,numCenters,Time, maxclust,bylocatio
         res <- bylocation(Lik, sparsemat, locLambdas, Lambda_dense, maxclust) 
         #perform selection by IC/CV
         selection <- clusterselect(res$locLambdas, maxclust, numCenters, Time, cv=FALSE)
-        return(res)
+        return(list(res = res,
+                    selection = selection))
     }
 }
 
@@ -282,8 +284,37 @@ clusterselect <- function(locLambdas,maxclust, numCenters, Time,cv=FALSE){
         cat(paste0("\t","Selected BIC: ",select.bic," clusters", "\n",
                      "\t","Selected AIC: ", select.aic," clusters", "\n",
                      "\t","Selected AICc: ",select.aicc," clusters"))
+        if(all.equal(select.bic, select.aic, select.aicc)){
+            overlapRR <- rep(1,numCenters*Time)
+            #Just do this once
+            for (i in 1:select.bic){
+                overlapRR <- overlapRR*locLambdas[[i]]
+            }
+            return(overlapRR)
+        }
+        else{
+            #Do it for each criterion
+            overlapRR.bic <- rep(1,numCenters*Time)
+            overlapRR.aic <- rep(1,numCenters*Time)
+            overlapRR.aicc <- rep(1,numCenters*Time)
+            #BIC
+            for (i in 1:select.bic){
+                overlapRR.bic <- overlapRR.bic*locLambdas[[i]]
+            }
+            #AIC
+            for (i in 1:select.aic){
+                overlapRR.aic <- overlapRR.aic*locLambdas[[i]]
+            }
+            #AICc
+            for (i in 1:select.aicc){
+                overlapRR.aicc <- overlapRR.aicc*locLambdas[[i]]
+            }
+            return(list(overlapRR.bic = overlapRR.bic,
+                        overlapRR.aic = overlapRR.aic,
+                        overlapRR.aicc = overlapRR.aicc))
+        }
     }
-
+    
 }
 
 #########################################
