@@ -180,7 +180,7 @@ bycluster <-  function(Lik, sparsemat, locLambdas, Lambda_dense,maxclust){
     #LikMAT <- matrix(rep(NA, (ncol(sparsemat)+1)*nrow(sparsemat)),ncol=(ncol(sparsemat)+1))
     wiMAT <-  matrix(rep(NA, (ncol(sparsemat)+1)*nrow(sparsemat)),ncol=(ncol(sparsemat)+1))
     #store initial weights into wiMAT first columns
-    LikMAT[,1] <- Lik@x
+    #LikMAT[,1] <- Lik@x
     wiMAT[,1] <- wi@x
     for (i in 1:maxclust){
         message(paste0("Searching for cluster ",i))

@@ -41,11 +41,15 @@ test_loc <-detectclusters(sparseMAT, Ex, Yx, numCenters, Time, maxclust, bylocat
 lapply(test_loc, function(x){plotmap((x), genpdf = FALSE)})
 lapply(test_loc, function(x){plotmap((x), genpdf = FALSE, maxrr = 1.5, minrr = 0.5)})
 lapply(test_loc, function(x){summary((x))})
+##plot overlapping clusters
+plotmap(test_loc$selection, genpdf = FALSE)
 
 #By PC
 test_pc <-detectclusters(sparseMAT, Ex, Yx, numCenters, Time, maxclust, bylocation = FALSE)
 lapply(test_pc, function(x){plotmap((x), genpdf = FALSE, maxrr=2)})
 lapply(test_pc, function(x){summary((x))})
+##plot overlapping clusters
+plotmap(test_pc$selection, genpdf = FALSE)
 
 
 ######################################################################################################
