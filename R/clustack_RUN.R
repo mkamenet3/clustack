@@ -57,12 +57,12 @@ plotmap(test_pc$selection, genpdf = FALSE)
 ###################################################
 #Test out new funcs
 ###################################################
-sparsemat <- Matrix::t(sparseMAT) #66870x1040
-out <- poisLik(Ex, Yx, sparsemat)	# out <- poisLik(Ex, Yx, sparsemat)
-Lik <- out$Lik	# Lik <- out$Lik
-Lambda_dense <- out$Lambda_dense	# Lambda_dense <- out$Lambda_dense
-#by loc
-res <- bylocation(Lik, sparsemat, locLambdas, Lambda_dense, maxclust)
+# sparsemat <- Matrix::t(sparseMAT) #66870x1040
+# out <- poisLik(Ex, Yx, sparsemat)	# out <- poisLik(Ex, Yx, sparsemat)
+# Lik <- out$Lik	# Lik <- out$Lik
+# Lambda_dense <- out$Lambda_dense	# Lambda_dense <- out$Lambda_dense
+# #by loc
+# res <- bylocation(Lik, sparsemat, locLambdas, Lambda_dense, maxclust)
 
 
 
