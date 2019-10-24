@@ -128,9 +128,14 @@ poisLik <-function(Ex, Yx, sparsemat){
 #'@param locLambdas Empty list filled by each iteration estimated weighted relative risks inside identified cluster.
 #'@param Lambda_dense Initial estimates for relative risk for each potential cluster;\eqn{\Lambda}.
 #'@param maxclust Maximum number of clusters to be detected.
-#'@return Weighted relative risks for identified locations.
+#'@return List. First element is a Weighted relative risks for identified locations. Second element is a large matrix of weights for each iteration.
 bylocation <- function(Lik, sparsemat, locLambdas, Lambda_dense,maxclust){
     wi <- likweights(Lik) #tiny weights
+    #LikMAT <- matrix(rep(NA, (ncol(sparsemat)+1)*nrow(sparsemat)),ncol=(ncol(sparsemat)+1))
+    wiMAT <-  matrix(rep(NA, (ncol(sparsemat)+1)*nrow(sparsemat)),ncol=(ncol(sparsemat)+1))
+    #store initial weights into wiMAT first columns
+    #LikMAT[,1] <- Lik@x
+    wiMAT[,1] <- wi@x
     for (i in 1:maxclust){
         message(paste0("Searching for cluster ",i))
         #find location with largest weight
@@ -153,8 +158,13 @@ bylocation <- function(Lik, sparsemat, locLambdas, Lambda_dense,maxclust){
         Lik[which(pclocmax!=0)] <-0
         #f) Recalculate scaled likelihoods
         wi <- likweights(Lik)
+        #g) Store weights into wiMAT and Lik into LikMAT(i+1 because this wi corresponds to next iteration)
+        #LikMAT[,(i+1)] <- Lik@x
+        wiMAT[,(i+1)] <- wi@x
     }
-    return(locLambdas=locLambdas)
+    return(list(locLambdas=locLambdas,
+                #LikMAT = LikMAT,
+                wiMAT = wiMAT))
 }
 
 #'@title bycluster
@@ -167,6 +177,11 @@ bylocation <- function(Lik, sparsemat, locLambdas, Lambda_dense,maxclust){
 #'@return Weighted relative risks for identified locations.
 bycluster <-  function(Lik, sparsemat, locLambdas, Lambda_dense,maxclust){
     wi <- likweights(Lik) #tiny weights
+    #LikMAT <- matrix(rep(NA, (ncol(sparsemat)+1)*nrow(sparsemat)),ncol=(ncol(sparsemat)+1))
+    wiMAT <-  matrix(rep(NA, (ncol(sparsemat)+1)*nrow(sparsemat)),ncol=(ncol(sparsemat)+1))
+    #store initial weights into wiMAT first columns
+    #LikMAT[,1] <- Lik@x
+    wiMAT[,1] <- wi@x
     for (i in 1:maxclust){
         message(paste0("Searching for cluster ",i))
         #find potential cluster with largest weight
@@ -188,8 +203,13 @@ bycluster <-  function(Lik, sparsemat, locLambdas, Lambda_dense,maxclust){
         Lik[which(pcmax!=0)] <-0
         #f) Recalculate scaled likelihoods
         wi <- likweights(Lik)
+        #g) Store weights into wiMAT and Lik into LikMAT(i+1 because this wi corresponds to next iteration)
+        #LikMAT[,(i+1)] <- Lik@x
+        wiMAT[,(i+1)] <- wi@x
     }
-    return(locLambdas=locLambdas)
+    return(list(locLambdas=locLambdas,
+                #LikMAT = LikMAT,
+                wiMAT = wiMAT))
 }
     
 #'@title detectclusters
@@ -201,9 +221,10 @@ bycluster <-  function(Lik, sparsemat, locLambdas, Lambda_dense,maxclust){
 #'@param Time Number of time periods.
 #'@param maxclust Maximum number of clusters allowed. TODO - allow this to be unknown.
 #'@param bylocation If clusters should be identified by maximum location (\code{TRUE}) or maximum potential cluster (\code{FALSE}). Default is \code{TRUE}.
+#'@param cv option for cross-validation instead of AIC/BIC. Default is set to FALSE
 #'@return Returns list for each iteration with weighted relative risks by location inside identified cluster.
 #'@export
-detectclusters <- function(sparseMAT, Ex, Yx,numCenters,Time, maxclust,bylocation=TRUE){
+detectclusters <- function(sparseMAT, Ex, Yx,numCenters,Time, maxclust,bylocation=TRUE, cv=FALSE){
     sparsemat <- Matrix::t(sparseMAT) 
     out <- poisLik(Ex, Yx, sparsemat)
     Lik <- out$Lik
@@ -212,19 +233,184 @@ detectclusters <- function(sparseMAT, Ex, Yx,numCenters,Time, maxclust,bylocatio
     if(bylocation==FALSE){
         message("Cluster detection by potential cluster")
         res <- bycluster(Lik, sparsemat, locLambdas, Lambda_dense, maxclust)
-        return(res)
+        #perform selection by IC/CV
+        selection <- clusterselect(res$locLambdas, maxclust, numCenters, Time, cv=FALSE)
+        return(list(res = res,
+                    selection = selection))
     }
     else{
         #default
         message("Cluster detection by location")
         res <- bylocation(Lik, sparsemat, locLambdas, Lambda_dense, maxclust) 
-        return(res)
+        #perform selection by IC/CV
+        selection <- clusterselect(res$locLambdas, maxclust, numCenters, Time, cv=FALSE)
+        return(list(res = res,
+                    selection = selection))
     }
 }
 
+#'@title clusterselect
+#'@description Select the optimal number of (overlapping) clusters using either information criteria or cross-validation
+#'@param locLambdas List of estimated relative risks at each space-time location.
+#'@param maxclust TODO
+#'@param numCenters TODO
+#'@param Time TODO
+#'@param cv TODO
+#'@return TODO
+clusterselect <- function(locLambdas,maxclust, numCenters, Time,cv=FALSE){
+    loglik<- rep(NA,(maxclust+1))
+    loglik[1] <- (dpoisson(Yx, rep(1,numCenters*Time), Ex)) #null model, no clusters
+    prodRR <- rep(1,numCenters*Time)
+    for (i in 1:maxclust){
+        prodRR <- prodRR*locLambdas[[i]]
+        loglik[i+1] <- dpoisson(Yx, prodRR, Ex) #a[i-1]
+        
+    }
+    K <- seq(from=0, to=maxclust)
+    if(cv==TRUE){
+        #TODO
+    }
+    else{
+        #calc
+        PLL.bic <- (-2*loglik) + K*log(numCenters*Time)
+        PLL.aic <- 2*K - 2*loglik
+        PLL.aicc <- 2*(K) - 2*(loglik) +
+            ((2*K*(K + 1))/(n_uniq*Time - K - 1))
+        #select
+        select.bic <- which.min(PLL.bic)-1 #-1 because the first element corresponds to 0 clusters (null)
+        select.aic <- which.min(PLL.aic)-1
+        select.aicc <- which.min(PLL.aicc)-1 
+        #print(paste0("Selected BIC: ",c(select.bic,select.aic, select.aicc))
+        cat(paste0("\t","Selected BIC: ",select.bic," clusters", "\n",
+                     "\t","Selected AIC: ", select.aic," clusters", "\n",
+                     "\t","Selected AICc: ",select.aicc," clusters"))
+        if(all.equal(select.bic, select.aic, select.aicc)){
+            overlapRR <- rep(1,numCenters*Time)
+            #Just do this once
+            for (i in 1:select.bic){
+                overlapRR <- overlapRR*locLambdas[[i]]
+            }
+            return(overlapRR)
+        }
+        else{
+            #Do it for each criterion
+            overlapRR.bic <- rep(1,numCenters*Time)
+            overlapRR.aic <- rep(1,numCenters*Time)
+            overlapRR.aicc <- rep(1,numCenters*Time)
+            #BIC
+            for (i in 1:select.bic){
+                overlapRR.bic <- overlapRR.bic*locLambdas[[i]]
+            }
+            #AIC
+            for (i in 1:select.aic){
+                overlapRR.aic <- overlapRR.aic*locLambdas[[i]]
+            }
+            #AICc
+            for (i in 1:select.aicc){
+                overlapRR.aicc <- overlapRR.aicc*locLambdas[[i]]
+            }
+            return(list(overlapRR.bic = overlapRR.bic,
+                        overlapRR.aic = overlapRR.aic,
+                        overlapRR.aicc = overlapRR.aicc))
+        }
+    }
+    
+}
+
+#########################################
+#OLD
+#########################################
+
+# ############################################
+# Yx1 <- Yx[1:10]
+# Ex1 <- Ex[1:10]
+# #lam <- c(1,1.5,1,0.9,1,1.3)
+# lam1 <- rep(1,10)
+# dpoisson(Yx1, lam1, Ex1)
+# lam2 <- c(rep(1,9),1.5)
+# dpoisson(Yx1, lam2, Ex1)
+# lam3 <- c(rep(1,8),rep(1.5,2))
+# 
+# 
+# aa <- function(y,lambda,E){
+#     -sum(stats::dpois(y, (lambda*E), log=TRUE))   
+# } 
+# aa(Yx1,lam1, Ex1)
+# aa(Yx1,lam2, Ex1)
+# aa(Yx1,lam3, Ex1)
+# 
+# aa(Yx, rep(1,1040) ,Ex)
+# aa(Yx, rep(1,1040) ,Ex)
+# # #wiMAT <- res$wiMAT
+# # #a <- res$locLambdas[[1]] 
+# # locLambdas <- res$locLambdas
 
 
 
 
-
-
+# 
+# #(dpoisson(Yx, locLambdas[[1]], Ex)) + (dpoisson(Yx, locLambdas[[2]], Ex))
+# (dpoisson(Yx, locLambdas[[1]], Ex))
+# (dpoisson(Yx, locLambdas[[1]]*locLambdas[[2]], Ex))
+# (dpoisson(Yx, (locLambdas[[1]]*locLambdas[[2]]*locLambdas[[3]]), Ex))
+# 
+# aa <-(locLambdas[[1]]*locLambdas[[2]]*locLambdas[[3]])
+# #b <- Reduce( "*", matrix(unlist(locLambdas), byrow = FALSE, ncol=10), accumulate=TRUE )
+# 
+# 
+# 
+# loglik<- rep(NA,(maxclust+1))
+# loglik[1] <- (dpoisson(Yx, rep(1,1040), Ex))
+# #loglik[1] <- (dpoisson(Yx, locLambdas[[1]], Ex))
+# #prodRR <- locLambdas[[1]]
+# prodRR <- rep(1,1040)
+# for (i in 1:maxclust){
+#     prodRR <- prodRR*locLambdas[[i]]
+#     loglik[i+1] <- dpoisson(Yx, prodRR, Ex) #a[i-1]
+# 
+# }
+# 
+# (l1 <- Yx*log(locLambdas[[1]]*Ex) - (locLambdas[[1]]*Ex))
+# (l2 <- sum(Yx*log((locLambdas[[1]]*locLambdas[[2]])*Ex) - ((locLambdas[[1]]*locLambdas[[2]])*Ex)))
+# (l3 <- sum(Yx*log((locLambdas[[1]]*locLambdas[[2]]*locLambdas[[3]])*Ex) - ((locLambdas[[1]]*locLambdas[[2]]*locLambdas[[3]])*Ex)))
+# # loglik_i <- (Yx * log(locLambdas[[1]] * Ex) - (locLambdas[[1]] * Ex)) +(Yx * log(locLambdas[[2]] * Ex) - (locLambdas[[2]] * Ex))
+# #     
+# baseline <- rep(1,1040)
+# z0 <- (dpoisson(Yx, baseline, Ex))
+#     
+# aa <- exp(log(locLambdas[[2]]) - (log(baseline)))
+# z1 <- (dpoisson(Yx, aa, Ex))
+# 
+# 
+# ab <- exp(log(locLambdas[[3]]) - (log(locLambdas[[2]]) - log(locLambdas[[1]])))
+# z2 <- (dpoisson(Yx, ab, Ex))
+# 
+# ac <- exp(log(locLambdas[[4]]) - (log(locLambdas[[3]])-log(locLambdas[[2]]) - log(locLambdas[[1]])))
+# z3 <- (dpoisson(Yx, ac, Ex))
+# 
+# 
+# ad <- exp(log(locLambdas[[5]]) - (log(locLambdas[[4]])-log(locLambdas[[3]])-log(locLambdas[[2]]) - log(locLambdas[[1]])))
+# z4 <- (dpoisson(Yx, ad, Ex))
+# 
+# ae <- exp(log(locLambdas[[6]]) - (log(locLambdas[[5]]) -log(locLambdas[[4]])-log(locLambdas[[3]])-log(locLambdas[[2]]) - log(locLambdas[[1]])))
+# z5 <- (dpoisson(Yx, ae, Ex))
+# 
+# af <- exp(log(locLambdas[[7]]) - (log(locLambdas[[6]])-log(locLambdas[[5]]) -log(locLambdas[[4]])-log(locLambdas[[3]])-log(locLambdas[[2]]) - log(locLambdas[[1]])))
+# z6 <- (dpoisson(Yx, af, Ex))
+# 
+# 
+# zz <- c(z0,z1,z2,z3,z4,z5,z6)
+# 
+# #######################
+# init <- setVectors(jbc$period, Ex, Yx, covars=NULL, Time=5)
+# Ex <- clusso::scale(init, Time)
+# Yx <- init$Y.vec
+# vectors <- list(Period = init$Year, Ex=Ex, E0_0=init$E0, Y.vec=init$Y.vec, covars = NULL)  
+# Ex <- vectors$Ex
+# Yx <- vectors$Y.vec
+# Period <- vectors$Period
+# baseline <- rep(1,1040)
+# z0 <- (dpoisson(Yx, baseline, Ex))
+# (dpoisson(Yx, locLambdas[[1]], Ex))
+# (dpoisson(Yx, locLambdas[[1]]*locLambdas[[2]], Ex))
+# (dpoisson(Yx, (locLambdas[[1]]*locLambdas[[2]]*locLambdas[[3]]), Ex))
