@@ -37,22 +37,36 @@ sparseMAT <- spacetimeMat(potentialclusters, numCenters, Time)
 #RUN SL
 ###################################################
 #By location
-maxclust <- 11
+maxclust <- 1040
 test_loc <-detectclusters(sparseMAT, Ex, Yx, numCenters, Time, maxclust, bylocation = TRUE)
-sapply(1:maxclust, function(i) plotmap(test_loc$wLambda[i,],genpdf = FALSE))
+plotmap(test_loc$wLambda[1,],genpdf = FALSE)
+plotmap(test_loc$wLambda[1040,],genpdf = FALSE)
+#sapply(1:maxclust, function(i) plotmap(test_loc$wLambda[i,],genpdf = FALSE))
 sapply(1:maxclust, function(i) summary(test_loc$wLambda[i,]))
 
-# lapply(test_loc, function(x){plotmap((x), genpdf = FALSE)})
-# lapply(test_loc, function(x){plotmap((x), genpdf = FALSE, maxrr = 1.5, minrr = 0.5)})
-# lapply(test_loc, function(x){summary((x))})
-# ##plot overlapping clusters
-# plotmap(test_loc$selection, genpdf = FALSE)
-
 #By PC
+
 test_pc <-detectclusters(sparseMAT, Ex, Yx, numCenters, Time, maxclust, bylocation = FALSE)
-# lapply(test_pc, function(x){plotmap((x), genpdf = FALSE, maxrr=2)})
-# lapply(test_pc, function(x){summary((x))})
-# ##plot overlapping clusters
-# plotmap(test_pc$selection, genpdf = FALSE)
+sapply(1:maxclust, function(i) plotmap(test_pc$wLambda[i,],genpdf = FALSE))
+sapply(1:maxclust, function(i) summary(test_pc$wLambda[i,]))
 
+###################################################
+#Debugging Start-Up
+###################################################
 
+maxclust <- 1040
+outExp <- sparsemat%*%Ex
+outObs <- sparsemat%*%Yx
+#calc Lambda
+lambdahat <- outObs/outExp
+Lambda <- as.vector(lambdahat)*sparsemat #big Lambda matrix
+Lambda_dense <- as.matrix(Lambda)
+Lambda_dense[Lambda_dense == 0] <- 1
+#Get scaled likelihood
+Lik <- ((outObs/outExp)/(sum(outObs)/sum(outExp)))^outObs
+outlogLik <- log(Lik)
+outlogLik_scaled <- outlogLik-max(outlogLik)
+Lik <- Likorig <- exp(outlogLik_scaled)
+test <- bycluster(Lik, Lambda_dense, sparsemat,maxclust)
+# sapply(1:maxclust, function(i) plotmap(test[i,],genpdf = FALSE))
+# sapply(1:maxclust, function(i) summary(test[i,]))
