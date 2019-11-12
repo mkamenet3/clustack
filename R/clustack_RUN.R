@@ -37,36 +37,23 @@ sparseMAT <- spacetimeMat(potentialclusters, numCenters, Time)
 #RUN SL
 ###################################################
 #By location
-maxclust <- 11
+maxclust <- 1040
 test_loc <-detectclusters(sparseMAT, Ex, Yx, numCenters, Time, maxclust, bylocation = TRUE)
+#BIC
+plotmap(test_loc$wLambda[test_loc$selection$select.bic,],genpdf = FALSE)
+summary(test_loc$wLambda[test_loc$selection$select.bic,])
 
-plotmap(test_loc$wLambda[1,],genpdf = FALSE)
-plotmap(test_loc$wLambda[5,],genpdf = FALSE)
-#sapply(1:maxclust, function(i) summary(test_loc$wLambda[i,]))
+#AIC/AICc
+plotmap(test_loc$wLambda[test_loc$selection$select.aic,],genpdf = FALSE)
+summary(test_loc$wLambda[test_loc$selection$select.aic,])
 
+###################
 #By PC
 test_pc <-detectclusters(sparseMAT, Ex, Yx, numCenters, Time, maxclust, bylocation = FALSE)
-plotmap(test_loc$wLambda[3,],genpdf = FALSE)
-sapply(1:maxclust, function(i) plotmap(test_pc$wLambda[i,],genpdf = FALSE))
-sapply(1:maxclust, function(i) summary(test_pc$wLambda[i,]))
 
-###################################################
-#Debugging Start-Up
-###################################################
+#BIC and AIC/AICc all select same thing
+plotmap(test_pc$wLambda[test_pc$selection.bic,],genpdf = FALSE)
+plotmap(test_pc$wLambda[test_pc$selection.aic,],genpdf = FALSE)
 
-# maxclust <- 1040
-# outExp <- sparsemat%*%Ex
-# outObs <- sparsemat%*%Yx
-# #calc Lambda
-# lambdahat <- outObs/outExp
-# Lambda <- as.vector(lambdahat)*sparsemat #big Lambda matrix
-# Lambda_dense <- as.matrix(Lambda)
-# Lambda_dense[Lambda_dense == 0] <- 1
-# #Get scaled likelihood
-# Lik <- ((outObs/outExp)/(sum(outObs)/sum(outExp)))^outObs
-# outlogLik <- log(Lik)
-# outlogLik_scaled <- outlogLik-max(outlogLik)
-# Lik <- Likorig <- exp(outlogLik_scaled)
-# test <- bycluster(Lik, Lambda_dense, sparsemat,maxclust)
-# # sapply(1:maxclust, function(i) plotmap(test[i,],genpdf = FALSE))
-# # sapply(1:maxclust, function(i) summary(test[i,]))
+summary(test_pc$wLambda[test_pc$selection.bic,])
+

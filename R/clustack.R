@@ -199,33 +199,41 @@ bylocation <- function(Lik, Lambda_dense,sparsemat, maxclust){
 #'@return Weighted relative risks for identified locations.
 bycluster <-  function(Lik, Lambda_dense, sparsemat,maxclust){
     wtMAT <- matrix(rep(NA, maxclust*nrow(sparsemat)), ncol=maxclust)
+    wt0 <- likweights(Lik)
     stop = FALSE
+    ixall <- NULL
+    ix <- NULL
     for (i in 1:maxclust){
-        wtmp <- likweights(Lik)
+        wtmp <- wt0
+        wtmp[ixall] <-0
         #find potential cluster with largest weight
         maxpc <- which.max(as.vector(wtmp))
         #maxloc <- which.max(as.vector(wi_loc))
         message(paste0("Potential cluster identified: ",(maxpc)))
+        
+        
         #find all potential clusters that overlap that PC
-        pcmax <- rep(0,length(wi)); pcmax[maxpc] <-1; pcmax <- matrix(pcmax,ncol=1)
+        pcmax <- rep(0,length(wtmp)); pcmax[maxpc] <-1; pcmax <- matrix(pcmax,ncol=1)
         pcpcmax <- t(t(sparsemat)%*%pcmax)%*%t(sparsemat); pcpcmax <- ifelse(pcpcmax!=0,1,0)
         ix <- which(pcpcmax!=0)
-        #print(paste0("length of ix: ", length(ix)))
-        if(length(ix)==0){
+
+
+        #upweight Lik* to 1 in all PCs that overlap max PC
+        Lik[ix] <- 1
+        #reweight so that everything inside the PCs that overlap max cluster sum to 1
+        wtmp[ix] <- likweights(Lik[ix]) 
+        wtMAT[,i] <- wtmp
+        if(all(ix %in% ixall)){
             stop = TRUE
             maxi = i
             break
         }
         if (stop){break}
-        #upweight Lik* to 1 in all PCs that overlap max PC
-        Lik[ix] <- 1
-        #reweight so that everything inside the PCs that overlap max cluster sum to 1
-        wtmp[ix] <- likweights(Lik[ix]) 
-        wtMAT[,i] <- wtmp@x
-        #set Lik in everything inside the Pcs that overlap max cluster to 0
-        Lik[ix] <-0   
+        #save everything that's already been considered
+        ixall <- c(ixall,ix)
+        maxi = i
     }
-    wLambda <- crossprod(wtMAT[,1:(maxi-1)], Lambda_dense)
+    wLambda <- crossprod(wtMAT[,1:(maxi)], Lambda_dense)
     return(wLambda = wLambda)
 }
     
@@ -255,7 +263,9 @@ detectclusters <- function(sparseMAT, Ex, Yx,numCenters,Time, maxclust,bylocatio
         selection <- clusterselect(res, Yx, Ex, maxclust, numCenters, Time, cv=FALSE)
         return(list(wLambda = res,
                     loglik = selection$loglik,
-                    selection = NA))
+                    selection.bic = selection$select.bic,
+                    selection.aic = selection$select.aic,
+                    selection.aicc = selection$select.aicc))
     }
     else{
         #default
@@ -265,7 +275,9 @@ detectclusters <- function(sparseMAT, Ex, Yx,numCenters,Time, maxclust,bylocatio
         selection <- clusterselect(res, Yx, Ex, maxclust, numCenters, Time, cv=FALSE)
         return(list(wLambda = res,
                     loglik = selection$loglik,
-                    selection = NA))
+                    selection.bic = selection$select.bic,
+                    selection.aic = selection$select.aic,
+                    selection.aicc = selection$select.aicc))
     }
 }
 
@@ -283,7 +295,7 @@ clusterselect <- function(wLambda,Yx, Ex, maxclust, numCenters, Time,cv=FALSE){
     #add null model loglik
     loglik <- c(dpoisson(Yx, rep(1,length(Yx)), Ex), loglik)
     #find K clusters
-    K <- seq(from=0, to=maxclust)
+    K <- seq(from=0, to=nrow(wLambda))#seq(from=0, to=maxclust)
     if(cv==TRUE){
         #TODO
     }
@@ -294,12 +306,12 @@ clusterselect <- function(wLambda,Yx, Ex, maxclust, numCenters, Time,cv=FALSE){
         PLL.aicc <- 2*(K) - 2*(loglik) +
             ((2*K*(K + 1))/(n_uniq*Time - K - 1))
         #select
-        select.bic <- which.min(PLL.bic)#-1 #-1 because the first element corresponds to 0 clusters (null)
-        select.aic <- which.min(PLL.aic)#-1
-        select.aicc <- which.min(PLL.aicc)#-1 
-        cat(paste0("\t","Selected BIC: "," cluster ", (select.bic-1),"\n",
-                     "\t","Selected AIC: "," cluster ", (select.aic-1),"\n",
-                     "\t","Selected AICc: "," cluster ",(select.aicc-1)))
+        select.bic <- which.min(PLL.bic)-1 #-1 because the first element corresponds to 0 clusters (null)
+        select.aic <- which.min(PLL.aic)-1
+        select.aicc <- which.min(PLL.aicc)-1 
+        cat(paste0("\t","Num. selected clusters by BIC: ", (select.bic),"\n",
+                     "\t","Num. selected clusters by AIC: ",(select.aic),"\n",
+                     "\t","Num. selected clusters by AICc: ",(select.aicc)))
         if(all.equal(select.bic, select.aic, select.aicc)){
             #TODO
         }
