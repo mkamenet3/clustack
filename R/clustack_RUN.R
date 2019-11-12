@@ -17,7 +17,7 @@ japan.prefect2 <- dframe.prefect2[,2:5]
 #set global
 rMax <- 20 
 Time <- 5
-maxclust <- 10
+#maxclust <- 10
 locLambdas <- vector("list", maxclust)
 #create set of potential clusters based on distances
 potentialclusters <- clusso::clusters2df(x,y,rMax, utm = TRUE, length(x))
@@ -37,16 +37,24 @@ sparseMAT <- spacetimeMat(potentialclusters, numCenters, Time)
 #RUN SL
 ###################################################
 #By location
-maxclust <- 1040
+maxclust <- 11
 test_loc <-detectclusters(sparseMAT, Ex, Yx, numCenters, Time, maxclust, bylocation = TRUE)
+
 plotmap(test_loc$wLambda[1,],genpdf = FALSE)
-plotmap(test_loc$wLambda[1040,],genpdf = FALSE)
+plotmap(test_loc$wLambda[5,],genpdf = FALSE)
+
+# plotmap(test_loc$wLambda[1040,],genpdf = FALSE); summary(test_loc$wLambda[1040,])
+# which.min(test_loc$loglik)
+# apply(test_loc$wLambda[580:1040,],1,summary)
+
+#plotmap(test_loc$wLambda[1040,],genpdf = FALSE)
 #sapply(1:maxclust, function(i) plotmap(test_loc$wLambda[i,],genpdf = FALSE))
 sapply(1:maxclust, function(i) summary(test_loc$wLambda[i,]))
 
 #By PC
 
 test_pc <-detectclusters(sparseMAT, Ex, Yx, numCenters, Time, maxclust, bylocation = FALSE)
+plotmap(test_loc$wLambda[3,],genpdf = FALSE)
 sapply(1:maxclust, function(i) plotmap(test_pc$wLambda[i,],genpdf = FALSE))
 sapply(1:maxclust, function(i) summary(test_pc$wLambda[i,]))
 
