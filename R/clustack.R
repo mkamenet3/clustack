@@ -247,12 +247,22 @@ bycluster <-  function(Lik, Lambda_dense, sparsemat,maxclust){
 #'@param Time Number of time periods.
 #'@param maxclust Maximum number of clusters allowed. TODO - allow this to be unknown.
 #'@param bylocation If clusters should be identified by maximum location (\code{TRUE}) or maximum potential cluster (\code{FALSE}). Default is \code{TRUE}.
+#'@param model A string specifying which model to use, Poisson or binomial. For Poisson, specify \code{"poisson"} and both the Poisson and quasi-Poisson model results are returned. For binomial, specify \code{"binomial"}.
 #'@param cv option for cross-validation instead of AIC/BIC. Default is set to FALSE
 #'@return Returns list for each iteration with weighted relative risks by location inside identified cluster.
 #'@export
-detectclusters <- function(sparseMAT, Ex, Yx,numCenters,Time, maxclust,bylocation=TRUE, cv=FALSE){
+detectclusters <- function(sparseMAT, Ex, Yx,numCenters,Time, maxclust,bylocation=TRUE, model=c("poisson", "binomial"),cv=FALSE){
     sparsemat <- Matrix::t(sparseMAT) 
-    out <- poisLik(Ex, Yx, sparsemat)
+    if (model=="poisson"){
+        out <- poisLik(Ex, Yx, sparsemat)  
+    }
+    else if (model=="binomial"){
+        out <- binomLik(Ex, Yx, sparsemat) #in dev
+    }
+    else {
+        stop("Model not specified. Please indicate `poisson` or `binomial`.")
+    }
+    message(paste0("Model specified: ", model))
     Lik <- out$Lik
     Lambda_dense <- out$Lambda_dense
     #locLambdas <- vector("list", maxclust)
@@ -260,7 +270,7 @@ detectclusters <- function(sparseMAT, Ex, Yx,numCenters,Time, maxclust,bylocatio
         message("Cluster detection by potential cluster")
         res <- bycluster(Lik, Lambda_dense, sparsemat, maxclust)
         #perform selection by IC/CV
-        selection <- clusterselect(res, Yx, Ex, maxclust, numCenters, Time, cv=FALSE)
+        selection <- clusterselect(res, Yx, Ex, model,maxclust, numCenters, Time, cv=FALSE)
         return(list(wLambda = res,
                     loglik = selection$loglik,
                     selection.bic = selection$select.bic,
@@ -272,7 +282,7 @@ detectclusters <- function(sparseMAT, Ex, Yx,numCenters,Time, maxclust,bylocatio
         message("Cluster detection by location")
         res <- bylocation(Lik, Lambda_dense, sparsemat, maxclust)
         #perform selection by IC/CV
-        selection <- clusterselect(res, Yx, Ex, maxclust, numCenters, Time, cv=FALSE)
+        selection <- clusterselect(res, Yx, Ex, model,maxclust, numCenters, Time, cv=FALSE)
         return(list(wLambda = res,
                     loglik = selection$loglik,
                     selection.bic = selection$select.bic,
@@ -285,15 +295,23 @@ detectclusters <- function(sparseMAT, Ex, Yx,numCenters,Time, maxclust,bylocatio
 #'@description Select the optimal number of (overlapping) clusters using either information criteria or cross-validation
 #'@param wLambda 
 #'@param maxclust TODO
+#'@param model A string specifying which model to use, Poisson or binomial. For Poisson, specify \code{"poisson"} and both the Poisson and quasi-Poisson model results are returned. For binomial, specify \code{"binomial"}.
 #'@param numCenters TODO
 #'@param Time TODO
 #'@param cv TODO
 #'@return TODO
-clusterselect <- function(wLambda,Yx, Ex, maxclust, numCenters, Time,cv=FALSE){
+clusterselect <- function(wLambda,Yx, Ex, model,maxclust, numCenters, Time,cv=FALSE){
     #test <- t(a)%*%Lambda_dense
     loglik <- sapply(1:nrow(wLambda), function(i) dpoisson(Yx, wLambda[i,], Ex))
     #add null model loglik
-    loglik <- c(dpoisson(Yx, rep(1,length(Yx)), Ex), loglik)
+    if (model=="poisson"){
+        loglik <- c(dpoisson(Yx, rep(1,length(Yx)), Ex), loglik)    
+    }
+    else if (model=="binomial"){
+        #TODO
+        #loglik <- c(dbin(Yx, rep(1,length(Yx)), Ex), loglik)
+    }
+    
     #find K clusters
     K <- seq(from=0, to=nrow(wLambda))#seq(from=0, to=maxclust)
     if(cv==TRUE){

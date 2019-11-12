@@ -38,7 +38,7 @@ sparseMAT <- spacetimeMat(potentialclusters, numCenters, Time)
 ###################################################
 #By location
 maxclust <- 1040
-test_loc <-detectclusters(sparseMAT, Ex, Yx, numCenters, Time, maxclust, bylocation = TRUE)
+test_loc <-detectclusters(sparseMAT, Ex, Yx, numCenters, Time, maxclust, bylocation = TRUE, model="poisson")
 #BIC
 plotmap(test_loc$wLambda[test_loc$selection$select.bic,],genpdf = FALSE)
 summary(test_loc$wLambda[test_loc$selection$select.bic,])
@@ -49,7 +49,7 @@ summary(test_loc$wLambda[test_loc$selection$select.aic,])
 
 ###################
 #By PC
-test_pc <-detectclusters(sparseMAT, Ex, Yx, numCenters, Time, maxclust, bylocation = FALSE)
+test_pc <-detectclusters(sparseMAT, Ex, Yx, numCenters, Time, maxclust, bylocation = FALSE, model="poisson")
 
 #BIC and AIC/AICc all select same thing
 plotmap(test_pc$wLambda[test_pc$selection.bic,],genpdf = FALSE)
