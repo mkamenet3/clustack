@@ -113,18 +113,8 @@ poisLik <-function(Ex, Yx, sparsemat){
     Lambda_dense <- as.matrix(Lambda)
     Lambda_dense[Lambda_dense == 0] <- 1
     #Get scaled likelihood
-    
-    #Lik <- ((outExp)^(outObs))*exp(-(outExp))
-    #Lik <- ((outObs/outExp)/(sum(outObs)/sum(outExp)))^outObs #original
-    
-    #Lik <-(((outObs/outExp)/(sum(outObs)/sum(outExp)))^outObs)*(exp(-((outObs/outExp)/(sum(outObs)/sum(outExp))))) 
-    #Lik <- ((((outObs/outExp)))^(outObs))*(exp(-((outObs/outExp)))) 
     outlogLik <- outObs*log(outObs/outExp) + (outExp-outObs)
-    outlogLik <- ifelse(is.na(outlogLik@x),0, outlogLik@x)
-    #outlogLik <-  outObs * log(outExp*lambdahat) - (outExp*lambdahat)
-    #outlogLik <- ifelse(is.na(outlogLik@x), 0, outlogLik@x)
-    
-    #outlogLik <- log(Lik)
+    outlogLik <- ifelse(is.na(outlogLik@x),0, outlogLik@x) #likelihood should be zero here
     outlogLik_scaled <- outlogLik-max(outlogLik)
     Lik <- exp(outlogLik_scaled)
     return(list(Lik=Lik,
@@ -147,15 +137,9 @@ binomLik <-function(Ex, Yx, sparsemat){
     Lambda_dense <- as.matrix(Lambda)
     Lambda_dense[Lambda_dense == 0] <- 1
     #Get scaled likelihood
-    
-    #Lik <- ((outExp)^(outObs))*exp(-(outExp))
-    Lik <- ((outObs/outExp)/(sum(outObs)/sum(outExp)))^outObs 
-    
-    #Lik <-(((outObs/outExp)/(sum(outObs)/sum(outExp)))^outObs)*(exp(-((outObs/outExp)/(sum(outObs)/sum(outExp))))) 
-    #Lik <- ((((outObs/outExp)))^(outObs))*(exp(-((outObs/outExp)))) 
-    #outlogLik <- outObs*log(outObs/outExp) + (outExp-outObs)
-    #outlogLik <-  outObs * log(outExp*lambdahat) - (outExp*lambdahat)
-    #outlogLik <- ifelse(is.na(outlogLik@x), 0, outlogLik@x)
+
+    Lik <- ((outObs/outExp)/(sum(outObs)/sum(outExp)))^outObs #TODO CHECK THIS
+
     
     outlogLik <- log(Lik)
     outlogLik_scaled <- outlogLik-max(outlogLik)
@@ -173,129 +157,37 @@ binomLik <-function(Ex, Yx, sparsemat){
 #'@return List. First element is a Weighted relative risks for identified locations. Second element is a large matrix of weights for each iteration.
 #'
 
-#test <- bylocation(Lik, Lambda_dense, sparsemat, 25)
-
-
-
 bylocation <- function(Lik, Lambda_dense,sparsemat, maxclust){
     wtMAT <- matrix(rep(NA, maxclust*nrow(sparsemat)), ncol=maxclust)
     wt0 <- likweights(Lik)
     ixall <- NULL
     ix <- NULL
-    #ix <- vector("list", maxclust)
-    #ix[[1]]<- NULL
-    #print(str(wtMAT))
-        for(i in 1:maxclust){
-            #wtmp <- likweights(Lik)
-            wtmp <-wt0
-            wtmp[ixall] <-0
-            # if(i>1){
-            #     wtmp@x[ix[[i-1]]] <- 0    
-            # }
-            #else{ print("iter 1")}
-            #Find maxloc
-            wi_loc <- t(wtmp)%*%sparsemat
-            maxloc <- which.max(as.vector(wi_loc))
-            message(paste0("Location identified: ",(maxloc)))
-            #find all potential clusters that overlap that location
-            locmax <- rep(0,numCenters*Time); 
-            locmax[maxloc] <-1;
-            locmax <- matrix(locmax,ncol=1)
-            pclocmax <- as.vector(t(locmax)%*%t(sparsemat))
-            ix <- which(pclocmax!=0) #indices of all PCs that overlap max location
-            #upweight Lik* to 1 in all Pcs that overlap max cluster
-            Lik[ix] <-1
-            #reweight so that everything inside the PCs that overlap max cluster sum to 1
-            wtmp[ix] <- likweights(Lik[ix]) 
-            wtMAT[,i] <- wtmp
-            ixall <- c(ixall, ix)
-            #set Lik in everything inside the Pcs that overlap max cluster to 0
-            #Lik[ix] <-0    
-        }
-    #print(paste0("str final wtMAT: ", str(wtMAT)))
-    wLambda <- crossprod(wtMAT, Lambda_dense)#t(wtMAT)%*%Lambda_dense
-    #print(paste0("str final wLambda: ", str(wLambda)))
+    for(i in 1:maxclust){
+        wtmp <-wt0
+        wtmp[ixall] <-0
+        #Find maxloc
+        wi_loc <- t(wtmp)%*%sparsemat
+        maxloc <- which.max(as.vector(wi_loc))
+        message(paste0("Location identified: ",(maxloc)))
+        #find all potential clusters that overlap that location
+        locmax <- rep(0,numCenters*Time); 
+        locmax[maxloc] <-1;
+        locmax <- matrix(locmax,ncol=1)
+        pclocmax <- as.vector(t(locmax)%*%t(sparsemat))
+        ix <- which(pclocmax!=0) #indices of all PCs that overlap max location
+        #upweight Lik* to 1 in all Pcs that overlap max cluster
+        Lik[ix] <-1
+        #reweight everything inside cluster to sum to 1
+        wtmp[ix] <- likweights(Lik[ix]) 
+        #save wtmp vector into master weight matrix
+        wtMAT[,i] <- wtmp
+        #save everything that's already been considered
+        ixall <- c(ixall, ix)
+    }
+    wLambda <- crossprod(wtMAT, Lambda_dense)
     return(wLambda = wLambda)
 }
 
-# 
-# # a <- vector("list", 10)
-# # v <- paste0(rep("a",100), rep(1:100))
-# # a[[1]] <- NULL
-# #     for(i in 1:10){
-# #         a[[i]] <-i
-# #         print(paste0("iter i: ",i))
-# #         print(a[[i]])
-# #         if(i>1){
-# #             print(v[[a[[i-1]]]])    
-# #         }
-# #         else{
-# #             print("no")
-# #         }
-# #         
-# #     }
-# Lik <- exp(outlogLik_scaled)
-# wtMAT <- matrix(rep(NA, maxclust*nrow(sparsemat)), ncol=maxclust)
-# wt0 <- likweights(Lik)
-# ix <- NULL
-# #ix <- vector("list", (maxclust+1))
-# #ix[[1]]<- NULL
-# #print(str(wtMAT))
-# #for(i in 1:maxclust){
-# #wtmp <- likweights(Lik)
-# wtmp <-wt0
-# # if(i>1){
-# #     wtmp[ix[[i-1]]] <- 0
-# #     #wtmp <- likweights(Lik)
-# # }
-# #print("iter 1")}
-# #Find maxloc
-# wi_loc <- t(wtmp)%*%sparsemat
-# maxloc <- which.max(as.vector(wi_loc))
-# message(paste0("Location identified: ",(maxloc)))
-# #find all potential clusters that overlap that location
-# locmax <- rep(0,numCenters*Time); 
-# locmax[maxloc] <-1;
-# locmax <- matrix(locmax,ncol=1)
-# pclocmax <- as.vector(t(locmax)%*%t(sparsemat))
-# ix <- c(ix, which(pclocmax!=0))
-# #ix[[i]] <- which(pclocmax!=0) #indices of all PCs that overlap max location
-# #upweight Lik* to 1 in all Pcs that overlap max cluster
-# 
-# #Lik[ix[[i]]] <-1
-# Lik[ix] <-1
-# #reweight so that everything inside the PCs that overlap max cluster sum to 1
-# 
-# #wtmp[ix[[i]]] <- likweights(Lik[ix[[i]]]) 
-# wtmp[ix] <- likweights(Lik[ix]) 
-# wtMAT[,i] <- wtmp
-# #set Lik in everything inside the Pcs that overlap max cluster to 0
-# #Lik[ix] <-0    
-# #}
-# #print(paste0("str final wtMAT: ", str(wtMAT)))
-# wLambda <- crossprod(wtMAT, Lambda_dense)#t(wtMAT)%*%Lambda_dense
-# 
-# #iter2
-# wtmp <- wt0
-# wtmp[ix] <-0
-# wi_loc <- t(wtmp)%*%sparsemat
-# maxloc <- which.max(as.vector(wi_loc))
-# message(paste0("Location identified: ",(maxloc)))
-# #find all potential clusters that overlap that location
-# locmax <- rep(0,numCenters*Time); 
-# locmax[maxloc] <-1;
-# locmax <- matrix(locmax,ncol=1)
-# pclocmax <- as.vector(t(locmax)%*%t(sparsemat))
-# 
-# ix2 <- which(pclocmax!=0)
-# ix <- c(ix,ix2)
-# Lik[ix2] <-1
-# wtmp[ix2] <- likweights(Lik[ix2]) 
-# wtMAT[,1] <- wtmp
-# 
-# #iter3
-# wtmp <- wt0
-# wtmp[ix] <-0
 
 
 #'@title bycluster
@@ -337,50 +229,7 @@ bycluster <-  function(Lik, Lambda_dense, sparsemat,maxclust){
     return(wLambda = wLambda)
 }
     
-    
-    
-#     
-# #     
-# 
-#     ################################################
-#     wi <- likweights(Lik) #tiny weights
-#     #LikMAT <- matrix(rep(NA, (ncol(sparsemat)+1)*nrow(sparsemat)),ncol=(ncol(sparsemat)+1))
-#     wiMAT <-  matrix(rep(NA, (ncol(sparsemat)+1)*nrow(sparsemat)),ncol=(ncol(sparsemat)+1))
-#     #store initial weights into wiMAT first columns
-#     #LikMAT[,1] <- Lik@x
-#     wiMAT[,1] <- wi@x
-#     for (i in 1:maxclust){
-#         message(paste0("Searching for cluster ",i))
-#         #find potential cluster with largest weight
-#         maxpc <- which.max(as.vector(wi))
-#         #maxloc <- which.max(as.vector(wi_loc))
-#         message(paste0("Potential cluster identified: ",(maxpc)))
-#         #find all potential clusters that overlap that PC
-#         pcmax <- rep(0,length(wi)); pcmax[maxpc] <-1; pcmax <- matrix(pcmax,ncol=1)
-#         #partition weights vector st for pclocmax=1, those weights sum to 1
-#         Lik[which(pcmax!=0)] <-1
-#         #reweight whats in the cluster so that sums to 1
-#         wi[which(pcmax!=0)] <- likweights(Lik[which(pcmax!=0)])
-#         out <- t(wi)%*%Lambda_dense
-#         #take only things inside the cluster
-#         ix <- t(pcmax)%*%sparsemat
-#         outID <- ifelse(ix*out==0,1,ix*out)
-#         locLambdas[[i]] <- outID
-#         #e) Set Lik for overlapping locations to zero
-#         Lik[which(pcmax!=0)] <-0
-#         #f) Recalculate scaled likelihoods
-#         wi <- likweights(Lik)
-#         #g) Store weights into wiMAT and Lik into LikMAT(i+1 because this wi corresponds to next iteration)
-#         #LikMAT[,(i+1)] <- Lik@x
-#         wiMAT[,(i+1)] <- wi@x
-#      }
-# #     return(list(locLambdas=locLambdas,
-# #                 #LikMAT = LikMAT,
-# #                 wiMAT = wiMAT))
-# # }
-
-
-
+  
 #'@title detectclusters
 #'@description Detect disease clusters either by location or by potential cluster.
 #'@param sparseMAT Large sparsematrix TODO
@@ -402,7 +251,6 @@ detectclusters <- function(sparseMAT, Ex, Yx,numCenters,Time, maxclust,bylocatio
     if(bylocation==FALSE){
         message("Cluster detection by potential cluster")
         res <- bycluster(Lik, Lambda_dense, sparsemat, maxclust)
-        #res <- bycluster(Lik, sparsemat, locLambdas, Lambda_dense, maxclust)
         #perform selection by IC/CV
         selection <- clusterselect(res, Yx, Ex, maxclust, numCenters, Time, cv=FALSE)
         return(list(wLambda = res,
@@ -413,7 +261,6 @@ detectclusters <- function(sparseMAT, Ex, Yx,numCenters,Time, maxclust,bylocatio
         #default
         message("Cluster detection by location")
         res <- bylocation(Lik, Lambda_dense, sparsemat, maxclust)
-        #res <- bycluster(Lik, sparsemat, locLambdas, Lambda_dense, maxclust)
         #perform selection by IC/CV
         selection <- clusterselect(res, Yx, Ex, maxclust, numCenters, Time, cv=FALSE)
         return(list(wLambda = res,
@@ -435,8 +282,8 @@ clusterselect <- function(wLambda,Yx, Ex, maxclust, numCenters, Time,cv=FALSE){
     loglik <- sapply(1:nrow(wLambda), function(i) dpoisson(Yx, wLambda[i,], Ex))
     #add null model loglik
     loglik <- c(dpoisson(Yx, rep(1,length(Yx)), Ex), loglik)
- 
-    K <- seq(from=0, to=maxclust)#c(0,rep(1, nrow(wLambda)))#seq(from=0, to = maxclust)#seq(from=0, to=maxclust)
+    #find K clusters
+    K <- seq(from=0, to=maxclust)
     if(cv==TRUE){
         #TODO
     }
@@ -447,13 +294,12 @@ clusterselect <- function(wLambda,Yx, Ex, maxclust, numCenters, Time,cv=FALSE){
         PLL.aicc <- 2*(K) - 2*(loglik) +
             ((2*K*(K + 1))/(n_uniq*Time - K - 1))
         #select
-        select.bic <- which.min(PLL.bic)-1 #-1 because the first element corresponds to 0 clusters (null)
-        select.aic <- which.min(PLL.aic)-1
-        select.aicc <- which.min(PLL.aicc)-1 
-        #print(paste0("Selected BIC: ",c(select.bic,select.aic, select.aicc))
-        cat(paste0("\t","Selected BIC: "," cluster ", select.bic,"\n",
-                     "\t","Selected AIC: "," cluster ", select.aic,"\n",
-                     "\t","Selected AICc: "," cluster ",select.aicc))
+        select.bic <- which.min(PLL.bic)#-1 #-1 because the first element corresponds to 0 clusters (null)
+        select.aic <- which.min(PLL.aic)#-1
+        select.aicc <- which.min(PLL.aicc)#-1 
+        cat(paste0("\t","Selected BIC: "," cluster ", (select.bic-1),"\n",
+                     "\t","Selected AIC: "," cluster ", (select.aic-1),"\n",
+                     "\t","Selected AICc: "," cluster ",(select.aicc-1)))
         if(all.equal(select.bic, select.aic, select.aicc)){
             #TODO
         }
@@ -468,7 +314,10 @@ clusterselect <- function(wLambda,Yx, Ex, maxclust, numCenters, Time,cv=FALSE){
            #TODO
             # return(list())
         }
-        return(list(loglik = loglik))
+        return(list(loglik = loglik,
+                    select.bic = select.bic,
+                    select.aic = select.aic,
+                    select.aicc = select.aicc))
     }
     
 }
