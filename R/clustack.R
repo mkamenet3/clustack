@@ -128,7 +128,7 @@ poisLik <-function(Ex, Yx, sparsemat){
 #'@param sparsemat Large sparsematrix where rows are potential clusters and columns are space-time locations.
 #'@export
 #'@return Likelihood for each potential cluster.
-binomLik <-function(Ex, Yx, sparsemat){
+binomLik <-function(nx, Yx, sparsemat){
     outExp <- sparsemat%*%Ex
     outObs <- sparsemat%*%Yx
     #calc Lambda
@@ -138,7 +138,9 @@ binomLik <-function(Ex, Yx, sparsemat){
     Lambda_dense[Lambda_dense == 0] <- 1
     #Get scaled likelihood
 
-    Lik <- ((outObs/outExp)/(sum(outObs)/sum(outExp)))^outObs #TODO CHECK THIS
+    Lik <- (((outObs/nx)/(sum(outObs)/sum(nx)))^(outobs))*(((sum(outObs)-outObs)/(sum(nx)-nx))/(sum(outObs)/sum(nx)))^(sum(outObs)-outObs)
+        #((outObs/outExp)/(sum(outObs)/sum(outExp)))^outObs #TODO CHECK THIS
+        
 
     
     outlogLik <- log(Lik)
@@ -323,6 +325,12 @@ clusterselect <- function(wLambda,Yx, Ex, model,maxclust, numCenters, Time,cv=FA
         PLL.aic <- 2*K - 2*loglik
         PLL.aicc <- 2*(K) - 2*(loglik) +
             ((2*K*(K + 1))/(n_uniq*Time - K - 1))
+        #make sure that aicc is not overparameterized
+        if(any(is.infinite(PLL.aicc))) {
+            idx <- which(is.infinite(PLL.aicc))
+            #replace everything in penalized loglik at infinite value and onward to be NA - these are nonsense solutions
+            PLL.aicc[idx:length(PLL.aicc)] <- NA
+        }
         #select
         select.bic <- which.min(PLL.bic)-1 #-1 because the first element corresponds to 0 clusters (null)
         select.aic <- which.min(PLL.aic)-1
