@@ -129,7 +129,8 @@ poisLik <-function(Ex, Yx, sparsemat){
 #'@export
 #'@return Likelihood for each potential cluster.
 binomLik <-function(nx, Yx, sparsemat){
-    outExp <- sparsemat%*%Ex
+    #outExp <- sparsemat%*%Ex
+    outnx <- sparsemat%*%nx
     outObs <- sparsemat%*%Yx
     #calc Lambda
     lambdahat <- outObs/outExp
@@ -138,10 +139,11 @@ binomLik <-function(nx, Yx, sparsemat){
     Lambda_dense[Lambda_dense == 0] <- 1
     #Get scaled likelihood
 
-    Lik <- (((outObs/nx)/(sum(outObs)/sum(nx)))^(outobs))*(((sum(outObs)-outObs)/(sum(nx)-nx))/(sum(outObs)/sum(nx)))^(sum(outObs)-outObs)
+    #Lik <- (((outObs/nx)/(sum(outObs)/sum(nx)))^(outobs))*(((sum(outObs)-outObs)/(sum(nx)-nx))/(sum(outObs)/sum(nx)))^(sum(outObs)-outObs)
         #((outObs/outExp)/(sum(outObs)/sum(outExp)))^outObs #TODO CHECK THIS
-        
-
+    outnt <- sum(outnx)
+    outObst <- sum(outObs)
+    Lik <- (((outObs/outnx)^outObs)*(1-(outObs/outnx))^(outnx-outObs))*(((outObst - outObs)/(outnt-outnx))^(outObst-outObs))*(1-((outObst-outObs)/(outnt - outnx)))^(outnt - outnx - outObst+outObs)
     
     outlogLik <- log(Lik)
     outlogLik_scaled <- outlogLik-max(outlogLik)
