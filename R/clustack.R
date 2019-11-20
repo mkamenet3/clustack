@@ -323,10 +323,10 @@ clusterselect <- function(wLambda,Yx, Ex, model,maxclust, numCenters, Time,cv=FA
     }
     else{
         #calc
-        PLL.bic <- (-2*loglik) + K*log(numCenters*Time)
+        PLL.bic <- (-2*loglik) + K*log(sum(Yx)) #(-2*loglik) + K*log(numCenters*Time)
         PLL.aic <- 2*K - 2*loglik
         PLL.aicc <- 2*(K) - 2*(loglik) +
-            ((2*K*(K + 1))/(n_uniq*Time - K - 1))
+            ((2*K*(K + 1))/(sum(Yx) - K - 1))
         #make sure that aicc is not overparameterized
         if(any(is.infinite(PLL.aicc))) {
             idx <- which(is.infinite(PLL.aicc))
