@@ -37,44 +37,27 @@ sparseMAT <- spacetimeMat(potentialclusters, numCenters, Time)
 #RUN SL
 ###################################################
 #By location
-maxclust <- 11
-test_loc <-detectclusters(sparseMAT, Ex, Yx, numCenters, Time, maxclust, bylocation = TRUE)
+maxclust <- 15
+test_loc <-detectclusters(sparseMAT, Ex, Yx, numCenters, Time, maxclust, bylocation = TRUE, model="poisson")
+#BIC
+plotmap(test_loc$wLambda[test_loc$selection.bic,],genpdf = FALSE)
+summary(test_loc$wLambda[test_loc$selection.bic,])
 
-plotmap(test_loc$wLambda[1,],genpdf = FALSE)
-plotmap(test_loc$wLambda[5,],genpdf = FALSE)
+#AIC/AICc
+plotmap(test_loc$wLambda[test_loc$selection.aic,],genpdf = FALSE)
+summary(test_loc$wLambda[test_loc$selection.aic,])
 
-# plotmap(test_loc$wLambda[1040,],genpdf = FALSE); summary(test_loc$wLambda[1040,])
-# which.min(test_loc$loglik)
-# apply(test_loc$wLambda[580:1040,],1,summary)
+#AICc
+plotmap(test_loc$wLambda[test_loc$selection.aicc,],genpdf = FALSE)
+summary(test_loc$wLambda[test_loc$selection.aicc,])
 
-#plotmap(test_loc$wLambda[1040,],genpdf = FALSE)
-#sapply(1:maxclust, function(i) plotmap(test_loc$wLambda[i,],genpdf = FALSE))
-sapply(1:maxclust, function(i) summary(test_loc$wLambda[i,]))
-
+###################
 #By PC
+test_pc <-detectclusters(sparseMAT, Ex, Yx, numCenters, Time, maxclust, bylocation = FALSE, model="poisson")
 
-test_pc <-detectclusters(sparseMAT, Ex, Yx, numCenters, Time, maxclust, bylocation = FALSE)
-plotmap(test_loc$wLambda[3,],genpdf = FALSE)
-sapply(1:maxclust, function(i) plotmap(test_pc$wLambda[i,],genpdf = FALSE))
-sapply(1:maxclust, function(i) summary(test_pc$wLambda[i,]))
+#BIC and AIC/AICc all select same thing
+plotmap(test_pc$wLambda[test_pc$selection.bic,],genpdf = FALSE)
+plotmap(test_pc$wLambda[test_pc$selection.aic,],genpdf = FALSE)
 
-###################################################
-#Debugging Start-Up
-###################################################
+summary(test_pc$wLambda[test_pc$selection.bic,])
 
-maxclust <- 1040
-outExp <- sparsemat%*%Ex
-outObs <- sparsemat%*%Yx
-#calc Lambda
-lambdahat <- outObs/outExp
-Lambda <- as.vector(lambdahat)*sparsemat #big Lambda matrix
-Lambda_dense <- as.matrix(Lambda)
-Lambda_dense[Lambda_dense == 0] <- 1
-#Get scaled likelihood
-Lik <- ((outObs/outExp)/(sum(outObs)/sum(outExp)))^outObs
-outlogLik <- log(Lik)
-outlogLik_scaled <- outlogLik-max(outlogLik)
-Lik <- Likorig <- exp(outlogLik_scaled)
-test <- bycluster(Lik, Lambda_dense, sparsemat,maxclust)
-# sapply(1:maxclust, function(i) plotmap(test[i,],genpdf = FALSE))
-# sapply(1:maxclust, function(i) summary(test[i,]))
