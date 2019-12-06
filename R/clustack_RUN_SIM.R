@@ -83,33 +83,28 @@ for (cent in centers){
             print(sim.i <- paste0("sim","_", "center",cent,"_" ,"radius", rad, "_",
                                   "risk", risk, "_", "theta", as.character(theta),
                                   as.numeric(paste(tim, collapse = "")), "_moderateoverdisperson", "_superclustLOC"))
+            simid <- 1:nsim
             filename <- paste0(sim_superclust_loc,".RData")
-            #plot
-            # plotmap(sim_superclust_loc$wLambda[sim_superclust_loc$selection.bic,],pdfname = paste0(sim.i, "_bic.pdf"),genpdf = TRUE)
-            # plotmap(sim_superclust_loc$wLambda[sim_superclust_loc$selection.aic,],pdfname = paste0(sim.i, "_aic"),genpdf = TRUE)
-            
-            #run superclust by PC for each sim (apply)
-            sim_superclust_pc <- lapply(1:nsim, function(i) detectclusters(sparseMAT, Ex[[i]], YSIM[[i]],
-                                                                            numCenters, Time, maxclust,
-                                                                            bylocation = FALSE, model="poisson"))
-            print(sim.i <- paste0("sim","_", "center",cent,"_" ,"radius", rad, "_",
-                                  "risk", risk, "_", "theta", as.character(theta),
-                                  as.numeric(paste(tim, collapse = "")), "_moderateoverdisperson", "_superclustPC"))
-            filename <- paste0(sim_superclust_pc,".RData")
+
 
             #if(null==TRUE){
                 #TODO
         #}
         #else{}
+            
             #calc power and FB rate
-            rrbin_inside <- matrix(as.vector(ifelse(rr!=1,1,0)),nrow=1)
-            ident.bic <- lapply(1:nsim, function(i) sim_superclust_loc[[i]]$wLambda[sim_superclust_loc[[i]]$selection.bic,])
-            ident.aic <- lapply(1:nsim, function(i) sim_superclust_loc[[i]]$wLambda[sim_superclust_loc[[i]]$selection.aic,])
-            ident.aicc <- lapply(1:nsim, function(i) sim_superclust_loc[[i]]$wLambda[sim_superclust_loc[[i]]$selection.aicc,])
+            rrbin_cluster <- matrix(as.vector(ifelse(rr!=1,1,0)),nrow=1)
+            clusteroverlap<- rrbin_inside%*%sparseMAT
+            rrbin_inside <- ifelse(sparseMAT%*%t(clusteroverlap)!=0,1,0)
+            
+            
+            ident.bic <- lapply(1:nsim, function(i) round(sim_superclust_loc[[i]]$wLambda[sim_superclust_loc[[i]]$selection.bic,],8))
+            ident.aic <- lapply(1:nsim, function(i) round(sim_superclust_loc[[i]]$wLambda[sim_superclust_loc[[i]]$selection.aic,],8))
+            ident.aicc <- lapply(1:nsim, function(i) round(sim_superclust_loc[[i]]$wLambda[sim_superclust_loc[[i]]$selection.aicc,],8))
             #1) Did it find anything INSIDE the cluster?
-            incluster.bic <- lapply(1:nsim, function(i) rrbin_inside%*%matrix(ident.bic[[i]],ncol=1))
-            incluster.aic <- lapply(1:nsim, function(i) rrbin_inside%*%matrix(ident.aic[[i]],ncol=1))
-            incluster.aicc <- lapply(1:nsim, function(i) rrbin_inside%*%matrix(ident.aicc[[i]],ncol=1))
+            incluster.bic <- lapply(1:nsim, function(i) rrbin_inside%*%matrix(ifelse(ident.bic[[i]]==1,0,1),ncol=1))
+            incluster.aic <- lapply(1:nsim, function(i) rrbin_inside%*%matrix(ifelse(ident.aic[[i]]==1,0,1),ncol=1))
+            incluster.aicc <- lapply(1:nsim, function(i) rrbin_inside%*%matrix(ifelse(ident.aicc[[i]]==1,0,1),ncol=1))
             
             pow.bic <- paste0(sum(ifelse(unlist(incluster.bic)!=0,1,0))/nsim*100, "%")
             pow.aic <- paste0(sum(ifelse(unlist(incluster.aic)!=0,1,0))/nsim*100, "%")
@@ -117,18 +112,36 @@ for (cent in centers){
             
             
             #2) Did it find anything OUTSIDE the cluster?
-            rrbin_outside <- matrix(as.vector(ifelse(rr!=1,0,1)),nrow=1)
-            outcluster.bic <- lapply(1:nsim, function(i) rrbin_outside%*%matrix(ident.bic[[i]],ncol=1))
-            outcluster.aic <- lapply(1:nsim, function(i) rrbin_outside%*%matrix(ident.aic[[i]],ncol=1))
-            outcluster.aicc <- lapply(1:nsim, function(i) rrbin_outside%*%matrix(ident.aicc[[i]],ncol=1))
+            rrbin_outside <- ifelse(sparseMAT%*%t(clusteroverlap)==0,1,0) #matrix(as.vector(ifelse(rr!=1,0,1)),nrow=1)
+            #this should be everything that doesn't touch the cluster
+            outcluster.bic <- lapply(1:nsim, function(i) rrbin_outside%*%matrix(ifelse(ident.bic[[i]]==1,0,1),ncol=1))
+            outcluster.aic <- lapply(1:nsim, function(i) rrbin_outside%*%matrix(ifelse(ident.aic[[i]]==1,0,1),ncol=1))
+            outcluster.aicc <- lapply(1:nsim, function(i) rrbin_outside%*%matrix(ifelse(ident.aicc[[i]]==1,0,1),ncol=1))
             
             fp.bic <- paste0(sum(ifelse(unlist(outcluster.bic)!=0,1,0))/nsim*100, "%")
             fp.aic <- paste0(sum(ifelse(unlist(outcluster.aic)!=0,1,0))/nsim*100, "%")
             fp.aicc <- paste0(sum(ifelse(unlist(outcluster.aicc)!=0,1,0))/nsim*100, "%")
             
             
+            ##################################
+            #plot probability maps
+            ##################################
+            #plot each RR for each sim            
+            lapply(1:nsim, function(i) plotmapAllIC(res.bic = sim_superclust_loc[[i]]$wLambda[sim_superclust_loc[[i]]$selection.bic,],
+                                                    res.aic = sim_superclust_loc[[i]]$wLambda[sim_superclust_loc[[i]]$selection.aic,],
+                                                    oracle = rr,
+                                                    genpdf = TRUE,
+                                                    pdfname = paste0(sim.i,"_simID",simid[i],".pdf")))
             
             
+            #run superclust by PC for each sim (apply)
+            sim_superclust_pc <- lapply(1:nsim, function(i) detectclusters(sparseMAT, Ex[[i]], YSIM[[i]],
+                                                                           numCenters, Time, maxclust,
+                                                                           bylocation = FALSE, model="poisson"))
+            print(sim.i <- paste0("sim","_", "center",cent,"_" ,"radius", rad, "_",
+                                  "risk", risk, "_", "theta", as.character(theta),
+                                  as.numeric(paste(tim, collapse = "")), "_moderateoverdisperson", "_superclustPC"))
+            filename <- paste0(sim_superclust_pc,".RData")
              #OUTPUT
             #detections
             # print(sim.i <- paste0("sim","_", "center",cent,"_" ,"radius", rad, "_",
