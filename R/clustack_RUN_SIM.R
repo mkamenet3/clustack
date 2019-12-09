@@ -18,12 +18,13 @@ japan.prefect2 <- dframe.prefect2[,2:5]
 #set global
 rMax <- 20 
 Time <- 5
-#maxclust <- 10
-locLambdas <- vector("list", maxclust)
 #create set of potential clusters based on distances
-
+potentialclusters <- clusso::clusters2df(x,y,rMax, utm = TRUE, length(x))
+n_uniq <- length(unique(potentialclusters$center))
+numCenters <- n_uniq
 #create giant sparse design matrix (single potential clusters)
 sparseMAT <- spacetimeMat(potentialclusters, numCenters, Time) 
+
 
 #################################
 #TESTER SIM
@@ -36,7 +37,7 @@ reval <- function(probs, ix){
 #nsims
 nsim <- 10
 #theta - overdispersion
-theta <- 100
+theta <- 500
 maxclust <- 15
 
 
@@ -54,9 +55,11 @@ eps <- 3
 #test
 cent <- 150
 rad <- 11
-risk <- 1.5
+risk <- 2
 tim <- c(3:5)
 
+# Start the clock!
+ptm <- proc.time()
 for (cent in centers){
     for (rad in radii){
         for (risk in risk.ratios){
@@ -293,7 +296,8 @@ for (cent in centers){
         }
     }
 }
-
+# Stop the clock
+proc.time() - ptm
 #####################################################################################
 #####################################################################################
 #####################################################################################
