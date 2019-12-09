@@ -192,95 +192,92 @@ for (cent in centers){
             #####################################################################################
             #####################################################################################
             #####################################################################################
-            #CLUSTER DETECTION BY POTENTIAL CLUSTER
+            #CLUSTER DETECTION BY CLUSSO
             #####################################################################################
             #####################################################################################
             #####################################################################################
             #run superclust by PC for each sim (apply)
-            sim_superclust_pc <- lapply(1:nsim, function(i) detectclusters(sparseMAT, Ex[[i]], YSIM[[i]],
-                                                                           numCenters, Time, maxclust,
-                                                                           bylocation = FALSE, model="poisson"))
+            sim_superclust_clusso <- #lapply(1:nsim, function(i) detectclusters(sparseMAT, Ex[[i]], YSIM[[i]],
+                                      #                                     numCenters, Time, maxclust,
+                                      #                                     bylocation = FALSE, model="poisson"))
             print(sim.i <- paste0("sim","_", "center",cent,"_" ,"radius", rad, "_",
                                   "risk", risk, "_", "theta", as.character(theta),
-                                  as.numeric(paste(tim, collapse = "")), "_moderateoverdisperson", "_superclustPC"))
+                                  as.numeric(paste(tim, collapse = "")), "_moderateoverdisperson", "_clusso"))
             filename <- paste0(sim.i,".RData")
             #save .RData
             save(sim_superclust_pc, file=filename)
             ##################################
             #DIAGNOSTICS: #calc power and FB rate
             ##################################
-            # #Which PCs overlap true cluster?
-            # rrbin_cluster <- matrix(as.vector(ifelse(rr!=1,1,0)),nrow=1)
-            # clusteroverlap<- rrbin_cluster%*%sparseMAT
-            #rrbin_inside <- ifelse(sparseMAT%*%t(clusteroverlap)!=0,1,0)
-            #what was identified in each sim by IC
-            ident.bic <- lapply(1:nsim, function(i) round(sim_superclust_pc[[i]]$wLambda[sim_superclust_pc[[i]]$selection.bic,],eps))
-            ident.aic <- lapply(1:nsim, function(i) round(sim_superclust_pc[[i]]$wLambda[sim_superclust_pc[[i]]$selection.aic,],eps))
-            ident.aicc <- lapply(1:nsim, function(i) round(sim_superclust_pc[[i]]$wLambda[sim_superclust_pc[[i]]$selection.aicc,],eps))
-            #1) Did it find anything INSIDE the cluster?
-            incluster.bic <- lapply(1:nsim, function(i) rrbin_inside%*%matrix(ifelse(ident.bic[[i]]==1,0,1),ncol=1))
-            incluster.aic <- lapply(1:nsim, function(i) rrbin_inside%*%matrix(ifelse(ident.aic[[i]]==1,0,1),ncol=1))
-            incluster.aicc <- lapply(1:nsim, function(i) rrbin_inside%*%matrix(ifelse(ident.aicc[[i]]==1,0,1),ncol=1))
-            #calc power
-            pow.bic <- sum(ifelse(unlist(incluster.bic)!=0,1,0))/nsim
-            pow.aic <- sum(ifelse(unlist(incluster.aic)!=0,1,0))/nsim
-            pow.aicc <-sum(ifelse(unlist(incluster.aicc)!=0,1,0))/nsim
-            outpow.bic <- paste0(pow.bic*100, "%")
-            outpow.aic <- paste0(pow.aic*100, "%")
-            outpow.aicc <- paste0(pow.aicc*100, "%")
-            #2) Did it find anything OUTSIDE the cluster?
-            #rrbin_outside <- ifelse(sparseMAT%*%t(clusteroverlap)==0,1,0) 
-            #this should be everything that doesn't touch the cluster
-            outcluster.bic <- lapply(1:nsim, function(i) rrbin_outside%*%matrix(ifelse(ident.bic[[i]]==1,0,1),ncol=1))
-            outcluster.aic <- lapply(1:nsim, function(i) rrbin_outside%*%matrix(ifelse(ident.aic[[i]]==1,0,1),ncol=1))
-            outcluster.aicc <- lapply(1:nsim, function(i) rrbin_outside%*%matrix(ifelse(ident.aicc[[i]]==1,0,1),ncol=1))
-            #calc FP rate
-            fp.bic <- sum(ifelse(unlist(outcluster.bic)!=0,1,0))/nsim
-            fp.aic <- sum(ifelse(unlist(outcluster.aic)!=0,1,0))/nsim
-            fp.aicc <- sum(ifelse(unlist(outcluster.aicc)!=0,1,0))/nsim
-            outfp.bic <- paste0(fp.bic*100, "%")
-            outfp.aic <- paste0(fp.aic*100, "%")
-            outfp.aicc <- paste0(fp.aicc*100, "%")
-            ##################################
-            #plot probability maps
-            ##################################
-            #create empties
-            vec <- rep(0, 208 * Time)
-            position.bic <- list(vec)[rep(1, nsim)]
-            position.aic <- list(vec)[rep(1, nsim)]
-            position.aicc <- list(vec)[rep(1, nsim)]
-            #recode identified cells as 1's, all other zeros
-            ix.bic <- lapply(1:nsim, function(i) which(ifelse(ident.bic[[i]]==1,0,1) ==1))
-            ix.aic <- lapply(1:nsim, function(i) which(ifelse(ident.aic[[i]]==1,0,1) ==1))
-            ix.aicc <- lapply(1:nsim, function(i) which(ifelse(ident.aicc[[i]]==1,0,1) ==1))
-            #creatematrix by location (rows) and sim (cols) with 1's indicating selection by superlearner
-            simindicator.bic <- mapply(reval, position.bic, ix.bic)
-            simindicator.aic <- mapply(reval, position.aic, ix.aic)
-            simindicator.aicc <- mapply(reval, position.aicc, ix.aicc)
-            #find probability of detection for each location in time
-            probs.bic <- Matrix::rowSums(simindicator.bic)/nsim
-            probs.aic <- Matrix::rowSums(simindicator.aic)/nsim
-            probs.aicc <- Matrix::rowSums(simindicator.aicc)/nsim
-            #map probability detections by IC to grey scale
-            colprob <- colormapping(list(probs.bic,
-                                         probs.aic,
-                                         probs.aicc,
-                                         as.vector(rrbin_cluster)), Time, cv = NULL,prob=TRUE)
-            #plot map with probability detection by each IC
-            probplotmapAllIC(colprob,genpdf = TRUE, pdfname=paste0(sim.i, "_prob_pc.pdf"))
-            ##################################
-            #RR maps
-            ##################################
-            #plot each RR for each sim            
-            lapply(1:nsim, function(i) plotmapAllIC(res.bic = sim_superclust_pc[[i]]$wLambda[sim_superclust_pc[[i]]$selection.bic,],
-                                                    res.aic = sim_superclust_pc[[i]]$wLambda[sim_superclust_pc[[i]]$selection.aic,],
-                                                    oracle = rr,
-                                                    genpdf = TRUE,
-                                                    pdfname = paste0(sim.i,"_pc_simID",simid[i],".pdf")))
+            # # #Which PCs overlap true cluster?
+            # #what was identified in each sim by IC
+            # ident.bic <- lapply(1:nsim, function(i) round(sim_superclust_pc[[i]]$wLambda[sim_superclust_pc[[i]]$selection.bic,],eps))
+            # ident.aic <- lapply(1:nsim, function(i) round(sim_superclust_pc[[i]]$wLambda[sim_superclust_pc[[i]]$selection.aic,],eps))
+            # ident.aicc <- lapply(1:nsim, function(i) round(sim_superclust_pc[[i]]$wLambda[sim_superclust_pc[[i]]$selection.aicc,],eps))
+            # #1) Did it find anything INSIDE the cluster?
+            # incluster.bic <- lapply(1:nsim, function(i) rrbin_inside%*%matrix(ifelse(ident.bic[[i]]==1,0,1),ncol=1))
+            # incluster.aic <- lapply(1:nsim, function(i) rrbin_inside%*%matrix(ifelse(ident.aic[[i]]==1,0,1),ncol=1))
+            # incluster.aicc <- lapply(1:nsim, function(i) rrbin_inside%*%matrix(ifelse(ident.aicc[[i]]==1,0,1),ncol=1))
+            # #calc power
+            # pow.bic <- sum(ifelse(unlist(incluster.bic)!=0,1,0))/nsim
+            # pow.aic <- sum(ifelse(unlist(incluster.aic)!=0,1,0))/nsim
+            # pow.aicc <-sum(ifelse(unlist(incluster.aicc)!=0,1,0))/nsim
+            # outpow.bic <- paste0(pow.bic*100, "%")
+            # outpow.aic <- paste0(pow.aic*100, "%")
+            # outpow.aicc <- paste0(pow.aicc*100, "%")
+            # #2) Did it find anything OUTSIDE the cluster?
+            # #rrbin_outside <- ifelse(sparseMAT%*%t(clusteroverlap)==0,1,0) 
+            # #this should be everything that doesn't touch the cluster
+            # outcluster.bic <- lapply(1:nsim, function(i) rrbin_outside%*%matrix(ifelse(ident.bic[[i]]==1,0,1),ncol=1))
+            # outcluster.aic <- lapply(1:nsim, function(i) rrbin_outside%*%matrix(ifelse(ident.aic[[i]]==1,0,1),ncol=1))
+            # outcluster.aicc <- lapply(1:nsim, function(i) rrbin_outside%*%matrix(ifelse(ident.aicc[[i]]==1,0,1),ncol=1))
+            # #calc FP rate
+            # fp.bic <- sum(ifelse(unlist(outcluster.bic)!=0,1,0))/nsim
+            # fp.aic <- sum(ifelse(unlist(outcluster.aic)!=0,1,0))/nsim
+            # fp.aicc <- sum(ifelse(unlist(outcluster.aicc)!=0,1,0))/nsim
+            # outfp.bic <- paste0(fp.bic*100, "%")
+            # outfp.aic <- paste0(fp.aic*100, "%")
+            # outfp.aicc <- paste0(fp.aicc*100, "%")
+            # ##################################
+            # #plot probability maps
+            # ##################################
+            # #create empties
+            # vec <- rep(0, 208 * Time)
+            # position.bic <- list(vec)[rep(1, nsim)]
+            # position.aic <- list(vec)[rep(1, nsim)]
+            # position.aicc <- list(vec)[rep(1, nsim)]
+            # #recode identified cells as 1's, all other zeros
+            # ix.bic <- lapply(1:nsim, function(i) which(ifelse(ident.bic[[i]]==1,0,1) ==1))
+            # ix.aic <- lapply(1:nsim, function(i) which(ifelse(ident.aic[[i]]==1,0,1) ==1))
+            # ix.aicc <- lapply(1:nsim, function(i) which(ifelse(ident.aicc[[i]]==1,0,1) ==1))
+            # #creatematrix by location (rows) and sim (cols) with 1's indicating selection by superlearner
+            # simindicator.bic <- mapply(reval, position.bic, ix.bic)
+            # simindicator.aic <- mapply(reval, position.aic, ix.aic)
+            # simindicator.aicc <- mapply(reval, position.aicc, ix.aicc)
+            # #find probability of detection for each location in time
+            # probs.bic <- Matrix::rowSums(simindicator.bic)/nsim
+            # probs.aic <- Matrix::rowSums(simindicator.aic)/nsim
+            # probs.aicc <- Matrix::rowSums(simindicator.aicc)/nsim
+            # #map probability detections by IC to grey scale
+            # colprob <- colormapping(list(probs.bic,
+            #                              probs.aic,
+            #                              probs.aicc,
+            #                              as.vector(rrbin_cluster)), Time, cv = NULL,prob=TRUE)
+            # #plot map with probability detection by each IC
+            # probplotmapAllIC(colprob,genpdf = TRUE, pdfname=paste0(sim.i, "_prob_pc.pdf"))
+            # ##################################
+            # #RR maps
+            # ##################################
+            # #plot each RR for each sim            
+            # lapply(1:nsim, function(i) plotmapAllIC(res.bic = sim_superclust_pc[[i]]$wLambda[sim_superclust_pc[[i]]$selection.bic,],
+            #                                         res.aic = sim_superclust_pc[[i]]$wLambda[sim_superclust_pc[[i]]$selection.aic,],
+            #                                         oracle = rr,
+            #                                         genpdf = TRUE,
+            #                                         pdfname = paste0(sim.i,"_pc_simID",simid[i],".pdf")))
             ##################################
             #Add sim results to table
             ##################################
-            tabn.pc <- rbind(cbind(IC="BIC",rad, risk, cent, theta,
+            tabn.clusso <- rbind(cbind(IC="BIC",rad, risk, cent, theta,
                                     time=as.numeric(paste(tim, collapse="")),
                                     mod="ST", pow=outpow.bic, fp = outfp.bic),
                               cbind(IC="AIC",rad, risk, cent, theta,
@@ -289,7 +286,7 @@ for (cent in centers){
                               cbind(IC="AICc",rad, risk, cent, theta,
                                     time=as.numeric(paste(tim, collapse="")),
                                     mod="ST", pow=outpow.aicc, fp = outfp.aicc))
-            table.detection.pc <- rbind(table.detection.pc, tabn.pc)
+            table.detection.clusso <- rbind(table.detection.clusso, tabn.clusso)
   
             
             
