@@ -14,6 +14,137 @@ colorsgrey <- function (x) {
     rgb(y[, 1], y[, 2], y[, 3], maxColorValue = 255)
 }
 
+#'@title probplotmapAllIC
+#'@param res.bic result bic
+#'#'@param res.aic result aic
+#'@param oracle
+#'@param pdfname String for name of pdf to be generated.
+#'@param genpdf Boolean. If results should be generated to console, set to \code{FALSE}. Default is \code{TRUE} for pdf to be generated.
+#'@return Maps for central region of Japan for each time period.
+probplotmapAllIC <- function(colprob, pdfname=NULL, genpdf=TRUE, obs=NULL){
+    if(!is.null(obs)){
+        firstrow = "Observed"
+    }
+    else{
+        firstrow="Oracle"
+    }
+    if(genpdf==TRUE){
+        pdf(pdfname, height=11, width=10)    
+    }
+    ####################################
+    #oracle or Obs
+    ####################################
+    #P1
+    par(fig=c(0,.2,.6,1), mar=c(.5,0.5,0.5,0))
+    plot(japan.poly2,type='n',asp=1,axes=F,xlab='',ylab='')
+    polygon(japan.poly2,col=colprob[[1]][,1] ,border=F)
+    segments(japan.prefect2$x1,japan.prefect2$y1,japan.prefect2$x2,japan.prefect2$y2)
+    text(270,4120,paste0(firstrow),cex=1.00, srt=90)
+    
+    #P2
+    par(fig=c(0.2,.4,.6,1), mar=c(.5,0.5,0.5,0), new=T)
+    plot(japan.poly2,type='n',asp=1,axes=F,xlab='',ylab='')
+    polygon(japan.poly2,col=colprob[[1]][,2] ,border=F)
+    segments(japan.prefect2$x1,japan.prefect2$y1,japan.prefect2$x2,japan.prefect2$y2)
+    
+    #P3
+    par(fig=c(0.4,.6,.6,1), mar=c(.5,0.5,0.5,0), new=T)
+    plot(japan.poly2,type='n',asp=1,axes=F,xlab='',ylab='')
+    polygon(japan.poly2,col=colprob[[1]][,3] ,border=F)
+    segments(japan.prefect2$x1,japan.prefect2$y1,japan.prefect2$x2,japan.prefect2$y2)
+    
+    #P4
+    par(fig=c(0.6,.8,.6,1), mar=c(.5,0.5,0.5,0), new=T)
+    plot(japan.poly2,type='n',asp=1,axes=F,xlab='',ylab='')
+    polygon(japan.poly2,col=colprob[[1]][,4] ,border=F)
+    segments(japan.prefect2$x1,japan.prefect2$y1,japan.prefect2$x2,japan.prefect2$y2)
+    
+    #P5
+    par(fig=c(0.8,1,.6,1), mar=c(.5,0.5,0.5,0), new=T)
+    plot(japan.poly2,type='n',asp=1,axes=F,xlab='',ylab='')
+    polygon(japan.poly2,col=colprob[[1]][,5] ,border=F)
+    segments(japan.prefect2$x1,japan.prefect2$y1,japan.prefect2$x2,japan.prefect2$y2)
+    ####################################
+    #BIC
+    ####################################
+    par(fig=c(0,.2,.4,.8), mar=c(.5,0.5,0.5,0), new=T)
+    plot(japan.poly2,type='n',asp=1,axes=F,xlab='',ylab='')
+    polygon(japan.poly2,col=colprob[[2]][,1],border=F)
+    segments(japan.prefect2$x1,japan.prefect2$y1,japan.prefect2$x2,japan.prefect2$y2)
+    text(270,4120,'BIC',cex=1.00, srt=90)
+    
+    par(fig=c(0.2,.4,.4,.8), mar=c(.5,0.5,0.5,0), new=T)   
+    plot(japan.poly2,type='n',asp=1,axes=F,xlab='',ylab='')
+    polygon(japan.poly2,col=colprob[[2]][,2],border=F)
+    segments(japan.prefect2$x1,japan.prefect2$y1,japan.prefect2$x2,japan.prefect2$y2)
+    #text(355,4120,'Period 2 - BIC',cex=1.00)
+    
+    par(fig=c(0.4,.6,.4,.8), mar=c(.5,0.5,0.5,0), new=T) 
+    plot(japan.poly2,type='n',asp=1,axes=F,xlab='',ylab='')
+    polygon(japan.poly2,col=colprob[[2]][,3],border=F)
+    segments(japan.prefect2$x1,japan.prefect2$y1,japan.prefect2$x2,japan.prefect2$y2)
+    #text(355,4120,'Period 3 - BIC',cex=1.00)
+    
+    par(fig=c(0.6,.8,.4,.8), mar=c(.5,0.5,0.5,0), new=T)
+    plot(japan.poly2,type='n',asp=1,axes=F,xlab='',ylab='')
+    polygon(japan.poly2,col=colprob[[2]][,4],border=F)
+    segments(japan.prefect2$x1,japan.prefect2$y1,japan.prefect2$x2,japan.prefect2$y2)
+    #text(355,4120,'Period 4 - BIC',cex=1.00)
+    
+    par(fig=c(0.8,1,.4,.8), mar=c(.5,0.5,0.5,0), new=T)
+    plot(japan.poly2,type='n',asp=1,axes=F,xlab='',ylab='')
+    polygon(japan.poly2,col=colprob[[2]][,5],border=F)
+    segments(japan.prefect2$x1,japan.prefect2$y1,japan.prefect2$x2,japan.prefect2$y2)
+    #text(355,4120,'Period 5 - BIC',cex=1.00)
+    
+    ####################################
+    #AIC
+    ####################################
+    par(fig=c(0,.2,.2,.6), mar=c(.5,0.5,0.5,0), new=T)
+    plot(japan.poly2,type='n',asp=1,axes=F,xlab='',ylab='')
+    polygon(japan.poly2,col=colprob[[3]][,1],border=F)
+    segments(japan.prefect2$x1,japan.prefect2$y1,japan.prefect2$x2,japan.prefect2$y2)
+    text(270,4120,'AIC',cex=1.00, srt=90)
+    
+    par(fig=c(0.2,.4,.2,.6), mar=c(.5,0.5,0.5,0), new=T) 
+    plot(japan.poly2,type='n',asp=1,axes=F,xlab='',ylab='')
+    polygon(japan.poly2,col=colprob[[3]][,2],border=F)
+    segments(japan.prefect2$x1,japan.prefect2$y1,japan.prefect2$x2,japan.prefect2$y2)
+    #text(355,4120,'Period 2 - AIC',cex=1.00)
+    
+    par(fig=c(0.4,.6,.2,.6), mar=c(.5,0.5,0.5,0), new=T) 
+    plot(japan.poly2,type='n',asp=1,axes=F,xlab='',ylab='')
+    polygon(japan.poly2,col=colprob[[3]][,3],border=F)
+    segments(japan.prefect2$x1,japan.prefect2$y1,japan.prefect2$x2,japan.prefect2$y2)
+    #text(355,4120,'Period 3 - AIC',cex=1.00)
+    
+    par(fig=c(0.6,.8,.2,.6), mar=c(.5,0.5,0.5,0), new=T)
+    plot(japan.poly2,type='n',asp=1,axes=F,xlab='',ylab='')
+    polygon(japan.poly2,col=colprob[[3]][,4],border=F)
+    segments(japan.prefect2$x1,japan.prefect2$y1,japan.prefect2$x2,japan.prefect2$y2)
+    #text(355,4120,'Period 4 - AIC',cex=1.00)
+    
+    par(fig=c(0.8,1,.2,.6), mar=c(.5,0.5,0.5,0), new=T)
+    plot(japan.poly2,type='n',asp=1,axes=F,xlab='',ylab='')
+    polygon(japan.poly2,col=colprob[[3]][,5],border=F)
+    segments(japan.prefect2$x1,japan.prefect2$y1,japan.prefect2$x2,japan.prefect2$y2)
+    #text(355,4120,'Period 5 - AIC',cex=1.00)
+    
+    
+    
+    #legend
+    par(fig=c(.35,.75,0,.1), new=T)
+    plot(1, xlim=c(0.6,1.5), ylim=c(0.2,1), axes=F, type='n',  xlab="", ylab="")
+    rect(seq(.6,1.4,length=50)[-50],.5,seq(.65,1.4,length=50)[-1],.62,col=greys(0:50/50),border=F)
+    text(seq(.6,1.4,length=6),rep(.45,6),c('0.0','0.2','0.4','0.6','0.8','1.0'),srt=330,adj=0)
+    #text(seq(0.6, 1.4, length = 5), rep(0.45, 5), seq(0.5, 1.5, length.out = 5), srt = 330, adj = 0)
+    
+    if(genpdf==TRUE){
+        dev.off()    
+    }
+    
+}
+
 #'@title plotmapAllIC
 #'@param res.bic result bic
 #'#'@param res.aic result aic
@@ -148,8 +279,6 @@ plotmapAllIC <- function(res.bic, res.aic, oracle ,pdfname=NULL, genpdf=TRUE, ma
     polygon(japan.poly2,col=cluster_ix.aic[,5],border=F)
     segments(japan.prefect2$x1,japan.prefect2$y1,japan.prefect2$x2,japan.prefect2$y2)
     #text(355,4120,'Period 5 - AIC',cex=1.00)
-    
-    
     
     #legend
     par(fig=c(.35,.75,0,0.2), new=T)
