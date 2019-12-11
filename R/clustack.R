@@ -4,6 +4,7 @@ library(clusso)
 library(testthat)
 library(Matrix)
 
+
 ########################################
 #Functions
 ########################################
