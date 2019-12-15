@@ -35,28 +35,35 @@ reval <- function(probs, ix){
     return(probs)
 }
 #nsims
-nsim <- 10
+nsim <- 2
 #theta - overdispersion
-theta <- 500
+theta <- 1000
 maxclust <- 11
 
 
 #scenarios
-centers <- c(150,35)
-radii <- c(9,18)
-timeperiod <- c(3:5)
-#timeperiods <- list(c(3:5), c(1:2))
-risk.ratios <- c(1, 1.1, 1.5, 2)
+# centers <- c(150,35)
+# radii <- c(9,18)
+# timeperiod <- c(3:5)
+# risk.ratios <- c(1, 1.1, 1.5, 2)
+
+#test
+centers <- 150
+radii <- 11
+risk.ratios <- 2
+tim <- c(3:5)
 table.detection.loc <- NULL
 table.detection.pc <- NULL
 table.detection.clusso <- NULL
 eps <- 3
+path.figures <- "../../figures/testersim/"
+path.tables <- "../../results/testersim/"
 
-#test
-cent <- 150
-rad <- 11
-risk <- 2
-tim <- c(3:5)
+# #test
+# cent <- 150
+# rad <- 11
+# risk <- 2
+# tim <- c(3:5)
 
 # Start the clock!
 ptm <- proc.time()
@@ -99,10 +106,10 @@ for (cent in centers){
             sim_superclust_loc <- lapply(1:nsim, function(i) detectclusters(sparsematrix, Ex[[i]], YSIM[[i]],
                                                                             numCenters, Time, maxclust,
                                                                             bylocation = TRUE, model="poisson"))
-            print(sim.i <- paste0("sim","_", "center",cent,"_" ,"radius", rad, "_",
+            sim.i <- paste0(path.figures,"sim","_", "center",cent,"_" ,"radius", rad, "_",
                                   "risk", risk, "_", "theta", as.character(theta),
-                                  as.numeric(paste(tim, collapse = "")), "_moderateoverdisperson", "_superclustLOC"))
-            filename <- paste0(sim.i,".RData")
+                                  as.numeric(paste(tim, collapse = "")), "_moderateoverdisperson")
+            print(filename <- paste0(sim.i,"_superclustLOC",".RData"))
             #save .RData
             save(sim_superclust_loc, file=filename)
             ##################################
@@ -152,9 +159,9 @@ for (cent in centers){
             position.aic <- list(vec)[rep(1, nsim)]
             position.aicc <- list(vec)[rep(1, nsim)]
             #recode identified cells as 1's, all other zeros
-            ix.bic <- lapply(1:nsim, function(i) which(ifelse(ident.bic[[i]]==1,0,1) ==1))
-            ix.aic <- lapply(1:nsim, function(i) which(ifelse(ident.aic[[i]]==1,0,1) ==1))
-            ix.aicc <- lapply(1:nsim, function(i) which(ifelse(ident.aicc[[i]]==1,0,1) ==1))
+            ix.bic <- lapply(1:nsim, function(i) which(ifelse((length(ident.bic[[i]]!=0) & ident.bic[[i]]==1),0,1)==1))
+            ix.aic <- lapply(1:nsim, function(i) which(ifelse((length(ident.aic[[i]]!=0) & ident.aic[[i]]==1),0,1)==1))
+            ix.aicc <- lapply(1:nsim, function(i) which(ifelse((length(ident.aicc[[i]]!=0) & ident.aicc[[i]]==1),0,1) ==1))
             #creatematrix by location (rows) and sim (cols) with 1's indicating selection by superlearner
             simindicator.bic <- mapply(reval, position.bic, ix.bic)
             simindicator.aic <- mapply(reval, position.aic, ix.aic)
@@ -206,15 +213,12 @@ for (cent in centers){
             sim_superclust_pc<- lapply(1:nsim, function(i) detectclusters(sparsematrix, Ex[[i]], YSIM[[i]],
                                                                           numCenters, Time, maxclust,
                                                                           bylocation = FALSE, model="poisson"))
-            print(sim.i <- paste0("sim","_", "center",cent,"_" ,"radius", rad, "_",
-                                  "risk", risk, "_", "theta", as.character(theta),
-                                  as.numeric(paste(tim, collapse = "")), "_moderateoverdisperson", "_pc"))
-            filename <- paste0(sim.i,".RData")
+            print(filename <- paste0(sim.i,"_superclustPC",".RData"))
             #save .RData
             save(sim_superclust_pc, file=filename)
             #################################
-            DIAGNOSTICS: #calc power and FB rate
-                #################################
+            #DIAGNOSTICS: #calc power and FB rate
+            #################################
             # #Which PCs overlap true cluster?
             #what was identified in each sim by IC
             ident.bic <- lapply(1:nsim, function(i) 
@@ -256,9 +260,9 @@ for (cent in centers){
             position.aic <- list(vec)[rep(1, nsim)]
             position.aicc <- list(vec)[rep(1, nsim)]
             #recode identified cells as 1's, all other zeros
-            ix.bic <- lapply(1:nsim, function(i) which(ifelse(ident.bic[[i]]==1,0,1) ==1))
-            ix.aic <- lapply(1:nsim, function(i) which(ifelse(ident.aic[[i]]==1,0,1) ==1))
-            ix.aicc <- lapply(1:nsim, function(i) which(ifelse(ident.aicc[[i]]==1,0,1) ==1))
+            ix.bic <- lapply(1:nsim, function(i) which(ifelse((length(ident.bic[[i]]!=0) & ident.bic[[i]]==1),0,1)==1))
+            ix.aic <- lapply(1:nsim, function(i) which(ifelse((length(ident.aic[[i]]!=0) & ident.aic[[i]]==1),0,1) ==1))
+            ix.aicc <- lapply(1:nsim, function(i) which(ifelse((length(ident.aicc[[i]]!=0) & ident.aicc[[i]]==1),0,1) ==1))
             #creatematrix by location (rows) and sim (cols) with 1's indicating selection by superlearner
             simindicator.bic <- mapply(reval, position.bic, ix.bic)
             simindicator.aic <- mapply(reval, position.aic, ix.aic)
@@ -319,15 +323,12 @@ for (cent in centers){
                                  y = y,
                                  rMax = rMax,
                                  utm=TRUE, 
-                                 analysis = "both",
+                                 analysis = "spacetime",
                                  model = "poisson",
                                  maxclust = maxclust))
-            print(sim.i <- paste0("sim","_", "center",cent,"_" ,"radius", rad, "_",
-                                  "risk", risk, "_", "theta", as.character(theta),
-                                  as.numeric(paste(tim, collapse = "")), "_moderateoverdisperson", "_clusso"))
-            filename <- paste0(sim.i,".RData")
+            print(filename <- paste0(sim.i,"_clusso",".RData"))
             #save .RData
-            save(sim_superclust_pc, file=filename)
+            save(sim_clusso, file=filename)
             ##################################
             #DIAGNOSTICS: #calc power and FB rate
             ##################################
@@ -415,63 +416,87 @@ for (cent in centers){
             outfp.aic.p <- paste0(fp.aic.p*100, "%")
             outfp.aicc.p <- paste0(fp.aicc.p*100, "%")
 
-            # ##################################
-            # #plot probability maps
-            # ##################################
-            # #create empties
-            # vec <- rep(0, 208 * Time)
-            # position.bic <- list(vec)[rep(1, nsim)]
-            # position.aic <- list(vec)[rep(1, nsim)]
-            # position.aicc <- list(vec)[rep(1, nsim)]
-            # #recode identified cells as 1's, all other zeros
-            # ix.bic <- lapply(1:nsim, function(i) which(ifelse(ident.bic[[i]]==1,0,1) ==1))
-            # ix.aic <- lapply(1:nsim, function(i) which(ifelse(ident.aic[[i]]==1,0,1) ==1))
-            # ix.aicc <- lapply(1:nsim, function(i) which(ifelse(ident.aicc[[i]]==1,0,1) ==1))
-            # #creatematrix by location (rows) and sim (cols) with 1's indicating selection by superlearner
-            # simindicator.bic <- mapply(reval, position.bic, ix.bic)
-            # simindicator.aic <- mapply(reval, position.aic, ix.aic)
-            # simindicator.aicc <- mapply(reval, position.aicc, ix.aicc)
-            # #find probability of detection for each location in time
-            # probs.bic <- Matrix::rowSums(simindicator.bic)/nsim
-            # probs.aic <- Matrix::rowSums(simindicator.aic)/nsim
-            # probs.aicc <- Matrix::rowSums(simindicator.aicc)/nsim
-            # #map probability detections by IC to grey scale
-            # colprob <- colormapping(list(probs.bic,
-            #                              probs.aic,
-            #                              probs.aicc,
-            #                              as.vector(rrbin_cluster)), Time, cv = NULL,prob=TRUE)
-            # #plot map with probability detection by each IC
-            # probplotmapAllIC(colprob,genpdf = TRUE, pdfname=paste0(sim.i, "_prob_pc.pdf"))
-            # ##################################
-            # #RR maps
-            # ##################################
-            # #plot each RR for each sim            
-            # lapply(1:nsim, function(i) plotmapAllIC(res.bic = sim_superclust_pc[[i]]$wLambda[sim_superclust_pc[[i]]$selection.bic,],
-            #                                         res.aic = sim_superclust_pc[[i]]$wLambda[sim_superclust_pc[[i]]$selection.aic,],
-            #                                         oracle = rr,
-            #                                         genpdf = TRUE,
-            #                                         pdfname = paste0(sim.i,"_pc_simID",simid[i],".pdf")))
+            ##################################
+            #plot probability maps
+            ##################################
+            #create empties
+            vec <- rep(0, 208 * Time)
+            #QP
+            position.bic.qp <- list(vec)[rep(1, nsim)]
+            position.aic.qp <- list(vec)[rep(1, nsim)]
+            position.aicc.qp <- list(vec)[rep(1, nsim)]
+            #P
+            position.bic.p <- list(vec)[rep(1, nsim)]
+            position.aic.p <- list(vec)[rep(1, nsim)]
+            position.aicc.p <- list(vec)[rep(1, nsim)]
+            #recode identified cells as 1's, all other zeros
+            #QP
+            ix.bic.qp <- lapply(1:nsim, function(i) which(ifelse((length(ident.bic.qp[[i]]!=0) & ident.bic.qp[[i]]==1 ),1,0)==1))
+            ix.aic.qp <- lapply(1:nsim, function(i) which(ifelse((length(ident.aic.qp[[i]]!=0) & ident.aic.qp[[i]]==1 ),1,0) ==1))
+            ix.aicc.qp <- lapply(1:nsim, function(i) which(ifelse((length(ident.aicc.qp[[i]]!=0) & ident.aicc.qp[[i]]==1 ),1,0) ==1))
+            #P
+            ix.bic.p <- lapply(1:nsim, function(i) which(ifelse((length(ident.bic.p[[i]]!=0) & ident.bic.p[[i]]==1 ),1,0)==1))
+            ix.aic.p <- lapply(1:nsim, function(i) which(ifelse((length(ident.aic.p[[i]]!=0) & ident.aic.p[[i]]==1 ),1,0) ==1))
+            ix.aicc.p <- lapply(1:nsim, function(i) which(ifelse((length(ident.aicc.p[[i]]!=0) & ident.aicc.p[[i]]==1 ),1,0) ==1))
+            
+            #creatematrix by location (rows) and sim (cols) with 1's indicating selection by superlearner
+            simindicator.bic.qp <- mapply(reval, position.bic.qp, ix.bic.qp)
+            simindicator.aic.qp <- mapply(reval, position.aic.qp, ix.aic.qp)
+            simindicator.aicc.qp <- mapply(reval, position.aicc.qp, ix.aicc.qp)
+            #find probability of detection for each location in time
+            probs.bic.qp <- Matrix::rowSums(simindicator.bic.qp)/nsim
+            probs.aic.qp <- Matrix::rowSums(simindicator.aic.qp)/nsim
+            probs.aicc.qp <- Matrix::rowSums(simindicator.aicc.qp)/nsim
+            #map probability detections by IC to grey scale
+            colprob <- colormapping(list(probs.bic.qp,
+                                         probs.aic.qp,
+                                         probs.aicc.qp,
+                                         as.vector(rrbin_cluster)), Time, cv = NULL,prob=TRUE)
+            #plot map with probability detection by each IC
+            probplotmapAllIC(colprob,genpdf = TRUE, pdfname=paste0(sim.i, "_prob_clusso.pdf"))
+            ##################################
+            #RR maps
+            ##################################
+            #plot each RR for each sim
+            ##QP
+            lapply(1:nsim, function(i) plotmapAllIC(res.bic = sim_clusso[[i]]$lassoresult.qp.st$E.qbic,
+                                                    res.aic = sim_clusso[[i]]$lassoresult.qp.st$E.qaic,
+                                                    oracle = rr,
+                                                    genpdf = TRUE,
+                                                    pdfname = paste0(sim.i,"_qp_clusso_simID",simid[i],".pdf")))
+            ##P
+            ##QP
+            lapply(1:nsim, function(i) plotmapAllIC(res.bic = sim_clusso[[i]]$lassoresult.p.st$E.qbic,
+                                                    res.aic = sim_clusso[[i]]$lassoresult.p.st$E.qaic,
+                                                    oracle = rr,
+                                                    genpdf = TRUE,
+                                                    pdfname = paste0(sim.i,"_p_clusso_simID",simid[i],".pdf")))
             ##################################
             #Add sim results to table
             ##################################
             tabn.clusso <- rbind(cbind(IC="BIC",rad, risk, cent, theta,
                                        time=as.numeric(paste(tim, collapse="")),
-                                       mod="ST", pow=outpow.bic, fp = outfp.bic),
+                                       mod="ST", pow=outpow.bic.qp, fp = outfp.bic.qp, type = "QP"),
                                  cbind(IC="AIC",rad, risk, cent, theta,
                                        time=as.numeric(paste(tim, collapse="")),
-                                       mod="ST", pow=outpow.aic, fp = outfp.aic),
+                                       mod="ST", pow=outpow.aic.qp, fp = outfp.aic.qp, type = "QP"),
                                  cbind(IC="AICc",rad, risk, cent, theta,
                                        time=as.numeric(paste(tim, collapse="")),
-                                       mod="ST", pow=outpow.aicc, fp = outfp.aicc))
+                                       mod="ST", pow=outpow.aicc.qp, fp = outfp.aicc.qp, type = "QP"),
+                                 cbind(IC="BIC",rad, risk, cent, theta,
+                                       time=as.numeric(paste(tim, collapse="")),
+                                       mod="ST", pow=outpow.bic.p, fp = outfp.bic.p, type = "Pois"),
+                                 cbind(IC="AIC",rad, risk, cent, theta,
+                                       time=as.numeric(paste(tim, collapse="")),
+                                       mod="ST", pow=outpow.aic.p, fp = outfp.aic.p, type = "Pois"),
+                                 cbind(IC="AICc",rad, risk, cent, theta,
+                                       time=as.numeric(paste(tim, collapse="")),
+                                       mod="ST", pow=outpow.aicc.p, fp = outfp.aicc.p, type = "Pois"))
             table.detection.clusso <- rbind(table.detection.clusso, tabn.clusso)
-            
-            
-            
-            
         }   
     }
 }
-}
+
 # Stop the clock
 proc.time() - ptm
 #####################################################################################
@@ -483,12 +508,12 @@ proc.time() - ptm
 #####################################################################################
 #superclust by loc
 print(table.detection.loc)
-write.csv(table.detection.loc, file="test_loc.csv", row.names=TRUE)
+write.csv(table.detection.loc, file=paste0(path.tables,"test_loc.csv"), row.names=TRUE)
 
 #superclust by loc
 print(table.detection.pc)
-write.csv(table.detection.pc, file="test_pc.csv", row.names=TRUE)
+write.csv(table.detection.pc, file=paste0(path.tables,"test_pc.csv"), row.names=TRUE)
 
 #clusso
 print(table.detection.clusso)
-write.csv(table.detection.clusso, file="test_clusso.csv", row.names=TRUE)
+write.csv(table.detection.clusso, file=paste0(path.tables,"test_clusso.csv"), row.names=TRUE)

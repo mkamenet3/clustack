@@ -619,20 +619,20 @@ clusterselect <- function(wLambda,Yx, Ex, model,maxclust, numCenters, Time,cv=FA
         cat(paste0("\t","Num. selected clusters by BIC: ", (select.bic),"\n",
                      "\t","Num. selected clusters by AIC: ",(select.aic),"\n",
                      "\t","Num. selected clusters by AICc: ",(select.aicc)))
-        if(all.equal(select.bic, select.aic, select.aicc)){
-            #TODO
-        }
-        else{
-            #Do it for each criterion
-           #TODO
-            #BIC
-           #TODO
-            #AIC
-           #TODO    
-            #AICc
-           #TODO
-            # return(list())
-        }
+        # if(all.equal(select.bic, select.aic, select.aicc)){
+        #     #TODO
+        # }
+        # else{
+        #     #Do it for each criterion
+        #    #TODO
+        #     #BIC
+        #    #TODO
+        #     #AIC
+        #    #TODO    
+        #     #AICc
+        #    #TODO
+        #     # return(list())
+        # }
         return(list(loglik = loglik,
                     select.bic = select.bic,
                     select.aic = select.aic,
