@@ -332,6 +332,9 @@ for (cent in centers){
             ##################################
             #DIAGNOSTICS: #calc power and FB rate
             ##################################
+          
+            
+            
             #detect 
             ##quasi-Poisson
             ident.bic.qp <- lapply(1:nsim, function(i) {

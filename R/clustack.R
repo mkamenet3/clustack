@@ -9,6 +9,55 @@ library(Matrix)
 #Functions
 ########################################
 
+clusso_prob_clusteroverlap <- function(sparseMAT,lassoresult,selected,rr, risk.ratio,nsim,Time, ncentroids, pow){
+    #DEFINE TRUTH
+    if(risk.ratio==1){
+        warning("Risk.ratio was set to 1")
+        rrmatvec <- rep(0,length(rr))
+    }
+    else{
+        rrmatvec <- ifelse(as.vector(rr)==risk.ratio,1,0)    
+    }
+    #Take out the time vectors - only keep cluster part of matrix
+    sparseMAT_clusteronly <- sparseMAT[,-c(ncol(sparseMAT)-Time+1:ncol(sparseMAT))]
+    #select out my betas for each sim
+    betaselect <- lassoresult$coefs.lasso.all[,selected]
+    #binarize
+    betaselect_bin <- ifelse(abs(betaselect >= 10e-6),1,0)
+    #only take the clusters betas
+    betaselect_bin_clusteronly <- betaselect_bin[-c(ncol(sparseMAT)-Time+1:ncol(sparseMAT))]
+    ##INCLUSTER
+    #Take out the time vectors - only keep cluster part of matrix
+    #sparseMAT_clusteronly <- sparseMAT[,-c(ncol(sparseMAT)-Time+1:ncol(sparseMAT))]
+    #select out my betas for each sim
+    #betaselect <- lassoresult$coefs.lasso.all[,selected]
+    #binarize
+    #betaselect_bin <- ifelse(abs(betaselect >= 10e-6),1,0)
+    #only take the clusters betas
+    #betaselect_bin_clusteronly <- betaselect_bin[-c(ncol(sparseMAT)-Time+1:ncol(sparseMAT))]
+    if(pow==TRUE){
+       #print("pow")
+        clusteroverlap <- t(rrmatvec) %*% sparseMAT_clusteronly
+        clusteroverlap_bin <- ifelse(clusteroverlap !=0,1,0)
+        incluster_sim <- clusteroverlap_bin %*% betaselect_bin_clusteronly
+        incluster_sim_bin <- ifelse(incluster_sim !=0,1,0)
+        return(idin = incluster_sim_bin)
+    }
+    else{
+        ##OUTCLUSTER
+       #print("fp")
+        clusteroverlap <- t(rrmatvec) %*% sparseMAT_clusteronly
+        clusteroverlap_bin <- ifelse(clusteroverlap !=0,0,1)
+        #print(paste0("clusteroverlap_bin: ", str(clusteroverlap_bin)))
+        #print(paste0("betaselect_bin_clusteronly: ", str(betaselect_bin_clusteronly)))
+        outcluster_sim <- clusteroverlap_bin %*% betaselect_bin_clusteronly
+        outcluster_sim_bin <- ifelse(outcluster_sim !=0,1,0)
+        return(idout = outcluster_sim_bin)
+    }
+}
+
+
+
 
 colorsgrey <- function (x) {
     y = colorRamp(RColorBrewer::brewer.pal(9, "Greys")[1:9])(x)
