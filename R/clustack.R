@@ -36,7 +36,7 @@ clusso_prob_clusteroverlap <- function(sparseMAT,lassoresult,selected,rr, risk.r
     #only take the clusters betas
     #betaselect_bin_clusteronly <- betaselect_bin[-c(ncol(sparseMAT)-Time+1:ncol(sparseMAT))]
     if(pow==TRUE){
-       #print("pow")
+        #print("pow")
         clusteroverlap <- t(rrmatvec) %*% sparseMAT_clusteronly
         clusteroverlap_bin <- ifelse(clusteroverlap !=0,1,0)
         incluster_sim <- clusteroverlap_bin %*% betaselect_bin_clusteronly
@@ -45,7 +45,7 @@ clusso_prob_clusteroverlap <- function(sparseMAT,lassoresult,selected,rr, risk.r
     }
     else{
         ##OUTCLUSTER
-       #print("fp")
+        #print("fp")
         clusteroverlap <- t(rrmatvec) %*% sparseMAT_clusteronly
         clusteroverlap_bin <- ifelse(clusteroverlap !=0,0,1)
         #print(paste0("clusteroverlap_bin: ", str(clusteroverlap_bin)))
@@ -223,7 +223,7 @@ plotmapAllIC <- function(res.bic, res.aic, oracle ,pdfname=NULL, genpdf=TRUE, ma
     else{
         minrr=0
     }
-
+    
     cluster_ix.bic <- matrix(redblue(log(maxrr *  pmax(minrr, pmin(res.bic, maxrr)))/log(maxrr^2)), ncol=5, byrow=FALSE)
     cluster_ix.aic <- matrix(redblue(log(maxrr *  pmax(minrr, pmin(res.aic, maxrr)))/log(maxrr^2)), ncol=5, byrow=FALSE)
     oracle_ix <- matrix(redblue(log(maxrr *  pmax(minrr, pmin(oracle, maxrr)))/log(maxrr^2)), ncol=5, byrow=FALSE)
@@ -466,9 +466,9 @@ binomLik <-function(nx, Yx, sparsemat){
     Lambda_dense <- as.matrix(Lambda)
     Lambda_dense[Lambda_dense == 0] <- 1
     #Get scaled likelihood
-
+    
     #Lik <- (((outObs/nx)/(sum(outObs)/sum(nx)))^(outobs))*(((sum(outObs)-outObs)/(sum(nx)-nx))/(sum(outObs)/sum(nx)))^(sum(outObs)-outObs)
-        #((outObs/outExp)/(sum(outObs)/sum(outExp)))^outObs #TODO CHECK THIS
+    #((outObs/outExp)/(sum(outObs)/sum(outExp)))^outObs #TODO CHECK THIS
     outnt <- sum(outnx)
     outObst <- sum(outObs)
     Lik <- (((outObs/outnx)^outObs)*(1-(outObs/outnx))^(outnx-outObs))*(((outObst - outObs)/(outnt-outnx))^(outObst-outObs))*(1-((outObst-outObs)/(outnt - outnx)))^(outnt - outnx - outObst+outObs)
@@ -517,7 +517,13 @@ bylocation <- function(Lik, Lambda_dense,sparsemat, maxclust){
         ixall <- c(ixall, ix)
     }
     wLambda <- crossprod(wtMAT, Lambda_dense)
-    return(wLambda = wLambda)
+    Lambda_sparse <- Lambda_dense
+    Lambda_sparse[Lambda_sparse==1] <- FALSE
+    Lambda_sparse <- Matrix::drop0(Lambda_sparse)
+    return(list(wLambda = wLambda,
+                #sparsemat = sparsemat,
+                wtMAT = wtMAT,
+                Lambda_sparse = Lambda_sparse))
 }
 
 
@@ -548,8 +554,8 @@ bycluster <-  function(Lik, Lambda_dense, sparsemat,maxclust){
         pcmax <- rep(0,length(wtmp)); pcmax[maxpc] <-1; pcmax <- matrix(pcmax,ncol=1)
         pcpcmax <- t(t(sparsemat)%*%pcmax)%*%t(sparsemat); pcpcmax <- ifelse(pcpcmax!=0,1,0)
         ix <- which(pcpcmax!=0)
-
-
+        
+        
         #upweight Lik* to 1 in all PCs that overlap max PC
         Lik[ix] <- 1
         #reweight so that everything inside the PCs that overlap max cluster sum to 1
@@ -566,10 +572,16 @@ bycluster <-  function(Lik, Lambda_dense, sparsemat,maxclust){
         maxi = i
     }
     wLambda <- crossprod(wtMAT[,1:(maxi)], Lambda_dense)
-    return(wLambda = wLambda)
+    Lambda_sparse <- Lambda_dense
+    Lambda_sparse[Lambda_sparse==1] <- FALSE
+    Lambda_sparse <- Matrix::drop0(Lambda_sparse)
+    return(list(wLambda = wLambda,
+                #sparsemat = sparsemat,
+                wtMAT = wtMAT,
+                Lambda_sparse = Lambda_sparse))
 }
-    
-  
+
+
 #'@title detectclusters
 #'@description Detect disease clusters either by location or by potential cluster.
 #'@param sparseMAT Large sparsematrix TODO
@@ -602,24 +614,30 @@ detectclusters <- function(sparseMAT, Ex, Yx,numCenters,Time, maxclust,bylocatio
         message("Cluster detection by potential cluster")
         res <- bycluster(Lik, Lambda_dense, sparsemat, maxclust)
         #perform selection by IC/CV
-        selection <- clusterselect(res, Yx, Ex, model,maxclust, numCenters, Time, cv=FALSE)
-        return(list(wLambda = res,
+        selection <- clusterselect(res[[1]], Yx, Ex, model,maxclust, numCenters, Time, cv=FALSE)
+        return(list(wLambda = res[[1]],
                     loglik = selection$loglik,
                     selection.bic = selection$select.bic,
                     selection.aic = selection$select.aic,
-                    selection.aicc = selection$select.aicc))
+                    selection.aicc = selection$select.aicc,
+                    #sparsemat = res[[2]],
+                    wtMAT = res[[2]],
+                    Lambda_sparse = res[[3]]))
     }
     else{
         #default
         message("Cluster detection by location")
         res <- bylocation(Lik, Lambda_dense, sparsemat, maxclust)
         #perform selection by IC/CV
-        selection <- clusterselect(res, Yx, Ex, model,maxclust, numCenters, Time, cv=FALSE)
-        return(list(wLambda = res,
+        selection <- clusterselect(res[[1]], Yx, Ex, model,maxclust, numCenters, Time, cv=FALSE)
+        return(list(wLambda = res[[1]],
                     loglik = selection$loglik,
                     selection.bic = selection$select.bic,
                     selection.aic = selection$select.aic,
-                    selection.aicc = selection$select.aicc))
+                    selection.aicc = selection$select.aicc,
+                    #sparsemat = res[[2]],
+                    wtMAT = res[[2]],
+                    Lambda_sparse = res[[3]]))
     }
 }
 
@@ -666,8 +684,8 @@ clusterselect <- function(wLambda,Yx, Ex, model,maxclust, numCenters, Time,cv=FA
         select.aic <- which.min(PLL.aic)-1
         select.aicc <- which.min(PLL.aicc)-1 
         cat(paste0("\t","Num. selected clusters by BIC: ", (select.bic),"\n",
-                     "\t","Num. selected clusters by AIC: ",(select.aic),"\n",
-                     "\t","Num. selected clusters by AICc: ",(select.aicc)))
+                   "\t","Num. selected clusters by AIC: ",(select.aic),"\n",
+                   "\t","Num. selected clusters by AICc: ",(select.aicc)))
         # if(all.equal(select.bic, select.aic, select.aicc)){
         #     #TODO
         # }
