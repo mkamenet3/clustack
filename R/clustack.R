@@ -527,13 +527,13 @@ bylocation <- function(Lik, Lambda_dense,sparsemat, maxclust){
         ixall <- c(ixall, ix)
     }
     wLambda <- crossprod(wtMAT, Lambda_dense)
-    Lambda_sparse <- Lambda_dense
-    Lambda_sparse[Lambda_sparse==1] <- FALSE
-    Lambda_sparse <- Matrix::drop0(Lambda_sparse)
+    #Lambda_sparse <- Lambda_dense
+    #Lambda_sparse[Lambda_sparse==1] <- FALSE
+    #Lambda_sparse <- Matrix::drop0(Lambda_sparse)
     return(list(wLambda = wLambda,
                 #sparsemat = sparsemat,
-                wtMAT = wtMAT,
-                Lambda_sparse = Lambda_sparse))
+                wtMAT = wtMAT))#,
+                #Lambda_sparse = Lambda_sparse))
 }
 
 
@@ -582,13 +582,13 @@ bycluster <-  function(Lik, Lambda_dense, sparsemat,maxclust){
         maxi = i
     }
     wLambda <- crossprod(wtMAT[,1:(maxi)], Lambda_dense)
-    Lambda_sparse <- Lambda_dense
-    Lambda_sparse[Lambda_sparse==1] <- FALSE
-    Lambda_sparse <- Matrix::drop0(Lambda_sparse)
+    #Lambda_sparse <- Lambda_dense
+    #Lambda_sparse[Lambda_sparse==1] <- FALSE
+    #Lambda_sparse <- Matrix::drop0(Lambda_sparse)
     return(list(wLambda = wLambda,
                 #sparsemat = sparsemat,
-                wtMAT = wtMAT,
-                Lambda_sparse = Lambda_sparse))
+                wtMAT = wtMAT))#,
+                #Lambda_sparse = Lambda_sparse))
 }
 
 
@@ -633,8 +633,8 @@ detectclusters <- function(sparseMAT, Ex, Yx,numCenters,Time, maxclust,bylocatio
                     selection.aic = selection$select.aic,
                     selection.aicc = selection$select.aicc,
                     #sparsemat = res[[2]],
-                    wtMAT = res[[2]],
-                    Lambda_sparse = res[[3]]))
+                    wtMAT = res[[2]]))#,
+                    #Lambda_sparse = res[[3]]))
     }
     else{
         #default
@@ -648,8 +648,8 @@ detectclusters <- function(sparseMAT, Ex, Yx,numCenters,Time, maxclust,bylocatio
                     selection.aic = selection$select.aic,
                     selection.aicc = selection$select.aicc,
                     #sparsemat = res[[2]],
-                    wtMAT = res[[2]],
-                    Lambda_sparse = res[[3]]))
+                    wtMAT = res[[2]]))#,
+                    #Lambda_sparse = res[[3]]))
     }
 }
 
