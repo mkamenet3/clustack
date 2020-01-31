@@ -108,7 +108,6 @@ table.detection.pc.space <- NULL
 table.detection.clusso.space <- NULL
 
 eps <- 3
-dispersion <- "purepoisson"
 path.figures <- "../../../figures/OUTDec19/"
 path.tables <- "../../../results/OUTDec19/"
 
@@ -191,7 +190,7 @@ for (cent in centers){
                                                                             overdisp.est = overdisp.est))
             sim.i <- paste0(path.figures,"sim","_", "center",cent,"_" ,"radius", rad, "_",
                             "risk", risk, "_", "theta", as.character(theta),
-                            as.numeric(paste(tim, collapse = "")), "_", dispersion)
+                            as.numeric(paste(tim, collapse = "")))
             print(filename <- paste0(sim.i,"_superclustLOC",".RData"))
             #save .RData
             save(sim_superclust_loc, file=filename)
@@ -710,7 +709,7 @@ for (cent in centers){
                                                                             bylocation = TRUE, model="poisson",
                                                                             overdisp.est = overdisp.est))
             sim.i <- paste0(path.figures,"sim","_", "center",cent,"_" ,"radius", rad, "_",
-                            "risk", risk, "_", "theta", as.character(theta),"_spaceonly_", "_", dispersion)
+                            "risk", risk, "_", "theta", as.character(theta),"_spaceonly_")
             print(filename <- paste0(sim.i,"_superclustLOC",".RData"))
             #save .RData
             save(sim_superclust_loc, file=filename)
