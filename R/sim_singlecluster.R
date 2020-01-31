@@ -1,3 +1,4 @@
+rm(list=ls())
 set.seed(20190326)
 #library(clusso)
 library(MASS)
