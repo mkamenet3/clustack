@@ -1,7 +1,8 @@
 set.seed(20190326)
 library(clusso)
 library(MASS)
-source("clustack_20191222.R")
+#source("clustack_20191222.R")
+source("clustack.R")
 
 ##################################################
 ######args definitions###########
