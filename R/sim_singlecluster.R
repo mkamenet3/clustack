@@ -1,5 +1,5 @@
 set.seed(20190326)
-library(clusso)
+#library(clusso)
 library(MASS)
 #source("clustack_20191222.R")
 source("clustack.R")
@@ -17,30 +17,30 @@ source("clustack.R")
 args<- commandArgs(TRUE)
 
 #source clusso files
-#file.sources = list.files(path="../../../clusso_KamenetskyLeeZhuGangnon/scripts/clusso/R/",pattern="*.R", full.names = TRUE)
-#sapply(file.sources, source, .GlobalEnv)
+file.sources = list.files(path="../../../clusso_KamenetskyLeeZhuGangnon/scripts/clusso/R/",pattern="*.R", full.names = TRUE)
+sapply(file.sources, source, .GlobalEnv)
 
 #source clusso sim files
-#file.sources = list.files(path="clusso-newpenalty/clusso/clusso/clussoSIMULATION/R_simulation/",pattern="*.R", full.names = TRUE)
-#file.sources = list.files(path="../../../../clusso-newpenalty/clusso/clussoSIMULATION/R_simulation/",pattern="*.R", full.names = TRUE)
-#sapply(file.sources, source, .GlobalEnv)
+file.sources = list.files(path="clusso-newpenalty/clusso/clusso/clussoSIMULATION/R_simulation/",pattern="*.R", full.names = TRUE)
+file.sources = list.files(path="../../../../clusso-newpenalty/clusso/clussoSIMULATION/R_simulation/",pattern="*.R", full.names = TRUE)
+sapply(file.sources, source, .GlobalEnv)
 
 
 
-#dframe1 <- read.csv("../../../../clusso-newpenalty/clusso/data/jap.breast.F.9.10.11.csv")
-#dframe2 <- read.csv("../../../../clusso-newpenalty/clusso/data/utmJapan.csv")
-dframe1 <- read.csv("../../../../cluSTACK/scripts/SERVERSCRIPTS/clusso-newpenalty/clusso/clusso/data/jap.breast.F.9.10.11.csv")
-dframe2 <- read.csv("../../../../cluSTACK/scripts/SERVERSCRIPTS/clusso-newpenalty/clusso/clusso/data/utmJapan.csv")
+dframe1 <- read.csv("../../../../clusso-newpenalty/clusso/data/jap.breast.F.9.10.11.csv")
+dframe2 <- read.csv("../../../../clusso-newpenalty/clusso/data/utmJapan.csv")
+#dframe1 <- read.csv("../../../../cluSTACK/scripts/SERVERSCRIPTS/clusso-newpenalty/clusso/clusso/data/jap.breast.F.9.10.11.csv")
+#dframe2 <- read.csv("../../../../cluSTACK/scripts/SERVERSCRIPTS/clusso-newpenalty/clusso/clusso/data/utmJapan.csv")
 dframe3 <- aggregate(dframe1, by=list(as.factor(rep(1:(nrow(dframe1)/4),each=4))), FUN="sum")
 dframe=data.frame(id=as.factor(dframe3$id/4),period=as.factor(dframe3$year),death=dframe3$death,expdeath=dframe3$expdeath)
 levels(dframe$period) <- c("1","2","3","4","5")
 
 
-#dframe.poly2 <- read.csv("../../../../clusso-newpenalty/clusso/data/japan_poly2.csv")
-dframe.poly2 <- read.csv("../../../../cluSTACK/scripts/SERVERSCRIPTS/clusso-newpenalty/clusso/clusso/data/japan_poly2.csv")
+dframe.poly2 <- read.csv("../../../../clusso-newpenalty/clusso/data/japan_poly2.csv")
+#dframe.poly2 <- read.csv("../../../../cluSTACK/scripts/SERVERSCRIPTS/clusso-newpenalty/clusso/clusso/data/japan_poly2.csv")
 japan.poly2 <- dframe.poly2[,2:3]
-#dframe.prefect2 <- read.csv("../../../../clusso-newpenalty/clusso/data/japan_prefect2.csv")
-dframe.prefect2 <- read.csv("../../../../cluSTACK/scripts/SERVERSCRIPTS/clusso-newpenalty/clusso/clusso/data/japan_prefect2.csv")
+dframe.prefect2 <- read.csv("../../../../clusso-newpenalty/clusso/data/japan_prefect2.csv")
+#dframe.prefect2 <- read.csv("../../../../cluSTACK/scripts/SERVERSCRIPTS/clusso-newpenalty/clusso/clusso/data/japan_prefect2.csv")
 japan.prefect2 <- dframe.prefect2[,2:5]
 japanbreastcancer <- dframe3
 japanbreastcancer$period <- japanbreastcancer$year
