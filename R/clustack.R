@@ -609,8 +609,10 @@ bycluster <-  function(Lik, Lambda_dense, sparsemat,maxclust){
 detectclusters <- function(sparseMAT, Ex, Yx,numCenters,Time, maxclust,bylocation=TRUE, model=c("poisson", "binomial"),cv=FALSE, overdisp.est){
     if(is.null(overdisp.est)){
         quasi <- FALSE
+        message(paste0("Model specified: ", model))
     } else{ quasi <- TRUE
-    print("Quasi model")
+    #print("Quasi model")
+    message(paste0("Model specified: ", "quasi-",model))
     }
     sparsemat <- Matrix::t(sparseMAT) 
     if (model=="poisson"){
@@ -623,7 +625,7 @@ detectclusters <- function(sparseMAT, Ex, Yx,numCenters,Time, maxclust,bylocatio
     else {
         stop("Model not specified. Please indicate `poisson` or `binomial`.")
     }
-    message(paste0("Model specified: ", model))
+    #message(paste0("Model specified: ", model))
     Lik <- out$Lik
     Lambda_dense <- out$Lambda_dense
     #locLambdas <- vector("list", maxclust)

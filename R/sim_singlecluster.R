@@ -87,12 +87,15 @@ timeperiod <- c(3:5)
 tim <- c(3:5)
 risk.ratios <- c(1, 1.1, 1.5, 2)
 
-# #test
-# cent <- 150
-# rad <- 11
-# risk <- 1.5
-# tim <- c(3:5)
-# theta <- 1000
+#test
+cent <- 150
+rad <- 11
+risk <- 1.5
+tim <- c(3:5)
+theta <- 1000
+
+
+
 
 
 table.detection.loc.st <- NULL
