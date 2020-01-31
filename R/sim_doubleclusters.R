@@ -178,9 +178,18 @@ ptm <- proc.time()
             #####################################################################################
             #####################################################################################
             #run superclust by location for each sim (apply)
+            if (is.infinite(theta)){
+                overdisp.est <- NULL
+            } else {
+                offset_reg <- lapply(1:nsim, function(i) glm(YSIM[[i]] ~ as.factor(rep(c("1","2","3","4","5"), 
+                                                                                       each=length(Ex[[i]])/Time)) + offset(log(Ex[[i]])),
+                                                             family=quasipoisson))
+                overdisp.est <- overdisp(offset_reg, sim = TRUE, overdispfloor = TRUE)
+            }
             sim_superclust_loc <- lapply(1:nsim, function(i) detectclusters(sparsematrix, Ex[[i]], YSIM[[i]],
                                                                             numCenters, Time, maxclust,
-                                                                            bylocation = TRUE, model="poisson"))
+                                                                            bylocation = TRUE, model="poisson",
+                                                                            overdisp.est = overdisp.est))
             sim.i <- paste0(path.figures,"sim","_", "center1_",center1,"_", "center2_", center2, "_",
                             "radius", rad, "_",
                             "risk", risk, "_", "theta", as.character(theta),
@@ -286,9 +295,20 @@ ptm <- proc.time()
             #####################################################################################
             #####################################################################################
             #run superclust by PC for each sim (apply)
+            if (is.infinite(theta)){
+                overdisp.est <- NULL
+            } else {
+                offset_reg <- lapply(1:nsim, 
+                                     function(i) glm(YSIM[[i]] ~ as.factor(rep(c("1","2","3","4","5"), 
+                                                                               each=length(Ex[[i]])/Time)) + offset(log(Ex[[i]])),
+                                                     family=quasipoisson))
+                overdisp.est <- overdisp(offset_reg, sim = TRUE, overdispfloor = TRUE)
+                
+            }
             sim_superclust_pc<- lapply(1:nsim, function(i) detectclusters(sparsematrix, Ex[[i]], YSIM[[i]],
                                                                           numCenters, Time, maxclust,
-                                                                          bylocation = FALSE, model="poisson"))
+                                                                          bylocation = FALSE, model="poisson",
+                                                                          overdisp.est = overdisp.est))
             print(filename <- paste0(sim.i,"_superclustPC",".RData"))
             #save .RData
             save(sim_superclust_pc, file=filename)
@@ -675,9 +695,20 @@ for (rad in radii){
         #####################################################################################
         #####################################################################################
         #run superclust by location for each sim (apply)
+        if (is.infinite(theta)){
+            overdisp.est <- NULL
+        } else {
+            offset_reg <- lapply(1:nsim, 
+                                 function(i) glm(YSIM[[i]] ~ as.factor(rep(c("1","2","3","4","5"), 
+                                                                           each=length(Ex[[i]])/Time)) + offset(log(Ex[[i]])),
+                                                 family=quasipoisson))
+            overdisp.est <- overdisp(offset_reg, sim = TRUE, overdispfloor = TRUE)
+            
+        }
         sim_superclust_loc <- lapply(1:nsim, function(i) detectclusters(sparsematrix, Ex[[i]], YSIM[[i]],
                                                                         numCenters, Time, maxclust,
-                                                                        bylocation = TRUE, model="poisson"))
+                                                                        bylocation = TRUE, model="poisson",
+                                                                        overdisp.est = overdisp.est))
         sim.i <- paste0(path.figures,"sim","_", "center1",center1,"_", "center2", center2, "_",
                         "radius", rad, "_",
                         "risk", risk, "_", "theta", as.character(theta),"_spaceonly_", "_", dispersion)
@@ -782,9 +813,20 @@ for (rad in radii){
         #####################################################################################
         #####################################################################################
         #run superclust by PC for each sim (apply)
+        if (is.infinite(theta)){
+            overdisp.est <- NULL
+        } else {
+            offset_reg <- lapply(1:nsim, 
+                                 function(i) glm(YSIM[[i]] ~ as.factor(rep(c("1","2","3","4","5"), 
+                                                                           each=length(Ex[[i]])/Time)) + offset(log(Ex[[i]])),
+                                                 family=quasipoisson))
+            overdisp.est <- overdisp(offset_reg, sim = TRUE, overdispfloor = TRUE)
+            
+        }
         sim_superclust_pc<- lapply(1:nsim, function(i) detectclusters(sparsematrix, Ex[[i]], YSIM[[i]],
                                                                       numCenters, Time, maxclust,
-                                                                      bylocation = FALSE, model="poisson"))
+                                                                      bylocation = FALSE, model="poisson",
+                                                                      overdisp.est = overdisp.est))
         print(filename <- paste0(sim.i,"_superclustPC",".RData"))
         #save .RData
         save(sim_superclust_pc, file=filename)

@@ -607,6 +607,11 @@ bycluster <-  function(Lik, Lambda_dense, sparsemat,maxclust){
 #'@return Returns list for each iteration with weighted relative risks by location inside identified cluster.
 #'@export
 detectclusters <- function(sparseMAT, Ex, Yx,numCenters,Time, maxclust,bylocation=TRUE, model=c("poisson", "binomial"),cv=FALSE, overdisp.est){
+    if(is.null(overdisp.est)){
+        quasi <- FALSE
+    } else{ quasi <- TRUE
+    print("Quasi model")
+    }
     sparsemat <- Matrix::t(sparseMAT) 
     if (model=="poisson"){
         out <- poisLik(Ex, Yx, sparsemat)  
@@ -626,7 +631,7 @@ detectclusters <- function(sparseMAT, Ex, Yx,numCenters,Time, maxclust,bylocatio
         message("Cluster detection by potential cluster")
         res <- bycluster(Lik, Lambda_dense, sparsemat, maxclust)
         #perform selection by IC/CV
-        selection <- clusterselect(res[[1]], Yx, Ex, model,maxclust, numCenters, Time, cv=FALSE,overdisp.est)
+        selection <- clusterselect(res[[1]], Yx, Ex, model,maxclust, numCenters, Time, quasi,cv=FALSE,overdisp.est)
         return(list(wLambda = res[[1]],
                     loglik = selection$loglik,
                     selection.bic = selection$select.bic,
@@ -641,7 +646,7 @@ detectclusters <- function(sparseMAT, Ex, Yx,numCenters,Time, maxclust,bylocatio
         message("Cluster detection by location")
         res <- bylocation(Lik, Lambda_dense, sparsemat, maxclust)
         #perform selection by IC/CV
-        selection <- clusterselect(res[[1]], Yx, Ex, model,maxclust, numCenters, Time, cv=FALSE,overdisp.est)
+        selection <- clusterselect(res[[1]], Yx, Ex, model,maxclust, numCenters, Time, quasi,cv=FALSE,overdisp.est)
         return(list(wLambda = res[[1]],
                     loglik = selection$loglik,
                     selection.bic = selection$select.bic,
