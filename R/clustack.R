@@ -4,9 +4,49 @@ library(clusso)
 library(testthat)
 library(Matrix)
 
+
 ########################################
 #Functions
 ########################################
+
+clusso_prob_clusteroverlap <- function(sparseMAT,lassoresult,selected,rr, risk.ratio,nsim,Time, ncentroids, pow){
+    #DEFINE TRUTH
+    if(risk.ratio==1){
+        warning("Risk.ratio was set to 1")
+        rrmatvec <- rep(0,length(rr))
+    }
+    else{
+        rrmatvec <- ifelse(as.vector(rr)==risk.ratio,1,0)    
+    }
+    #Take out the time vectors - only keep cluster part of matrix
+    sparseMAT_clusteronly <- sparseMAT[,-c(ncol(sparseMAT)-Time+1:ncol(sparseMAT))]
+    #select out my betas for each sim
+    betaselect <- lassoresult$coefs.lasso.all[,selected]
+    #binarize
+    betaselect_bin <- ifelse(abs(betaselect >= 10e-6),1,0)
+    #only take the clusters betas
+    betaselect_bin_clusteronly <- betaselect_bin[-c(ncol(sparseMAT)-Time+1:ncol(sparseMAT))]
+    ##INCLUSTER
+    if(pow==TRUE){
+        #print("pow")
+        clusteroverlap <- t(rrmatvec) %*% sparseMAT_clusteronly
+        clusteroverlap_bin <- ifelse(clusteroverlap !=0,1,0)
+        incluster_sim <- clusteroverlap_bin %*% betaselect_bin_clusteronly
+        incluster_sim_bin <- ifelse(incluster_sim !=0,1,0)
+        return(idin = incluster_sim_bin)
+    }
+    else{
+        ##OUTCLUSTER
+        #print("fp")
+        clusteroverlap <- t(rrmatvec) %*% sparseMAT_clusteronly
+        clusteroverlap_bin <- ifelse(clusteroverlap !=0,0,1)
+        outcluster_sim <- clusteroverlap_bin %*% betaselect_bin_clusteronly
+        outcluster_sim_bin <- ifelse(outcluster_sim !=0,1,0)
+        return(idout = outcluster_sim_bin)
+    }
+}
+
+
 
 
 colorsgrey <- function (x) {
@@ -14,6 +54,284 @@ colorsgrey <- function (x) {
     rgb(y[, 1], y[, 2], y[, 3], maxColorValue = 255)
 }
 
+#'@title probplotmapAllIC
+#'@param res.bic result bic
+#'#'@param res.aic result aic
+#'@param oracle
+#'@param pdfname String for name of pdf to be generated.
+#'@param genpdf Boolean. If results should be generated to console, set to \code{FALSE}. Default is \code{TRUE} for pdf to be generated.
+#'@return Maps for central region of Japan for each time period.
+probplotmapAllIC <- function(colprob, pdfname=NULL, genpdf=TRUE, obs=NULL){
+    if(!is.null(obs)){
+        firstrow = "Observed"
+    }
+    else{
+        firstrow="Oracle"
+    }
+    if(genpdf==TRUE){
+        pdf(pdfname, height=11, width=10)    
+    }
+    ####################################
+    #oracle or Obs
+    ####################################
+    #P1
+    par(fig=c(0,.2,.6,1), mar=c(.5,0.5,0.5,0))
+    plot(japan.poly2,type='n',asp=1,axes=F,xlab='',ylab='')
+    polygon(japan.poly2,col=colprob[[1]][,1] ,border=F)
+    segments(japan.prefect2$x1,japan.prefect2$y1,japan.prefect2$x2,japan.prefect2$y2)
+    text(270,4120,paste0(firstrow),cex=1.00, srt=90)
+    
+    #P2
+    par(fig=c(0.2,.4,.6,1), mar=c(.5,0.5,0.5,0), new=T)
+    plot(japan.poly2,type='n',asp=1,axes=F,xlab='',ylab='')
+    polygon(japan.poly2,col=colprob[[1]][,2] ,border=F)
+    segments(japan.prefect2$x1,japan.prefect2$y1,japan.prefect2$x2,japan.prefect2$y2)
+    
+    #P3
+    par(fig=c(0.4,.6,.6,1), mar=c(.5,0.5,0.5,0), new=T)
+    plot(japan.poly2,type='n',asp=1,axes=F,xlab='',ylab='')
+    polygon(japan.poly2,col=colprob[[1]][,3] ,border=F)
+    segments(japan.prefect2$x1,japan.prefect2$y1,japan.prefect2$x2,japan.prefect2$y2)
+    
+    #P4
+    par(fig=c(0.6,.8,.6,1), mar=c(.5,0.5,0.5,0), new=T)
+    plot(japan.poly2,type='n',asp=1,axes=F,xlab='',ylab='')
+    polygon(japan.poly2,col=colprob[[1]][,4] ,border=F)
+    segments(japan.prefect2$x1,japan.prefect2$y1,japan.prefect2$x2,japan.prefect2$y2)
+    
+    #P5
+    par(fig=c(0.8,1,.6,1), mar=c(.5,0.5,0.5,0), new=T)
+    plot(japan.poly2,type='n',asp=1,axes=F,xlab='',ylab='')
+    polygon(japan.poly2,col=colprob[[1]][,5] ,border=F)
+    segments(japan.prefect2$x1,japan.prefect2$y1,japan.prefect2$x2,japan.prefect2$y2)
+    ####################################
+    #BIC
+    ####################################
+    par(fig=c(0,.2,.4,.8), mar=c(.5,0.5,0.5,0), new=T)
+    plot(japan.poly2,type='n',asp=1,axes=F,xlab='',ylab='')
+    polygon(japan.poly2,col=colprob[[2]][,1],border=F)
+    segments(japan.prefect2$x1,japan.prefect2$y1,japan.prefect2$x2,japan.prefect2$y2)
+    text(270,4120,'BIC',cex=1.00, srt=90)
+    
+    par(fig=c(0.2,.4,.4,.8), mar=c(.5,0.5,0.5,0), new=T)   
+    plot(japan.poly2,type='n',asp=1,axes=F,xlab='',ylab='')
+    polygon(japan.poly2,col=colprob[[2]][,2],border=F)
+    segments(japan.prefect2$x1,japan.prefect2$y1,japan.prefect2$x2,japan.prefect2$y2)
+    #text(355,4120,'Period 2 - BIC',cex=1.00)
+    
+    par(fig=c(0.4,.6,.4,.8), mar=c(.5,0.5,0.5,0), new=T) 
+    plot(japan.poly2,type='n',asp=1,axes=F,xlab='',ylab='')
+    polygon(japan.poly2,col=colprob[[2]][,3],border=F)
+    segments(japan.prefect2$x1,japan.prefect2$y1,japan.prefect2$x2,japan.prefect2$y2)
+    #text(355,4120,'Period 3 - BIC',cex=1.00)
+    
+    par(fig=c(0.6,.8,.4,.8), mar=c(.5,0.5,0.5,0), new=T)
+    plot(japan.poly2,type='n',asp=1,axes=F,xlab='',ylab='')
+    polygon(japan.poly2,col=colprob[[2]][,4],border=F)
+    segments(japan.prefect2$x1,japan.prefect2$y1,japan.prefect2$x2,japan.prefect2$y2)
+    #text(355,4120,'Period 4 - BIC',cex=1.00)
+    
+    par(fig=c(0.8,1,.4,.8), mar=c(.5,0.5,0.5,0), new=T)
+    plot(japan.poly2,type='n',asp=1,axes=F,xlab='',ylab='')
+    polygon(japan.poly2,col=colprob[[2]][,5],border=F)
+    segments(japan.prefect2$x1,japan.prefect2$y1,japan.prefect2$x2,japan.prefect2$y2)
+    #text(355,4120,'Period 5 - BIC',cex=1.00)
+    
+    ####################################
+    #AIC
+    ####################################
+    par(fig=c(0,.2,.2,.6), mar=c(.5,0.5,0.5,0), new=T)
+    plot(japan.poly2,type='n',asp=1,axes=F,xlab='',ylab='')
+    polygon(japan.poly2,col=colprob[[3]][,1],border=F)
+    segments(japan.prefect2$x1,japan.prefect2$y1,japan.prefect2$x2,japan.prefect2$y2)
+    text(270,4120,'AIC',cex=1.00, srt=90)
+    
+    par(fig=c(0.2,.4,.2,.6), mar=c(.5,0.5,0.5,0), new=T) 
+    plot(japan.poly2,type='n',asp=1,axes=F,xlab='',ylab='')
+    polygon(japan.poly2,col=colprob[[3]][,2],border=F)
+    segments(japan.prefect2$x1,japan.prefect2$y1,japan.prefect2$x2,japan.prefect2$y2)
+    #text(355,4120,'Period 2 - AIC',cex=1.00)
+    
+    par(fig=c(0.4,.6,.2,.6), mar=c(.5,0.5,0.5,0), new=T) 
+    plot(japan.poly2,type='n',asp=1,axes=F,xlab='',ylab='')
+    polygon(japan.poly2,col=colprob[[3]][,3],border=F)
+    segments(japan.prefect2$x1,japan.prefect2$y1,japan.prefect2$x2,japan.prefect2$y2)
+    #text(355,4120,'Period 3 - AIC',cex=1.00)
+    
+    par(fig=c(0.6,.8,.2,.6), mar=c(.5,0.5,0.5,0), new=T)
+    plot(japan.poly2,type='n',asp=1,axes=F,xlab='',ylab='')
+    polygon(japan.poly2,col=colprob[[3]][,4],border=F)
+    segments(japan.prefect2$x1,japan.prefect2$y1,japan.prefect2$x2,japan.prefect2$y2)
+    #text(355,4120,'Period 4 - AIC',cex=1.00)
+    
+    par(fig=c(0.8,1,.2,.6), mar=c(.5,0.5,0.5,0), new=T)
+    plot(japan.poly2,type='n',asp=1,axes=F,xlab='',ylab='')
+    polygon(japan.poly2,col=colprob[[3]][,5],border=F)
+    segments(japan.prefect2$x1,japan.prefect2$y1,japan.prefect2$x2,japan.prefect2$y2)
+    #text(355,4120,'Period 5 - AIC',cex=1.00)
+    
+    
+    
+    #legend
+    par(fig=c(.35,.75,0,.1), new=T)
+    plot(1, xlim=c(0.6,1.5), ylim=c(0.2,1), axes=F, type='n',  xlab="", ylab="")
+    rect(seq(.6,1.4,length=50)[-50],.5,seq(.65,1.4,length=50)[-1],.62,col=greys(0:50/50),border=F)
+    text(seq(.6,1.4,length=6),rep(.45,6),c('0.0','0.2','0.4','0.6','0.8','1.0'),srt=330,adj=0)
+    #text(seq(0.6, 1.4, length = 5), rep(0.45, 5), seq(0.5, 1.5, length.out = 5), srt = 330, adj = 0)
+    
+    if(genpdf==TRUE){
+        dev.off()    
+    }
+    
+}
+
+#'@title plotmapAllIC
+#'@param res.bic result bic
+#'#'@param res.aic result aic
+#'@param oracle
+#'@param pdfname String for name of pdf to be generated.
+#'@param genpdf Boolean. If results should be generated to console, set to \code{FALSE}. Default is \code{TRUE} for pdf to be generated.
+#'@param maxrr For the color ramp, what is the maximum relative risk color. Default is for the ramp to be between 0 and 2. 
+#'@param minrr For the color ramp, what is the minimum relative risk color. Default is for the ramp to be between 0 and 2. 
+#'@return Maps for central region of Japan for each time period.
+plotmapAllIC <- function(res.bic, res.aic, oracle ,pdfname=NULL, genpdf=TRUE, maxrr=2, minrr=0, obs=NULL){
+    if(!is.null(obs)){
+        firstrow = "Observed"
+    }
+    else{
+        firstrow="Oracle"
+    }
+    if(!is.null(maxrr)){
+        maxrr=maxrr
+    }
+    else{
+        maxrr=2
+    }
+    if(!is.null(minrr)){
+        minrr=minrr
+    }
+    else{
+        minrr=0
+    }
+    
+    cluster_ix.bic <- matrix(redblue(log(maxrr *  pmax(minrr, pmin(res.bic, maxrr)))/log(maxrr^2)), ncol=5, byrow=FALSE)
+    cluster_ix.aic <- matrix(redblue(log(maxrr *  pmax(minrr, pmin(res.aic, maxrr)))/log(maxrr^2)), ncol=5, byrow=FALSE)
+    oracle_ix <- matrix(redblue(log(maxrr *  pmax(minrr, pmin(oracle, maxrr)))/log(maxrr^2)), ncol=5, byrow=FALSE)
+    #colors_0 <- matrix(cluster_ix, ncol=5, byrow = FALSE)
+    if(genpdf==TRUE){
+        pdf(pdfname, height=11, width=10)    
+    }
+    ####################################
+    #oracle or Obs
+    ####################################
+    #P1
+    par(fig=c(0,.2,.6,1), mar=c(.5,0.5,0.5,0))
+    plot(japan.poly2,type='n',asp=1,axes=F,xlab='',ylab='')
+    polygon(japan.poly2,col=oracle_ix [,1] ,border=F)
+    segments(japan.prefect2$x1,japan.prefect2$y1,japan.prefect2$x2,japan.prefect2$y2)
+    text(270,4120,paste0(firstrow),cex=1.00, srt=90)
+    
+    #P2
+    par(fig=c(0.2,.4,.6,1), mar=c(.5,0.5,0.5,0), new=T)
+    plot(japan.poly2,type='n',asp=1,axes=F,xlab='',ylab='')
+    polygon(japan.poly2,col=oracle_ix[,2] ,border=F)
+    segments(japan.prefect2$x1,japan.prefect2$y1,japan.prefect2$x2,japan.prefect2$y2)
+    
+    #P3
+    par(fig=c(0.4,.6,.6,1), mar=c(.5,0.5,0.5,0), new=T)
+    plot(japan.poly2,type='n',asp=1,axes=F,xlab='',ylab='')
+    polygon(japan.poly2,col=oracle_ix[,3] ,border=F)
+    segments(japan.prefect2$x1,japan.prefect2$y1,japan.prefect2$x2,japan.prefect2$y2)
+    
+    #P4
+    par(fig=c(0.6,.8,.6,1), mar=c(.5,0.5,0.5,0), new=T)
+    plot(japan.poly2,type='n',asp=1,axes=F,xlab='',ylab='')
+    polygon(japan.poly2,col=oracle_ix[,4] ,border=F)
+    segments(japan.prefect2$x1,japan.prefect2$y1,japan.prefect2$x2,japan.prefect2$y2)
+    
+    #P5
+    par(fig=c(0.8,1,.6,1), mar=c(.5,0.5,0.5,0), new=T)
+    plot(japan.poly2,type='n',asp=1,axes=F,xlab='',ylab='')
+    polygon(japan.poly2,col=oracle_ix[,5] ,border=F)
+    segments(japan.prefect2$x1,japan.prefect2$y1,japan.prefect2$x2,japan.prefect2$y2)
+    ####################################
+    #BIC
+    ####################################
+    par(fig=c(0,.2,.4,.8), mar=c(.5,0.5,0.5,0), new=T)
+    plot(japan.poly2,type='n',asp=1,axes=F,xlab='',ylab='')
+    polygon(japan.poly2,col=cluster_ix.bic[,1],border=F)
+    segments(japan.prefect2$x1,japan.prefect2$y1,japan.prefect2$x2,japan.prefect2$y2)
+    text(270,4120,'BIC',cex=1.00, srt=90)
+    
+    par(fig=c(0.2,.4,.4,.8), mar=c(.5,0.5,0.5,0), new=T)   
+    plot(japan.poly2,type='n',asp=1,axes=F,xlab='',ylab='')
+    polygon(japan.poly2,col=cluster_ix.bic[,2],border=F)
+    segments(japan.prefect2$x1,japan.prefect2$y1,japan.prefect2$x2,japan.prefect2$y2)
+    #text(355,4120,'Period 2 - BIC',cex=1.00)
+    
+    par(fig=c(0.4,.6,.4,.8), mar=c(.5,0.5,0.5,0), new=T) 
+    plot(japan.poly2,type='n',asp=1,axes=F,xlab='',ylab='')
+    polygon(japan.poly2,col=cluster_ix.bic[,3],border=F)
+    segments(japan.prefect2$x1,japan.prefect2$y1,japan.prefect2$x2,japan.prefect2$y2)
+    #text(355,4120,'Period 3 - BIC',cex=1.00)
+    
+    par(fig=c(0.6,.8,.4,.8), mar=c(.5,0.5,0.5,0), new=T)
+    plot(japan.poly2,type='n',asp=1,axes=F,xlab='',ylab='')
+    polygon(japan.poly2,col=cluster_ix.bic[,4],border=F)
+    segments(japan.prefect2$x1,japan.prefect2$y1,japan.prefect2$x2,japan.prefect2$y2)
+    #text(355,4120,'Period 4 - BIC',cex=1.00)
+    
+    par(fig=c(0.8,1,.4,.8), mar=c(.5,0.5,0.5,0), new=T)
+    plot(japan.poly2,type='n',asp=1,axes=F,xlab='',ylab='')
+    polygon(japan.poly2,col=cluster_ix.bic[,5],border=F)
+    segments(japan.prefect2$x1,japan.prefect2$y1,japan.prefect2$x2,japan.prefect2$y2)
+    #text(355,4120,'Period 5 - BIC',cex=1.00)
+    
+    ####################################
+    #AIC
+    ####################################
+    par(fig=c(0,.2,.2,.6), mar=c(.5,0.5,0.5,0), new=T)
+    plot(japan.poly2,type='n',asp=1,axes=F,xlab='',ylab='')
+    polygon(japan.poly2,col=cluster_ix.aic[,1],border=F)
+    segments(japan.prefect2$x1,japan.prefect2$y1,japan.prefect2$x2,japan.prefect2$y2)
+    text(270,4120,'AIC',cex=1.00, srt=90)
+    
+    par(fig=c(0.2,.4,.2,.6), mar=c(.5,0.5,0.5,0), new=T) 
+    plot(japan.poly2,type='n',asp=1,axes=F,xlab='',ylab='')
+    polygon(japan.poly2,col=cluster_ix.aic[,2],border=F)
+    segments(japan.prefect2$x1,japan.prefect2$y1,japan.prefect2$x2,japan.prefect2$y2)
+    #text(355,4120,'Period 2 - AIC',cex=1.00)
+    
+    par(fig=c(0.4,.6,.2,.6), mar=c(.5,0.5,0.5,0), new=T) 
+    plot(japan.poly2,type='n',asp=1,axes=F,xlab='',ylab='')
+    polygon(japan.poly2,col=cluster_ix.aic[,3],border=F)
+    segments(japan.prefect2$x1,japan.prefect2$y1,japan.prefect2$x2,japan.prefect2$y2)
+    #text(355,4120,'Period 3 - AIC',cex=1.00)
+    
+    par(fig=c(0.6,.8,.2,.6), mar=c(.5,0.5,0.5,0), new=T)
+    plot(japan.poly2,type='n',asp=1,axes=F,xlab='',ylab='')
+    polygon(japan.poly2,col=cluster_ix.aic[,4],border=F)
+    segments(japan.prefect2$x1,japan.prefect2$y1,japan.prefect2$x2,japan.prefect2$y2)
+    #text(355,4120,'Period 4 - AIC',cex=1.00)
+    
+    par(fig=c(0.8,1,.2,.6), mar=c(.5,0.5,0.5,0), new=T)
+    plot(japan.poly2,type='n',asp=1,axes=F,xlab='',ylab='')
+    polygon(japan.poly2,col=cluster_ix.aic[,5],border=F)
+    segments(japan.prefect2$x1,japan.prefect2$y1,japan.prefect2$x2,japan.prefect2$y2)
+    #text(355,4120,'Period 5 - AIC',cex=1.00)
+    
+    #legend
+    par(fig=c(.35,.75,0,0.2), new=T)
+    plot(1, xlim=c(0.6,1.5), ylim=c(0.2,1), axes=F, type='n',  xlab="", ylab="")
+    rect(seq(.6,1.4,length=50)[-50],.5,seq(.65,1.4,length=50)[-1],.62,col=redblue(0:50/50),border=F)
+    #text(seq(.6,1.4,length=5),rep(.45,5),seq(0,maxrr,length.out=5),srt=330,adj=0)
+    text(seq(.6,1.4,length=5),rep(.45,5),seq(minrr,maxrr,length.out=5),srt=330,adj=0)
+    
+    if(genpdf==TRUE){
+        dev.off()    
+    }
+    
+}
 
 #'@title plotmap
 #'@param res result 
@@ -97,6 +415,26 @@ likweights <- function(liki){
     return(wi)
 }
 
+####NOTE: this overdisp function is part of clusso. Omit after testing
+overdisp <- function(offset_reg, sim = TRUE, overdispfloor = TRUE) {
+    if(sim==TRUE){
+        stopifnot(inherits(offset_reg[[1]], c("glm", "lm")))
+        phi <- max(unlist(lapply(1:length(offset_reg), function(i) deviance(offset_reg[[i]])/df.residual(offset_reg[[i]]))))
+    }
+    else{
+        stopifnot(inherits(offset_reg, c("glm", "lm")))
+        phi <- max(unlist(deviance(offset_reg)/df.residual(offset_reg)))
+    }
+    if(overdispfloor == TRUE & phi < 1){
+        message(paste("Underdispersion detected (", phi,"). Setting phi to 1"))
+        phi <- 1
+    }
+    if(overdispfloor == FALSE & phi < 1){
+        message(paste("Underdispersion detect (", phi,").\n 'Floor' argument was set to FALSE to underdispersed model will be run"))
+    }
+    return(phi)
+}
+
 #'@title poisLik
 #'@description Poisson-based likelihood
 #'@param Ex Vector of expected counts.
@@ -138,9 +476,9 @@ binomLik <-function(nx, Yx, sparsemat){
     Lambda_dense <- as.matrix(Lambda)
     Lambda_dense[Lambda_dense == 0] <- 1
     #Get scaled likelihood
-
+    
     #Lik <- (((outObs/nx)/(sum(outObs)/sum(nx)))^(outobs))*(((sum(outObs)-outObs)/(sum(nx)-nx))/(sum(outObs)/sum(nx)))^(sum(outObs)-outObs)
-        #((outObs/outExp)/(sum(outObs)/sum(outExp)))^outObs #TODO CHECK THIS
+    #((outObs/outExp)/(sum(outObs)/sum(outExp)))^outObs #TODO CHECK THIS
     outnt <- sum(outnx)
     outObst <- sum(outObs)
     Lik <- (((outObs/outnx)^outObs)*(1-(outObs/outnx))^(outnx-outObs))*(((outObst - outObs)/(outnt-outnx))^(outObst-outObs))*(1-((outObst-outObs)/(outnt - outnx)))^(outnt - outnx - outObst+outObs)
@@ -189,7 +527,13 @@ bylocation <- function(Lik, Lambda_dense,sparsemat, maxclust){
         ixall <- c(ixall, ix)
     }
     wLambda <- crossprod(wtMAT, Lambda_dense)
-    return(wLambda = wLambda)
+    #Lambda_sparse <- Lambda_dense
+    #Lambda_sparse[Lambda_sparse==1] <- FALSE
+    #Lambda_sparse <- Matrix::drop0(Lambda_sparse)
+    return(list(wLambda = wLambda,
+                #sparsemat = sparsemat,
+                wtMAT = wtMAT))#,
+                #Lambda_sparse = Lambda_sparse))
 }
 
 
@@ -220,8 +564,8 @@ bycluster <-  function(Lik, Lambda_dense, sparsemat,maxclust){
         pcmax <- rep(0,length(wtmp)); pcmax[maxpc] <-1; pcmax <- matrix(pcmax,ncol=1)
         pcpcmax <- t(t(sparsemat)%*%pcmax)%*%t(sparsemat); pcpcmax <- ifelse(pcpcmax!=0,1,0)
         ix <- which(pcpcmax!=0)
-
-
+        
+        
         #upweight Lik* to 1 in all PCs that overlap max PC
         Lik[ix] <- 1
         #reweight so that everything inside the PCs that overlap max cluster sum to 1
@@ -238,10 +582,16 @@ bycluster <-  function(Lik, Lambda_dense, sparsemat,maxclust){
         maxi = i
     }
     wLambda <- crossprod(wtMAT[,1:(maxi)], Lambda_dense)
-    return(wLambda = wLambda)
+    #Lambda_sparse <- Lambda_dense
+    #Lambda_sparse[Lambda_sparse==1] <- FALSE
+    #Lambda_sparse <- Matrix::drop0(Lambda_sparse)
+    return(list(wLambda = wLambda,
+                #sparsemat = sparsemat,
+                wtMAT = wtMAT))#,
+                #Lambda_sparse = Lambda_sparse))
 }
-    
-  
+
+
 #'@title detectclusters
 #'@description Detect disease clusters either by location or by potential cluster.
 #'@param sparseMAT Large sparsematrix TODO
@@ -253,12 +603,21 @@ bycluster <-  function(Lik, Lambda_dense, sparsemat,maxclust){
 #'@param bylocation If clusters should be identified by maximum location (\code{TRUE}) or maximum potential cluster (\code{FALSE}). Default is \code{TRUE}.
 #'@param model A string specifying which model to use, Poisson or binomial. For Poisson, specify \code{"poisson"} and both the Poisson and quasi-Poisson model results are returned. For binomial, specify \code{"binomial"}.
 #'@param cv option for cross-validation instead of AIC/BIC. Default is set to FALSE
+#'@param overdisp.est Overdispersion parameter estimated across all simulations (max).
 #'@return Returns list for each iteration with weighted relative risks by location inside identified cluster.
 #'@export
-detectclusters <- function(sparseMAT, Ex, Yx,numCenters,Time, maxclust,bylocation=TRUE, model=c("poisson", "binomial"),cv=FALSE){
+detectclusters <- function(sparseMAT, Ex, Yx,numCenters,Time, maxclust,bylocation=TRUE, model=c("poisson", "binomial"),cv=FALSE, overdisp.est){
+    if(is.null(overdisp.est)){
+        quasi <- FALSE
+        message(paste0("Model specified: ", model))
+    } else{ quasi <- TRUE
+    #print("Quasi model")
+    message(paste0("Model specified: ", "quasi-",model))
+    }
     sparsemat <- Matrix::t(sparseMAT) 
     if (model=="poisson"){
         out <- poisLik(Ex, Yx, sparsemat)  
+        #out <- poisLik(Ex[[1]], YSIM[[1]], sparsemat)  
     }
     else if (model=="binomial"){
         out <- binomLik(Ex, Yx, sparsemat) #in dev
@@ -266,7 +625,7 @@ detectclusters <- function(sparseMAT, Ex, Yx,numCenters,Time, maxclust,bylocatio
     else {
         stop("Model not specified. Please indicate `poisson` or `binomial`.")
     }
-    message(paste0("Model specified: ", model))
+    #message(paste0("Model specified: ", model))
     Lik <- out$Lik
     Lambda_dense <- out$Lambda_dense
     #locLambdas <- vector("list", maxclust)
@@ -274,24 +633,30 @@ detectclusters <- function(sparseMAT, Ex, Yx,numCenters,Time, maxclust,bylocatio
         message("Cluster detection by potential cluster")
         res <- bycluster(Lik, Lambda_dense, sparsemat, maxclust)
         #perform selection by IC/CV
-        selection <- clusterselect(res, Yx, Ex, model,maxclust, numCenters, Time, cv=FALSE)
-        return(list(wLambda = res,
+        selection <- clusterselect(res[[1]], Yx, Ex, model,maxclust, numCenters, Time, quasi,cv=FALSE,overdisp.est)
+        return(list(wLambda = res[[1]],
                     loglik = selection$loglik,
                     selection.bic = selection$select.bic,
                     selection.aic = selection$select.aic,
-                    selection.aicc = selection$select.aicc))
+                    selection.aicc = selection$select.aicc,
+                    #sparsemat = res[[2]],
+                    wtMAT = res[[2]]))#,
+                    #Lambda_sparse = res[[3]]))
     }
     else{
         #default
         message("Cluster detection by location")
         res <- bylocation(Lik, Lambda_dense, sparsemat, maxclust)
         #perform selection by IC/CV
-        selection <- clusterselect(res, Yx, Ex, model,maxclust, numCenters, Time, cv=FALSE)
-        return(list(wLambda = res,
+        selection <- clusterselect(res[[1]], Yx, Ex, model,maxclust, numCenters, Time, quasi,cv=FALSE,overdisp.est)
+        return(list(wLambda = res[[1]],
                     loglik = selection$loglik,
                     selection.bic = selection$select.bic,
                     selection.aic = selection$select.aic,
-                    selection.aicc = selection$select.aicc))
+                    selection.aicc = selection$select.aicc,
+                    #sparsemat = res[[2]],
+                    wtMAT = res[[2]]))#,
+                    #Lambda_sparse = res[[3]]))
     }
 }
 
@@ -302,19 +667,37 @@ detectclusters <- function(sparseMAT, Ex, Yx,numCenters,Time, maxclust,bylocatio
 #'@param model A string specifying which model to use, Poisson or binomial. For Poisson, specify \code{"poisson"} and both the Poisson and quasi-Poisson model results are returned. For binomial, specify \code{"binomial"}.
 #'@param numCenters TODO
 #'@param Time TODO
+#'@param quasi Boolean. \code{TRUE} indicates a quasi-Poisson or quasi-binomial model that accounts for overdispersion. \code{FALSE} indicates a Poisson or binomial model without adjustment for overdispersion.
+#'@param covars Dataframe of additional covariates to be included in the model that are un-penalized by the LASSO.
+#'@param Yx Number of observed cases for each space-time location.
 #'@param cv TODO
+#'@param overdisp.est Overdispersion parameter estimated across all simulations (max).
 #'@return TODO
-clusterselect <- function(wLambda,Yx, Ex, model,maxclust, numCenters, Time,cv=FALSE){
+clusterselect <- function(wLambda,Yx, Ex, model,maxclust, numCenters, Time,quasi,cv=FALSE,overdisp.est){
     #test <- t(a)%*%Lambda_dense
     loglik <- sapply(1:nrow(wLambda), function(i) dpoisson(Yx, wLambda[i,], Ex))
+    #loglik <- sapply(1:nrow(wLambda), function(i) dpoisson(YSIM[[1]], wLambda[i,], Ex[[1]]))
     #add null model loglik
     if (model=="poisson"){
         loglik <- c(dpoisson(Yx, rep(1,length(Yx)), Ex), loglik)    
+        #loglik <- c(dpoisson(YSIM[[1]], rep(1,length(YSIM[[1]])), Ex[[1]]), loglik)
+        if (quasi== TRUE){
+            message(paste("Overdispersion estimate:", round(overdisp.est,4)))
+            if(quasi == TRUE & is.null(overdisp.est)) warning("No overdispersion for quasi-Poisson model. Please check.")
+        } else {
+            print("no overdispersion being estimated")
+        }
+        
     }
-    else if (model=="binomial"){
-        #TODO
-        #loglik <- c(dbin(Yx, rep(1,length(Yx)), Ex), loglik)
-    }
+    # else if (model=="binomial"){
+    #     #TODO
+    #     #loglik <- c(dbin(Yx, rep(1,length(Yx)), Ex), loglik)
+    #     # if (quasi== TRUE){
+    #     #     #TODO
+    #     # } else {
+    #     #     #TODO
+    #     # }
+    # }
     
     #find K clusters
     K <- seq(from=0, to=nrow(wLambda))#seq(from=0, to=maxclust)
@@ -323,10 +706,18 @@ clusterselect <- function(wLambda,Yx, Ex, model,maxclust, numCenters, Time,cv=FA
     }
     else{
         #calc
-        PLL.bic <- (-2*loglik) + K*log(sum(Yx)) #(-2*loglik) + K*log(numCenters*Time)
-        PLL.aic <- 2*K - 2*loglik
-        PLL.aicc <- 2*(K) - 2*(loglik) +
-            ((2*K*(K + 1))/(sum(Yx) - K - 1))
+        if (quasi== TRUE){
+            PLL.bic <- (-2*loglik/overdisp.est) + (K+1)*log(sum(Yx)) #(-2*loglik) + K*log(numCenters*Time)
+            PLL.aic <- 2*(K+1) - 2*(loglik/overdisp.est)
+            PLL.aicc <- 2*(K+1) - 2*(loglik/overdisp.est) +
+                ((2*(K+1)*(K+1 + 1))/(sum(Yx) - K+1 - 1))
+        } else {
+            PLL.bic <- (-2*loglik) + K*log(sum(Yx)) #(-2*loglik) + K*log(numCenters*Time)
+            PLL.aic <- 2*K - 2*loglik
+            PLL.aicc <- 2*(K) - 2*(loglik) +
+                ((2*K*(K + 1))/(sum(Yx) - K - 1))
+        }
+        
         #make sure that aicc is not overparameterized
         if(any(is.infinite(PLL.aicc))) {
             idx <- which(is.infinite(PLL.aicc))
@@ -338,22 +729,22 @@ clusterselect <- function(wLambda,Yx, Ex, model,maxclust, numCenters, Time,cv=FA
         select.aic <- which.min(PLL.aic)-1
         select.aicc <- which.min(PLL.aicc)-1 
         cat(paste0("\t","Num. selected clusters by BIC: ", (select.bic),"\n",
-                     "\t","Num. selected clusters by AIC: ",(select.aic),"\n",
-                     "\t","Num. selected clusters by AICc: ",(select.aicc)))
-        if(all.equal(select.bic, select.aic, select.aicc)){
-            #TODO
-        }
-        else{
-            #Do it for each criterion
-           #TODO
-            #BIC
-           #TODO
-            #AIC
-           #TODO    
-            #AICc
-           #TODO
-            # return(list())
-        }
+                   "\t","Num. selected clusters by AIC: ",(select.aic),"\n",
+                   "\t","Num. selected clusters by AICc: ",(select.aicc)))
+        # if(all.equal(select.bic, select.aic, select.aicc)){
+        #     #TODO
+        # }
+        # else{
+        #     #Do it for each criterion
+        #    #TODO
+        #     #BIC
+        #    #TODO
+        #     #AIC
+        #    #TODO    
+        #     #AICc
+        #    #TODO
+        #     # return(list())
+        # }
         return(list(loglik = loglik,
                     select.bic = select.bic,
                     select.aic = select.aic,
