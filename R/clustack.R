@@ -216,7 +216,12 @@ plotmapAllIC <- function(res.bic, res.aic, oracle ,pdfname=NULL, genpdf=TRUE, ma
     
     cluster_ix.bic <- matrix(redblue(log(maxrr *  pmax(minrr, pmin(res.bic, maxrr)))/log(maxrr^2)), ncol=5, byrow=FALSE)
     cluster_ix.aic <- matrix(redblue(log(maxrr *  pmax(minrr, pmin(res.aic, maxrr)))/log(maxrr^2)), ncol=5, byrow=FALSE)
-    oracle_ix <- matrix(redblue(log(maxrr *  pmax(minrr, pmin(oracle, maxrr)))/log(maxrr^2)), ncol=5, byrow=FALSE)
+    if(!is.null(obs)){
+        oracle_ix <- matrix(redblue(log(2*pmax(1/2,pmin(oracle,2)))/log(4)), ncol=5, byrow=FALSE)
+    } else {
+        oracle_ix <- matrix(redblue(log(maxrr *  pmax(minrr, pmin(oracle, maxrr)))/log(maxrr^2)), ncol=5, byrow=FALSE)    
+    }
+    
     #colors_0 <- matrix(cluster_ix, ncol=5, byrow = FALSE)
     if(genpdf==TRUE){
         pdf(pdfname, height=11, width=10)    
