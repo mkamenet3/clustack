@@ -4,7 +4,10 @@
 #v1: 2020-06-30
 
 rm(list=ls())
-
+library(dplyr)
+library(tidyr)
+library(clusso)
+library(ggplot2)
 ####################################################################
 #HELPER FUNCTIONS
 ####################################################################
@@ -96,14 +99,17 @@ calcbounds <- function(null, out, Yx, Ex, thetai,thetaa, param_ix, w_q,sparsemat
         #new standard error calc
         #model averaged calc
         varthetas <- apply(thetai, 1, function(x) x/Ex)#lapply(1:nrow(thetai), function(i) sqrt(thetai[i,]/Ex))
+        test <- apply(thetai, 2, function(x) x/outEx@x[clusterlocs.bic$param_ix])
         
         zz <- apply(thetai,1, function(x) (x-as.vector(thetaa))^2)
+        #zz2 <- apply(thetai,1, function(x) (x-as.vector(thetaa))^2)
         print("zz")
         print(str(zz))
         #yy <- varthetas[,1]+zz[,1]
         print("varthetas")
         print(str(varthetas))
-        yy2 <- sapply(1:ncol(varthetas), function(k) sqrt(varthetas[,k]+zz[,k]))
+        #yy2 <- sapply(1:ncol(varthetas), function(k) sqrt(varthetas[,k]+zz[,k]))
+        yy2 <- sapply(1:ncol(varthetas), function(k) sqrt(test[k,1]+zz[,k]))
         vars <- yy2%*%matrix(w_q, ncol=1)#crossprod(matrix(w_q, ncol=1,yy2 )) #apply(yy2,2, function(x) w_q*x)
         # yy <- mapply(function(x,y){
         #     x+y
@@ -126,18 +132,6 @@ calcbounds <- function(null, out, Yx, Ex, thetai,thetaa, param_ix, w_q,sparsemat
     return(list(profiled = c(LB, UB),
            ma_adjusted = c(LBa, UBa)))
 }
-
-#make a quick and dirty plot
-library(dplyr);library(tidyr)
-dat <- cbind.data.frame(thetaa=as.vector(thetaa), UBa = as.vector(UBa), LBa=as.vector(LBa))
-# dat <- cbind.data.frame(thetaa=as.vector(modelthetas.bic$thetaa), UBa = as.vector(bounds.bic$ma_adjusted[[2]]), 
-#                         LBa=as.vector(bounds.bic$ma_adjusted[[1]]))
-dat <- dat %>%arrange(thetaa) %>%mutate(id = 1:nrow(.))
-ggplot(data=dat) +
-    geom_line(aes(x=id, y=thetaa), size=2) +
-    theme_bw() +
-    geom_line(aes(x=id, y=LBa), col="blue", size=1.5, alpha=0.5) +
-    geom_line(aes(x=id, y=UBa), col="blue", size=1.5, alpha=0.5) 
 
 
 ####################################################################
@@ -282,8 +276,8 @@ for(s in 1:nsim){
     #     
     # }
     outEx <- matrix(Ex, nrow=1)%*%sparsematrix
-    outYx <- matrix(Yx, nrow=1)%*%sparsematrix
-    lambdahat <- Yx/Ex
+    outYx <- matrix(YSIM, nrow=1)%*%sparsematrix
+    lambdahat <- YSIM/Ex
     
     Lambda <- as.vector(lambdahat)*sparsematrix #big Lambda matrix
     Lambda_dense <- as.matrix(Lambda)
@@ -296,7 +290,7 @@ for(s in 1:nsim){
     #####################################################################################
     #####################################################################################
     
-    sim_superclust_pc<- detectclusters(sparsematrix, Ex, Yx,
+    sim_superclust_pc<- detectclusters(sparsematrix, Ex, YSIM,
                                        numCenters, Time, maxclust,
                                        bylocation = FALSE, model="poisson",
                                        overdisp.est = NULL)
@@ -322,35 +316,55 @@ for(s in 1:nsim){
                                  modelthetas.aic$thetaa, clusterlocs.aic$param_ix, 
                                  clusterlocs.aic$w_q,sparsematrix, adjustedbounds = TRUE) 
     } else {
-        print("BIC and AIC select same.")
+        print("BIC and AIC select the same path.")
         modelthetas.aic <- vector(mode = "list", length = 1)
-        modelthetas.aic[[1]] <- -999999
+        modelthetas.aic[[1]] <- rep(-999999,1040)
         names(modelthetas.aic) <- c("thetaa")  
         bounds.aic <- vector(mode = "list", length = 2)
-        bounds.aic[[1]] <- c(-999999, -999999)
-        bounds.aic[[2]] <- c(-999999, -999999)
+        bounds.aic[[1]] <- rep(-999999, 1040)
+        bounds.aic[[2]] <- rep(-999999, 1040)
         names(bounds.aic) <- c("profiled", "ma_adjusted")
     }
     
-    row <- cbind(simID = c(1,1),thetaa.bic= modelthetas.bic$thetaa,
-                 thetaa.aic = modelthetas.aic$thetaa,
-                 profiled.bic = bounds.bic$profiled,
-                 adjusted.bic = bounds.bic$ma_adjusted,
-                 profiled.aic = bounds.aic$profiled,
-                 adjusted.aic = bounds.aic$ma_adjusted)
+    row <- rbind(simID = rep(1,1040),
+                 thetaa.bic= as.vector(modelthetas.bic$thetaa),
+                 thetaa.aic = as.vector(modelthetas.aic$thetaa),
+                 #profiled.bic = bounds.bic$profiled,
+                 adjusted.bic.LB = as.vector(bounds.bic$ma_adjusted[[1]]),
+                 adjusted.bic.UB = as.vector(bounds.bic$ma_adjusted[[2]]),
+                 #profiled.aic = bounds.aic$profiled,
+                 adjusted.aic.LB = bounds.aic$ma_adjusted,
+                 adjusted.aic.UB = bounds.aic$ma_adjusted)
     
     master <- rbind(master, row)
     
     
-    print(pdfname <- paste0("simID_", s, ".pdf"))
-    plotmapAllIC(res.bic = sim_superclust_pc$wLambda[sim_superclust_pc$selection.bic,],
-                 res.aic = sim_superclust_pc$wLambda[sim_superclust_pc$selection.aic,],
-                 oracle = Yx_mod/Ex_mod,
-                 pdfname = pdfname,
-                 genpdf = TRUE,
-                 maxrr = 2,
-                 minrr = 0.5,
-                 obs = FALSE)
+    # print(pdfname <- paste0("simID_", s, ".pdf"))
+    # plotmapAllIC(res.bic = sim_superclust_pc$wLambda[sim_superclust_pc$selection.bic,],
+    #              res.aic = sim_superclust_pc$wLambda[sim_superclust_pc$selection.aic,],
+    #              oracle = Yx_mod/Ex_mod,
+    #              pdfname = pdfname,
+    #              genpdf = TRUE,
+    #              maxrr = 2,
+    #              minrr = 0.5,
+    #              obs = FALSE)
 }
 
 write.csv(master, file="clustackbounds_sim_bypc.csv")
+
+
+#make a quick and dirty plot
+
+
+#dat <- cbind.data.frame(thetaa=as.vector(thetaa), UBa = as.vector(UBa), LBa=as.vector(LBa))
+dat <- cbind.data.frame(thetaa=as.vector(modelthetas.bic$thetaa), UBa = as.vector(bounds.bic$ma_adjusted[[2]]), 
+                         LBa=as.vector(bounds.bic$ma_adjusted[[1]]))
+dat <- dat %>%arrange(thetaa) %>%mutate(id = 1:nrow(.))
+ggplot(data=dat) +
+    geom_line(aes(x=id, y=thetaa), size=2) +
+    theme_bw() +
+    geom_line(aes(x=id, y=LBa), col="blue", size=1.5, alpha=0.5) +
+    geom_line(aes(x=id, y=UBa), col="blue", size=1.5, alpha=0.5) +
+    geom_hline(yintercept = 1, col="red", linetype="dashed", size=1) +
+    geom_vline(xintercept = 823, col="red", linetype="dashed", size=1)
+
