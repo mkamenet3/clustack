@@ -257,7 +257,7 @@ for(s in 1:nsim){
      #   print("OverD: NB")
     #    YSIM <- lapply(1:nsim, function(i) MASS::rnegbin(E1, theta = theta))
     #}
-    Ex <- unlist(scale_sim(list(YSIM), init, s, Time))
+    Ex <- unlist(scale_sim(list(YSIM), init, 1, Time))
     #####################################################################################
     #####################################################################################
     #####################################################################################
@@ -303,18 +303,25 @@ for(s in 1:nsim){
     #calculate null and model curves
     out.bic <- dpoisson_theta(Yx, thetas, Ex, ix = which(clusterlocs.bic$pclocs!=0))
     bounds.bic <- calcbounds(null, out.bic, Yx, Ex,
-                             modelthetas.bic$thetai, modelthetas.bic$thetaa, clusterlocs.bic$param_ix, 
-                             clusterlocs.bic$w_q,sparsematrix, adjustedbounds = TRUE) 
+                             modelthetas.bic$thetai, 
+                             modelthetas.bic$thetaa, 
+                             clusterlocs.bic$param_ix, 
+                             clusterlocs.bic$w_q,
+                             sparsematrix, 
+                             adjustedbounds = TRUE) 
     if(sim_superclust_pc$selection.bic!=sim_superclust_pc$selection.aic){
         #AIC
-        clusterlocs.aic <- clusterlocs_ident(sim_superclust_pc, selection="selection.aic", sparseMAT)
+        clusterlocs.aic <- clusterlocs_ident(sim_superclust_pc, selection="selection.aic", sparsematrix)
         modelthetas.aic <- extract_thetai(clusterlocs.aic$param_ix, clusterlocs.aic$w_q, Lambda_dense)
         #calculate null and model curves
-        out.aic <- dpoisson_theta(Yx_mod, thetas, Ex_mod, ix = which(clusterlocs.aic$pclocs!=0))
-        bounds.aic <- calcbounds(null, out.aic, Yx_mod, Ex_mod,
+        out.aic <- dpoisson_theta(Yx, thetas, Ex, ix = which(clusterlocs.aic$pclocs!=0))
+        bounds.aic <- calcbounds(null, out.aic, Yx, Ex,
                                  modelthetas.aic$thetai, 
-                                 modelthetas.aic$thetaa, clusterlocs.aic$param_ix, 
-                                 clusterlocs.aic$w_q,sparsematrix, adjustedbounds = TRUE) 
+                                 modelthetas.aic$thetaa, 
+                                 clusterlocs.aic$param_ix, 
+                                 clusterlocs.aic$w_q,
+                                 sparsematrix, 
+                                 adjustedbounds = TRUE) 
     } else {
         print("BIC and AIC select the same path.")
         modelthetas.aic <- vector(mode = "list", length = 1)
@@ -326,15 +333,15 @@ for(s in 1:nsim){
         names(bounds.aic) <- c("profiled", "ma_adjusted")
     }
     
-    row <- rbind(simID = rep(1,1040),
+    row <- cbind(simID = rep(s,1040),
                  thetaa.bic= as.vector(modelthetas.bic$thetaa),
                  thetaa.aic = as.vector(modelthetas.aic$thetaa),
                  #profiled.bic = bounds.bic$profiled,
                  adjusted.bic.LB = as.vector(bounds.bic$ma_adjusted[[1]]),
                  adjusted.bic.UB = as.vector(bounds.bic$ma_adjusted[[2]]),
                  #profiled.aic = bounds.aic$profiled,
-                 adjusted.aic.LB = bounds.aic$ma_adjusted,
-                 adjusted.aic.UB = bounds.aic$ma_adjusted)
+                 adjusted.aic.LB = as.vector(bounds.aic$ma_adjusted[[1]]),
+                 adjusted.aic.UB = as.vector(bounds.aic$ma_adjusted[[2]]))
     
     master <- rbind(master, row)
     
