@@ -392,26 +392,39 @@ w_q <- clusterlocs.bic$w_q
 #     tailarea2 <- apply(tailarea1,2, function(x) sum(x)-0.025)
 # 	#z.quantiles = (theta-theta.hats)/se.theta.hats
 # 	tailarea_i = sum(model.weights*pnorm(z.quantiles)) - alpha
-    thetai <- modelthetas.bic$thetai
-    thetaa <- modelthetas.bic$thetaa
-    se.thetai <- sqrt(apply(thetai, 2, function(x) 1/outEx@x[clusterlocs.bic$param_ix]))#sqrt(bounds.bic$varthetai)
-    w_q <- clusterlocs.bic$w_q
-thetaaa <- log(as.vector(thetaa)[820])
-thetaii <- log(thetai[,820])
-se.thetaii <- se.thetai[,820]
+thetai <- log(modelthetas.bic$thetai)
+thetaa <- log(modelthetas.bic$thetaa)
+se.thetai <- sqrt(apply(thetai, 2, function(x) 1/outEx@x[clusterlocs.bic$param_ix]))#sqrt(bounds.bic$varthetai)
+w_q <- clusterlocs.bic$w_q
+thetaaa <- log(as.vector(thetaa)[827])
+thetaii <- log(thetai[,827])
+se.thetaii <- se.thetai[,827]
 
     	
-tailareazscore <- function(thetaii, thetaaa, se.thetaii, w_q, alpha){
+mata_tailareazscore <- function(thetaii, thetaaa, se.thetaii, w_q, alpha){
     thetaii <- as.vector(thetaii)
     zval <- (thetaaa - thetaii)/se.thetaii
     zpnorm <- pnorm(zval)
     w_zpnorm <- sum((w_q*zpnorm))-alpha
         
 }	
-	
+mata_solvebounds <- function(thetaii, se.thetaii, w_q, alpha, tol){
+    mataLB <- uniroot(f=mata_tailareazscore, interval=c(-3, 3),
+                     thetaii= thetaii,
+                     se.thetaii=se.thetaii,
+                     w_q=w_q, alpha=alpha, tol=tol)$root
+    
+    mataUB <- uniroot(f=mata_tailareazscore, interval=c(-3, 3),
+                     thetaii= thetaii,
+                     se.thetaii=se.thetaii,
+                     w_q=w_q, alpha=1-alpha, tol=tol)$root
+    return(exp(cbind(mataLB, mataUB)))
+}
 	
 #}
-##############
+########################################################
+#MATA-Intervals
+########################################################
 thetai <- as.matrix(thetai)
 diff1 = apply(thetai,1, function(x) (as.vector(thetaa)-x))
 zquant <- sapply(1:ncol(diff1), function(x) diff1[,x]/se.thetai[x,])
@@ -419,15 +432,41 @@ test1 <- apply(zquant, 2, function(x) pnorm(zquant))
 
 
 
-tailarea.zout <- tailarea.z(modelthetas.bic$thetaa, modelthetas.bic$thetai, bounds.bic$varthetai, clusterlocs.bic$w_q, 0.025)
-mataL <- uniroot(f=tailareazscore, interval=c(-3, 3),
+#tailarea.zout <- tailarea.z(modelthetas.bic$thetaa, modelthetas.bic$thetai, bounds.bic$varthetai, clusterlocs.bic$w_q, 0.025)
+mataL <- uniroot(f=mata_tailareazscore, interval=c(-3, 3),
                  thetaii= thetaii,
                  se.thetaii=se.thetaii,
                  w_q=w_q, alpha=0.025, tol=1e-8)$root
 
-mataU <- uniroot(f=tailareazscore, interval=c(-3, 3),
+mataU <- uniroot(f=mata_tailareazscore, interval=c(-3, 3),
                  thetaii= thetaii,
                  se.thetaii=se.thetaii,
                  w_q=w_q, alpha=1-0.025, tol=1e-8)$root
 exp(cbind(mataL, mataU))
+
+
+
+mata_solvebounds(thetaii = thetaii, se.thetaii = se.thetaii, w_q, alpha = 0.025, tol=1e-8)
+mata_solvebounds(thetaii = thetaii, se.thetaii = se.thetaii, w_q, alpha = 0.025, tol=1e-8)
+#do this for all ST locations
+
+mata_st <- sapply(1:1040, function(x) mata_solvebounds(thetai[,x],
+                                                    se.thetaii = se.thetai[,x],
+                                                    w_q = w_q,
+                                                    alpha = 0.025,
+                                                    tol=1e-8))
+mata_stt <- t(mata_st)
+mata_df <- as.data.frame(mata_stt)
+names(mata_df) <- c("mataLB", "mataUB")
+mata_df$locid <- 1:1040
+
+mata_df <- mata_df %>%
+    mutate(clusterix = ifelse(locid %in% clusterix,1,0)) 
+mata_df <- mata_df %>%
+    mutate(coverage.bic = ifelse((risk < mataUB & risk > mataLB & clusterix==1), 1, 0))
+
+
+
+
+
 
