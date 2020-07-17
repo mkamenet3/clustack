@@ -9,98 +9,7 @@ library(tidyr)
 library(clusso)
 library(ggplot2)
 library(forcats)
-####################################################################
-#HELPER FUNCTIONS
-####################################################################
-dpoisson_theta <- function (y, lambda, E0, ix) {
-    #print(str(ix))
-    ell <- rep(NA, length(lambda))
-    for(i in 1:length(lambda)){
-        x <- rep(1,1040)
-        x[ix] <- lambda[i]
-        ell[i] <- sum(y * log(x * E0 ) - (x * E0))
-    }
-    return(ell)
-}
 
-#identify clusters and their locations
-#' @param res result of model-averaging
-#' @param selection Character string indicating which information criterion to use. Options include \code{"selection.aic"}, \code{"selection.aicc"}, or \code{"selection.bic"}
-#' @param  sparsematrix sparse design matrix where rows are locations and columns are potential clusters
-clusterlocs_ident <- function(res, selection, sparsematrix){
-    maxpc <- res$maxpcs[unlist(res[selection])]
-    pcmax <- rep(0,dim(sparsematrix)[2]); pcmax[maxpc] <-1; pcmax <- matrix(pcmax,ncol=1)
-    pcpcmax <- t(sparsematrix%*%pcmax)%*%sparsematrix; pcpcmax <- ifelse(pcpcmax!=0,1,0)
-    #Q = which models actually have parameter of interest
-    Qmods_pc_ix<- which(pcpcmax!=0)
-    param_ix <- which(pcpcmax!=0)
-    w2_q <- res[["wtMAT"]][,unlist(res[selection])][param_ix]#w2[param_ix]
-    #pclocs should identify all  models that contrain cluster65193
-    pclocs <- as.vector(matrix(pcpcmax, nrow=1)%*%t(sparsematrix))
-    pclocs <- ifelse(pclocs!=0,1,0)
-    return(list(param_ix = param_ix,
-                pclocs = pclocs,
-                w_q = w2_q))
-}
-
-#Extract all estimated theta_i for each model that overlaps max identified cluster
-#' @param param_ix Indices of potential clusters (models) that overlap max identified cluster
-#' @param w_q Weights for each of the identified potential clusters (models) that overlap the max identified cluster
-#' @param Lambda_dense Large matrix of relative risks for each potential cluster
-extract_thetai <- function(param_ix, w_q, Lambda_dense){
-    #create a sparematrix
-    M <- Matrix(0, nrow=dim(Lambda_dense)[2], ncol=length(param_ix), sparse=TRUE)
-    for (i in 1:length(param_ix)){
-        M[,i][param_ix[i]] <- 1    
-    }
-    thetas <- t(M)%*%t(Lambda_dense)
-    thetaa <- matrix(w_q, nrow=1)%*%thetas
-    return(list(thetai = thetas,
-                thetaa = thetaa))
-}
-
-
-
-#calculate profile-likelihood confidence bounds and adjust for model-averaaging
-#' @param null Null model likelihood
-#' @param proflik Vector of profiled likelihoods for set of thetas
-calcbounds <- function(Yx, Ex, thetai,thetaa, param_ix, w_q,sparsematrix, logscale) {
-    #################################
-    #Added 7-8-20
-    #thetai <- modelthetas.bic$thetai
-    #thetaa <- modelthetas.bic$thetaa@x
-    #################################
-    if(logscale==FALSE){
-        variance <- vector(mode = "list", length = dim(thetai)[1])
-        #model averaged calc
-        #varthetai <- apply(thetai, 2, function(x) x/outEx@x[param_ix])
-        varthetai <- apply(thetai, 2, function(x) 1/outEx@x[param_ix])
-        withintheta <- apply(thetai,1, function(x) (x-as.vector(thetaa))^2)
-        var <- sapply(1:ncol(varthetai ), function(k) sqrt(varthetai[k,1]+withintheta[,k]))
-        varthetas_w <- matrix(as.vector(w_q), nrow=1)%*%varthetai#crossprod(matrix(w_q, nrow =1), varthetai)
-        #matrix(w_q, nrow=1)%*%varthetai
-            #var%*%matrix(w_q, ncol=1)#crossprod(matrix(w_q, ncol=1,yy2 )) #apply(yy2,2, function(x) w_q*x)
-        var_thetaa <- as.vector(varthetas_w)
-        UBa = exp(log(thetaa) + 1.96*sqrt(var_thetaa))
-        LBa = exp(log(thetaa) - 1.96*sqrt(var_thetaa))
-    } else {
-        variance <- vector(mode = "list", length = dim(thetai)[1])
-        #varthetai <- apply(thetai, 2, function(x) x/outEx@x[param_ix])
-        varthetai <- apply(thetai, 2, function(x) 1/outEx@x[param_ix])
-        withintheta <- apply(thetai,1, function(x) (log(x)-log(as.vector(thetaa)))^2)
-        var <- sapply(1:ncol(varthetai), function(k) sqrt(varthetai[k,1]+withintheta[,k]))
-        varthetas_w <- matrix(as.vector(w_q), nrow=1)%*%varthetai#crossprod(matrix(w_q, nrow=1), varthetai)
-        #matrix(w_q, nrow=1)%*%varthetai
-            #var%*%matrix(w_q, ncol=1)
-        var_thetaa <- as.vector(varthetas_w)
-        UBa = exp(log(thetaa) + 1.96*sqrt(var_thetaa))
-        LBa = exp(log(thetaa) - 1.96*sqrt(var_thetaa))
-        
-    }
-    return(ma_adjusted = c(LBa, UBa))
-    # return(list(ma_adjusted = c(LBa, UBa),
-    #        varthetai = varthetai))
-}
 
 
 ####################################################################
@@ -169,14 +78,14 @@ for(s in 1:nsim){
     message(paste("Running model for periods",tim[1],"through", tail(tim, n=1)))
     #simulate data here
     #if (theta=="Inf"){
-    #if (is.infinite(theta)){
-     #   print("Inf theta: pure poisson")
+    if (is.infinite(theta)){
+       print("Inf theta: pure poisson")
         #YSIM <- lapply(1:nsim, function(i) rpois(length(E1), lambda = E1))
         YSIM <- rpois(length(E1), lambda = E1)
-    #} else {
-     #   print("OverD: NB")
-    #    YSIM <- lapply(1:nsim, function(i) MASS::rnegbin(E1, theta = theta))
-    #}
+    } else {
+        print("OverD: NB")
+        YSIM <- MASS::rnegbin(E1, theta = theta)
+    }
     Ex <- unlist(scale_sim(list(YSIM), init, 1, Time))
     #####################################################################################
     #####################################################################################
@@ -203,8 +112,6 @@ for(s in 1:nsim){
     Lambda_dense <- as.matrix(Lambda)
     Lambda_dense[Lambda_dense == 0] <- 1
     
-
-    #truth <- as.matrix(Lambda)%*%t(sparsematrix)
     #####################################################################################
     #####################################################################################
     #####################################################################################
@@ -218,14 +125,10 @@ for(s in 1:nsim){
                                        numCenters, Time, maxclust,
                                        bylocation = FALSE, model="poisson",
                                        overdisp.est = NULL)
-    # thetas <- seq(0.1,3, length=1000)
-    # null <- dpoisson_theta(Yx, 1, Ex, ix=1:dim(sparsematrix)[1])
-    
     #BIC
     clusterlocs.bic <- clusterlocs_ident(sim_superclust_pc, selection="selection.bic", sparsematrix)
     modelthetas.bic <- extract_thetai(clusterlocs.bic$param_ix, clusterlocs.bic$w_q, Lambda_dense)
     #calculate null and model curves
-    #out.bic <- dpoisson_theta(Yx, thetas, Ex, ix = which(clusterlocs.bic$pclocs!=0))
     bounds.bic <- calcbounds(Yx, Ex,
                              modelthetas.bic$thetai, 
                              modelthetas.bic$thetaa, 
@@ -239,13 +142,11 @@ for(s in 1:nsim){
                              clusterlocs.bic$param_ix, 
                              clusterlocs.bic$w_q,
                              sparsematrix, logscale = TRUE)
-    #print(str(bounds.bic.log))
     if(sim_superclust_pc$selection.bic!=sim_superclust_pc$selection.aic){
         #AIC
         clusterlocs.aic <- clusterlocs_ident(sim_superclust_pc, selection="selection.aic", sparsematrix)
         modelthetas.aic <- extract_thetai(clusterlocs.aic$param_ix, clusterlocs.aic$w_q, Lambda_dense)
         #calculate null and model curves
-        #out.aic <- dpoisson_theta(Yx, thetas, Ex, ix = which(clusterlocs.aic$pclocs!=0))
         bounds.aic <- calcbounds(Yx, Ex,
                                  modelthetas.aic$thetai, 
                                  modelthetas.aic$thetaa, 
@@ -263,20 +164,18 @@ for(s in 1:nsim){
         bounds.aic <- bounds.bic
         bounds.aic.log <- bounds.bic.log
         modelthetas.aic <- modelthetas.bic
-        # modelthetas.aic <- vector(mode = "list", length = 1)
-        # modelthetas.aic[[1]] <- rep(-999999,1040)
-        # names(modelthetas.aic) <- c("thetaa")  
-        # bounds.aic <- vector(mode = "list", length = 2)
-        # bounds.aic[[1]] <- rep(-999999, 1040)
-        # bounds.aic[[2]] <- rep(-999999, 1040)
-        # bounds.aic.log <- vector(mode = "list", length = 2)
-        # bounds.aic.log[[1]] <- rep(-999999, 1040)
-        # bounds.aic.log[[2]] <- rep(-999999, 1040)
-        # names(bounds.aic) <- c("ma_adjusted")
-        # names(bounds.aic.log) <- c("ma_adjusted")
     }
-    
-    
+    ########################
+    #Calculate MATA-Bounds
+    ########################
+    #BIC
+    se.thetai.bic <- sqrt(apply(thetai, 2, function(x) 1/outEx@x[clusterlocs.bic$param_ix]))
+    mata_st.bic <- t(sapply(1:1040, function(x) mata_solvebounds(log(modelthetas.bic$thetai)[,x],
+                                                           se.thetaii = se.thetai.bic[,x],
+                                                           w_q =  clusterlocs.bic$w_q,
+                                                           alpha = 0.025,
+                                                           tol=1e-8)))
+    #Create simrow
      row <- cbind(simID = rep(s,1040),
                  thetaa.bic= as.vector(modelthetas.bic$thetaa),
                  thetaa.aic = as.vector(modelthetas.aic$thetaa),
@@ -287,10 +186,12 @@ for(s in 1:nsim){
                  adjusted.bic.log.LB = as.vector(bounds.bic.log[[1]]),
                  adjusted.bic.log.UB = as.vector(bounds.bic.log[[2]]),
                  adjusted.aic.log.LB = as.vector(bounds.aic.log[[1]]),
-                 adjusted.aic.log.UB = as.vector(bounds.aic.log[[2]]))
-    
+                 adjusted.aic.log.UB = as.vector(bounds.aic.log[[2]]),
+                 mata.bic.LB = mata_st.bic[,1],
+                 mata.bic.UB = mata_st.bic[,2],
+                 mata.aic.LB = mata_st.aic[,1],
+                 mata.aic.UB = mata_st.aic[,2])
     master <- rbind(master, row)
-
 }
 
 write.csv(master, file="clustackbounds_sim_bypc_test.csv")
@@ -314,9 +215,6 @@ ggplot(data=master2,aes(x=locid, y=thetaa.bic, group=factor(simID), color=factor
     theme_bw() +
     geom_ribbon(aes(ymin = adjusted.bic.LB, ymax = adjusted.bic.UB, fill=factor(simID)), alpha=0.1) +
     geom_line()
-    #, group=factor(simID), color=factor(simID))) 
-    #geom_line(aes(x=locid, y=adjusted.bic.LB, group=factor(simID), color=factor(simID)),  size=0.5, alpha=0.5, linetype="dashed") +
-    #geom_line(aes(x=locid, y=adjusted.bic.UB, group=factor(simID), color=factor(simID)),  size=0.5, alpha=0.5, linetype="dashed") 
 
 master2 %>%
     arrange(thetaa.bic) %>%
@@ -347,16 +245,10 @@ master2 %>%
     geom_hline(yintercept = 2, color="red") +
     ggtitle("nsim=10, estimates & bounds inside RR=2 cluster")
 
+##########################################
 #coverage probability
-
-
-# +
-#     geom_line(aes(x=id, y=UBa), col="blue", size=1.5, alpha=0.5) +
-#     geom_hline(yintercept = 1, col="red", linetype="dashed", size=1) +
-#     geom_vline(xintercept = 823, col="red", linetype="dashed", size=1)
-
+##########################################
 #make a quick and dirty plot
-#dat <- cbind.data.frame(thetaa=as.vector(thetaa), UBa = as.vector(UBa), LBa=as.vector(LBa))
 dat <- cbind.data.frame(thetaa=as.vector(modelthetas.bic$thetaa), UBa = as.vector(bounds.bic$ma_adjusted[[2]]), 
                          LBa=as.vector(bounds.bic$ma_adjusted[[1]]))
 dat <- dat %>%arrange(thetaa) %>%mutate(id = 1:nrow(.))
@@ -369,70 +261,24 @@ ggplot(data=dat) +
     geom_vline(xintercept = 823, col="red", linetype="dashed", size=1)
 
 
+# #https://github.com/jlaake/RMark/blob/master/RMark/R/mata.wald.r
+# thetai <- log(modelthetas.bic$thetai)
+# thetaa <- log(modelthetas.bic$thetaa)
+# se.thetai <- sqrt(apply(thetai, 2, function(x) 1/outEx@x[clusterlocs.bic$param_ix]))
+# w_q <- clusterlocs.bic$w_q
+# thetaaa <- log(as.vector(thetaa)[827])
+# thetaii <- log(thetai[,827])
+# se.thetaii <- se.thetai[,827]
+# 
+# ########################################################
+# #MATA-Intervals
+# ########################################################
+# thetai <- as.matrix(thetai)
+# diff1 = apply(thetai,1, function(x) (as.vector(thetaa)-x))
+# zquant <- sapply(1:ncol(diff1), function(x) diff1[,x]/se.thetai[x,])
+# test1 <- apply(zquant, 2, function(x) pnorm(zquant))
 
-
-#https://github.com/jlaake/RMark/blob/master/RMark/R/mata.wald.r
-thetai <- modelthetas.bic$thetai
-thetaa <- modelthetas.bic$thetaa
-se.thetai <- sqrt(apply(thetai, 2, function(x) 1/outEx@x[clusterlocs.bic$param_ix]))#sqrt(bounds.bic$varthetai)
-w_q <- clusterlocs.bic$w_q
-#se.thetai <- varthetai <- apply(thetai, 2, function(x) x/outEx@x[param_ix])
-
-#tailarea.z = function(theta, theta.hats, se.theta.hats, model.weights, alpha) {
-    thetai <- as.matrix(thetai)
-    diff1 = apply(thetai,1, function(x) (as.vector(thetaa)-x))
-    #zquant <- sapply(1:ncol(diff1), function(x) diff1[,x]/se.thetai[x,])#lapply(1:length(diff1), function(x) diff1[[x]]/se.thetai[x,])
-    zquant <- sapply(1:1040, function(x) diff1[x,]/se.thetai[,x])#lapply(1:length(diff1), function(x) diff1[[x]]/se.thetai[x,])
-    
-    test1 <- pnorm(zquant)
-    test2 <- as.vector(matrix(w_q, nrow=1)%*% test1) - 0.025#[,1]
-    
-    
-#     tailarea1 = pnorm(zquant)%*%matrix(w_q, ncol=1)#w_q*pnorm(zquant)
-#     tailarea2 <- apply(tailarea1,2, function(x) sum(x)-0.025)
-# 	#z.quantiles = (theta-theta.hats)/se.theta.hats
-# 	tailarea_i = sum(model.weights*pnorm(z.quantiles)) - alpha
-thetai <- log(modelthetas.bic$thetai)
-thetaa <- log(modelthetas.bic$thetaa)
-se.thetai <- sqrt(apply(thetai, 2, function(x) 1/outEx@x[clusterlocs.bic$param_ix]))#sqrt(bounds.bic$varthetai)
-w_q <- clusterlocs.bic$w_q
-thetaaa <- log(as.vector(thetaa)[827])
-thetaii <- log(thetai[,827])
-se.thetaii <- se.thetai[,827]
-
-    	
-mata_tailareazscore <- function(thetaii, thetaaa, se.thetaii, w_q, alpha){
-    thetaii <- as.vector(thetaii)
-    zval <- (thetaaa - thetaii)/se.thetaii
-    zpnorm <- pnorm(zval)
-    w_zpnorm <- sum((w_q*zpnorm))-alpha
-        
-}	
-mata_solvebounds <- function(thetaii, se.thetaii, w_q, alpha, tol){
-    mataLB <- uniroot(f=mata_tailareazscore, interval=c(-3, 3),
-                     thetaii= thetaii,
-                     se.thetaii=se.thetaii,
-                     w_q=w_q, alpha=alpha, tol=tol)$root
-    
-    mataUB <- uniroot(f=mata_tailareazscore, interval=c(-3, 3),
-                     thetaii= thetaii,
-                     se.thetaii=se.thetaii,
-                     w_q=w_q, alpha=1-alpha, tol=tol)$root
-    return(exp(cbind(mataLB, mataUB)))
-}
-	
-#}
-########################################################
-#MATA-Intervals
-########################################################
-thetai <- as.matrix(thetai)
-diff1 = apply(thetai,1, function(x) (as.vector(thetaa)-x))
-zquant <- sapply(1:ncol(diff1), function(x) diff1[,x]/se.thetai[x,])
-test1 <- apply(zquant, 2, function(x) pnorm(zquant))
-
-
-
-#tailarea.zout <- tailarea.z(modelthetas.bic$thetaa, modelthetas.bic$thetai, bounds.bic$varthetai, clusterlocs.bic$w_q, 0.025)
+######################################################
 mataL <- uniroot(f=mata_tailareazscore, interval=c(-3, 3),
                  thetaii= thetaii,
                  se.thetaii=se.thetaii,
@@ -455,6 +301,11 @@ mata_st <- sapply(1:1040, function(x) mata_solvebounds(thetai[,x],
                                                     w_q = w_q,
                                                     alpha = 0.025,
                                                     tol=1e-8))
+mata_test <- sapply(1:10, function(x) mata_solvebounds(thetai[,x],
+                                                       se.thetaii = se.thetai[,x],
+                                                       w_q = w_q,
+                                                       alpha = 0.025,
+                                                       tol=1e-8))
 mata_stt <- t(mata_st)
 mata_df <- as.data.frame(mata_stt)
 names(mata_df) <- c("mataLB", "mataUB")

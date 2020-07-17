@@ -765,3 +765,126 @@ clusterselect <- function(wLambda,Yx, Ex, model,maxclust, numCenters, Time,quasi
     }
     
 }
+
+####################################################################
+#HELPER FUNCTIONS
+####################################################################
+dpoisson_theta <- function (y, lambda, E0, ix) {
+    #print(str(ix))
+    ell <- rep(NA, length(lambda))
+    for(i in 1:length(lambda)){
+        x <- rep(1,1040)
+        x[ix] <- lambda[i]
+        ell[i] <- sum(y * log(x * E0 ) - (x * E0))
+    }
+    return(ell)
+}
+
+#identify clusters and their locations
+#' @param res result of model-averaging
+#' @param selection Character string indicating which information criterion to use. Options include \code{"selection.aic"}, \code{"selection.aicc"}, or \code{"selection.bic"}
+#' @param  sparsematrix sparse design matrix where rows are locations and columns are potential clusters
+clusterlocs_ident <- function(res, selection, sparsematrix){
+    maxpc <- res$maxpcs[unlist(res[selection])]
+    pcmax <- rep(0,dim(sparsematrix)[2]); pcmax[maxpc] <-1; pcmax <- matrix(pcmax,ncol=1)
+    pcpcmax <- t(sparsematrix%*%pcmax)%*%sparsematrix; pcpcmax <- ifelse(pcpcmax!=0,1,0)
+    #Q = which models actually have parameter of interest
+    Qmods_pc_ix<- which(pcpcmax!=0)
+    param_ix <- which(pcpcmax!=0)
+    w2_q <- res[["wtMAT"]][,unlist(res[selection])][param_ix]#w2[param_ix]
+    #pclocs should identify all  models that contrain cluster65193
+    pclocs <- as.vector(matrix(pcpcmax, nrow=1)%*%t(sparsematrix))
+    pclocs <- ifelse(pclocs!=0,1,0)
+    return(list(param_ix = param_ix,
+                pclocs = pclocs,
+                w_q = w2_q))
+}
+
+#Extract all estimated theta_i for each model that overlaps max identified cluster
+#' @param param_ix Indices of potential clusters (models) that overlap max identified cluster
+#' @param w_q Weights for each of the identified potential clusters (models) that overlap the max identified cluster
+#' @param Lambda_dense Large matrix of relative risks for each potential cluster
+extract_thetai <- function(param_ix, w_q, Lambda_dense){
+    #create a sparematrix
+    M <- Matrix(0, nrow=dim(Lambda_dense)[2], ncol=length(param_ix), sparse=TRUE)
+    for (i in 1:length(param_ix)){
+        M[,i][param_ix[i]] <- 1    
+    }
+    thetas <- t(M)%*%t(Lambda_dense)
+    thetaa <- matrix(w_q, nrow=1)%*%thetas
+    return(list(thetai = thetas,
+                thetaa = thetaa))
+}
+
+
+
+#calculate profile-likelihood confidence bounds and adjust for model-averaaging
+#' @param null Null model likelihood
+#' @param proflik Vector of profiled likelihoods for set of thetas
+calcbounds <- function(Yx, Ex, thetai,thetaa, param_ix, w_q,sparsematrix, logscale) {
+    #################################
+    #Added 7-8-20
+    #thetai <- modelthetas.bic$thetai
+    #thetaa <- modelthetas.bic$thetaa@x
+    #################################
+    if(logscale==FALSE){
+        variance <- vector(mode = "list", length = dim(thetai)[1])
+        #model averaged calc
+        #varthetai <- apply(thetai, 2, function(x) x/outEx@x[param_ix])
+        varthetai <- apply(thetai, 2, function(x) 1/outEx@x[param_ix])
+        withintheta <- apply(thetai,1, function(x) (x-as.vector(thetaa))^2)
+        var <- sapply(1:ncol(varthetai ), function(k) sqrt(varthetai[k,1]+withintheta[,k]))
+        varthetas_w <- matrix(as.vector(w_q), nrow=1)%*%varthetai#crossprod(matrix(w_q, nrow =1), varthetai)
+        #matrix(w_q, nrow=1)%*%varthetai
+        #var%*%matrix(w_q, ncol=1)#crossprod(matrix(w_q, ncol=1,yy2 )) #apply(yy2,2, function(x) w_q*x)
+        var_thetaa <- as.vector(varthetas_w)
+        UBa = exp(log(thetaa) + 1.96*sqrt(var_thetaa))
+        LBa = exp(log(thetaa) - 1.96*sqrt(var_thetaa))
+    } else {
+        variance <- vector(mode = "list", length = dim(thetai)[1])
+        #varthetai <- apply(thetai, 2, function(x) x/outEx@x[param_ix])
+        varthetai <- apply(thetai, 2, function(x) 1/outEx@x[param_ix])
+        withintheta <- apply(thetai,1, function(x) (log(x)-log(as.vector(thetaa)))^2)
+        var <- sapply(1:ncol(varthetai), function(k) sqrt(varthetai[k,1]+withintheta[,k]))
+        varthetas_w <- matrix(as.vector(w_q), nrow=1)%*%varthetai#crossprod(matrix(w_q, nrow=1), varthetai)
+        #matrix(w_q, nrow=1)%*%varthetai
+        #var%*%matrix(w_q, ncol=1)
+        var_thetaa <- as.vector(varthetas_w)
+        UBa = exp(log(thetaa) + 1.96*sqrt(var_thetaa))
+        LBa = exp(log(thetaa) - 1.96*sqrt(var_thetaa))
+        
+    }
+    return(ma_adjusted = c(LBa, UBa))
+    # return(list(ma_adjusted = c(LBa, UBa),
+    #        varthetai = varthetai))
+}
+
+#MATA-intervals
+mata_tailareazscore <- function(thetaii, thetaaa, se.thetaii, w_q, alpha){
+    thetaii <- as.vector(thetaii)
+    zval <- (thetaaa - thetaii)/se.thetaii
+    zpnorm <- pnorm(zval)
+    w_zpnorm <- sum((w_q*zpnorm))-alpha
+    
+}	
+mata_solvebounds <- function(thetaii, se.thetaii, w_q, alpha, tol){
+    mataLB <- uniroot(f=mata_tailareazscore, interval=c(-3, 3),
+                      thetaii= thetaii,
+                      se.thetaii=se.thetaii,
+                      w_q=w_q, alpha=alpha, tol=tol)$root
+    
+    mataUB <- uniroot(f=mata_tailareazscore, interval=c(-3, 3),
+                      thetaii= thetaii,
+                      se.thetaii=se.thetaii,
+                      w_q=w_q, alpha=1-alpha, tol=tol)$root
+    return(exp(cbind(mataLB, mataUB)))
+}
+
+
+
+
+
+
+
+
+
