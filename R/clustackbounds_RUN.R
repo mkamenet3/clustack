@@ -201,7 +201,7 @@ for(s in 1:nsim){
     master <- rbind(master, row)
 }
 
-write.csv(master, file="clustackbounds_sim_bypc_test.csv")
+write.csv(master, file="clustackbounds_sim_bypc.csv")
 
 
 ##########################################################################################
