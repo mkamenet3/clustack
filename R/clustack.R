@@ -821,7 +821,7 @@ extract_thetai <- function(param_ix, w_q, Lambda_dense){
 #calculate profile-likelihood confidence bounds and adjust for model-averaaging
 #' @param null Null model likelihood
 #' @param proflik Vector of profiled likelihoods for set of thetas
-calcbounds <- function(Yx, Ex, thetai,thetaa, param_ix, w_q,sparsematrix, logscale) {
+calcbounds <- function(Yx, Ex, thetai,thetaa, param_ix, w_q,sparsematrix, logscale, overdisp.est) {
     #################################
     #Added 7-8-20
     #thetai <- modelthetas.bic$thetai
@@ -830,33 +830,34 @@ calcbounds <- function(Yx, Ex, thetai,thetaa, param_ix, w_q,sparsematrix, logsca
     if(logscale==FALSE){
         variance <- vector(mode = "list", length = dim(thetai)[1])
         #model averaged calc
-        #varthetai <- apply(thetai, 2, function(x) x/outEx@x[param_ix])
-        varthetai <- apply(thetai, 2, function(x) 1/outEx@x[param_ix])
+        if(!is.null(overdisp.est)){
+            varthetai <- apply(thetai, 2, function(x) 1/outEx@x[param_ix])*overdisp.est
+        } else {
+            varthetai <- apply(thetai, 2, function(x) 1/outEx@x[param_ix])   
+        }
         withintheta <- apply(thetai,1, function(x) (x-as.vector(thetaa))^2)
         var <- sapply(1:ncol(varthetai ), function(k) sqrt(varthetai[k,1]+withintheta[,k]))
-        varthetas_w <- matrix(as.vector(w_q), nrow=1)%*%varthetai#crossprod(matrix(w_q, nrow =1), varthetai)
-        #matrix(w_q, nrow=1)%*%varthetai
-        #var%*%matrix(w_q, ncol=1)#crossprod(matrix(w_q, ncol=1,yy2 )) #apply(yy2,2, function(x) w_q*x)
+        varthetas_w <- matrix(as.vector(w_q), nrow=1)%*%varthetai
         var_thetaa <- as.vector(varthetas_w)
         UBa = exp(log(thetaa) + 1.96*sqrt(var_thetaa))
         LBa = exp(log(thetaa) - 1.96*sqrt(var_thetaa))
     } else {
         variance <- vector(mode = "list", length = dim(thetai)[1])
-        #varthetai <- apply(thetai, 2, function(x) x/outEx@x[param_ix])
-        varthetai <- apply(thetai, 2, function(x) 1/outEx@x[param_ix])
+        if(!is.null(overdisp.est)){
+            varthetai <- apply(thetai, 2, function(x) 1/outEx@x[param_ix])*overdisp.est
+        } else {
+            varthetai <- apply(thetai, 2, function(x) 1/outEx@x[param_ix])    
+        }
+        
         withintheta <- apply(thetai,1, function(x) (log(x)-log(as.vector(thetaa)))^2)
         var <- sapply(1:ncol(varthetai), function(k) sqrt(varthetai[k,1]+withintheta[,k]))
-        varthetas_w <- matrix(as.vector(w_q), nrow=1)%*%varthetai#crossprod(matrix(w_q, nrow=1), varthetai)
-        #matrix(w_q, nrow=1)%*%varthetai
-        #var%*%matrix(w_q, ncol=1)
+        varthetas_w <- matrix(as.vector(w_q), nrow=1)%*%varthetai
         var_thetaa <- as.vector(varthetas_w)
         UBa = exp(log(thetaa) + 1.96*sqrt(var_thetaa))
         LBa = exp(log(thetaa) - 1.96*sqrt(var_thetaa))
         
     }
     return(ma_adjusted = c(LBa, UBa))
-    # return(list(ma_adjusted = c(LBa, UBa),
-    #        varthetai = varthetai))
 }
 
 #MATA-intervals

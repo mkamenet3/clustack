@@ -43,14 +43,15 @@ sparsematrix <- spacetimeMat(potentialclusters, numCenters, Time)
 #set maxclust
 maxclust <- 15
 
-#test
-nsim <-10
-theta = 100
+##############################
+#ARGS
+##############################
+nsim <- 2#10
 risk = 2
 cent = 150
 rad = 11
 tim <- c(1:5)
-
+theta <- 60#args[1]
 
 ##############################
 master <- NULL
@@ -90,20 +91,19 @@ for(s in 1:nsim){
     #####################################################################################
     #####################################################################################
     #####################################################################################
-    #CLUSTER DETECTION BY LOCATION
+    #SET-UP
     #####################################################################################
     #####################################################################################
     #####################################################################################
     #run superclust by location for each sim (apply)
-    # if (is.infinite(theta)){
-    #     overdisp.est <- NULL
-    # } else {
-    #     offset_reg <- lapply(1:nsim, function(i) glm(YSIM[[i]] ~ as.factor(rep(c("1","2","3","4","5"), 
-    #                                                                            each=length(Ex[[i]])/Time)) + offset(log(Ex[[i]])),
-    #                                                  family=quasipoisson))
-    #     overdisp.est <- overdisp(offset_reg, sim = TRUE, overdispfloor = TRUE)
-    #     
-    # }
+    if (is.infinite(theta)){
+        overdisp.est <- NULL
+    } else {
+        offset_reg <- glm(YSIM ~ as.factor(rep(c("1","2","3","4","5"),each=length(Ex)/Time)) + offset(log(Ex)),
+                                                     family=quasipoisson)
+        overdisp.est <- overdisp(offset_reg, sim = FALSE, overdispfloor = TRUE)
+
+    }
     outEx <- matrix(Ex, nrow=1)%*%sparsematrix
     outYx <- matrix(YSIM, nrow=1)%*%sparsematrix
     lambdahat <- YSIM/Ex
@@ -119,49 +119,35 @@ for(s in 1:nsim){
     #####################################################################################
     #####################################################################################
     #####################################################################################
-    
-    
     sim_superclust_pc<- detectclusters(sparsematrix, Ex, YSIM,
                                        numCenters, Time, maxclust,
                                        bylocation = FALSE, model="poisson",
-                                       overdisp.est = NULL)
+                                       overdisp.est = overdisp.est)
     #BIC
     clusterlocs.bic <- clusterlocs_ident(sim_superclust_pc, selection="selection.bic", sparsematrix)
     modelthetas.bic <- extract_thetai(clusterlocs.bic$param_ix, clusterlocs.bic$w_q, Lambda_dense)
     #calculate null and model curves
-    bounds.bic <- calcbounds(Yx, Ex,
-                             modelthetas.bic$thetai, 
-                             modelthetas.bic$thetaa, 
-                             clusterlocs.bic$param_ix, 
-                             clusterlocs.bic$w_q,
-                             sparsematrix, 
-                             logscale = FALSE) 
     bounds.bic.log <- calcbounds(Yx, Ex,
                              modelthetas.bic$thetai, 
                              modelthetas.bic$thetaa, 
                              clusterlocs.bic$param_ix, 
                              clusterlocs.bic$w_q,
-                             sparsematrix, logscale = TRUE)
+                             sparsematrix, logscale = TRUE,
+                             overdisp.est=overdisp.est)
     if(sim_superclust_pc$selection.bic!=sim_superclust_pc$selection.aic){
         #AIC
         clusterlocs.aic <- clusterlocs_ident(sim_superclust_pc, selection="selection.aic", sparsematrix)
         modelthetas.aic <- extract_thetai(clusterlocs.aic$param_ix, clusterlocs.aic$w_q, Lambda_dense)
         #calculate null and model curves
-        bounds.aic <- calcbounds(Yx, Ex,
-                                 modelthetas.aic$thetai, 
-                                 modelthetas.aic$thetaa, 
-                                 clusterlocs.aic$param_ix, 
-                                 clusterlocs.aic$w_q,
-                                 sparsematrix, logscale = FALSE) 
         bounds.aic.log <- calcbounds(Yx, Ex,
                                  modelthetas.aic$thetai, 
                                  modelthetas.aic$thetaa, 
                                  clusterlocs.aic$param_ix, 
                                  clusterlocs.aic$w_q,
-                                 sparsematrix, logscale = TRUE) 
+                                 sparsematrix, logscale = TRUE,
+                                 overdisp.est=overdisp.est) 
     } else {
         print("BIC and AIC select the same path.")
-        bounds.aic <- bounds.bic
         bounds.aic.log <- bounds.bic.log
         modelthetas.aic <- modelthetas.bic
     }
@@ -169,20 +155,41 @@ for(s in 1:nsim){
     #Calculate MATA-Bounds
     ########################
     #BIC
-    se.thetai.bic <- sqrt(apply(thetai, 2, function(x) 1/outEx@x[clusterlocs.bic$param_ix]))
-    mata_st.bic <- t(sapply(1:1040, function(x) mata_solvebounds(log(modelthetas.bic$thetai)[,x],
-                                                           se.thetaii = se.thetai.bic[,x],
-                                                           w_q =  clusterlocs.bic$w_q,
-                                                           alpha = 0.025,
-                                                           tol=1e-8)))
+    if(!is.null(overdisp.est)) {
+        se.thetai.bic <- sqrt(apply(thetai, 2, function(x) 1/outEx@x[clusterlocs.bic$param_ix]))*sqrt(overdisp.est)
+    } else{
+        se.thetai.bic <- sqrt(apply(thetai, 2, function(x) 1/outEx@x[clusterlocs.bic$param_ix]))   
+    }
+    modelthetas_thetai.bic.log <- log(modelthetas.bic$thetai)
+    mata_st.bic <- sapply(1:1040, function(x) mata_solvebounds(modelthetas_thetai.bic.log[,x],
+                                                                 se.thetaii = se.thetai.bic[,x],
+                                                                 w_q =  clusterlocs.bic$w_q,
+                                                                 alpha = 0.025,
+                                                                 tol=1e-8))
+    mata_st.bic <- t(mata_st.bic)
+    if(sim_superclust_pc$selection.bic!=sim_superclust_pc$selection.aic){
+        #AIC
+        if(!is.null(overdisp.est)) {
+            se.thetai.aic <- sqrt(apply(thetai, 2, function(x) 1/outEx@x[clusterlocs.aic$param_ix]))*sqrt(overdisp.est)   
+        } else {
+            se.thetai.aic <- sqrt(apply(thetai, 2, function(x) 1/outEx@x[clusterlocs.aic$param_ix]))    
+        }
+        modelthetas_thetai.aic.log <- log(modelthetas.aic$thetai)
+        mata_st.aic <- sapply(1:1040, function(x) mata_solvebounds(modelthetas_thetai.aic.log[,x],
+                                                                     se.thetaii = se.thetai.aic[,x],
+                                                                     w_q =  clusterlocs.aic$w_q,
+                                                                     alpha = 0.025,
+                                                                     tol=1e-8))
+        mata_st.aic <- t(mata_st.aic)
+        
+    } else {
+        print("BIC and AIC select the same path.")
+        mata_st.aic <- mata_st.bic
+    }
     #Create simrow
      row <- cbind(simID = rep(s,1040),
                  thetaa.bic= as.vector(modelthetas.bic$thetaa),
                  thetaa.aic = as.vector(modelthetas.aic$thetaa),
-                 adjusted.bic.LB = as.vector(bounds.bic[[1]]),
-                 adjusted.bic.UB = as.vector(bounds.bic[[2]]),
-                 adjusted.aic.LB = as.vector(bounds.aic[[1]]),
-                 adjusted.aic.UB = as.vector(bounds.aic[[2]]),
                  adjusted.bic.log.LB = as.vector(bounds.bic.log[[1]]),
                  adjusted.bic.log.UB = as.vector(bounds.bic.log[[2]]),
                  adjusted.aic.log.LB = as.vector(bounds.aic.log[[1]]),
@@ -196,14 +203,21 @@ for(s in 1:nsim){
 
 write.csv(master, file="clustackbounds_sim_bypc_test.csv")
 
+
+##########################################################################################
+#POST ANALYSIS
+##########################################################################################
 master2 <- as.data.frame(master)
-master2$locid <- rep(1:1040, times=2)
+master2$locid <- rep(1:1040, times=nsim)
 master2$locidF <- as.factor(rep(1:1040, times=2))
 clusterix <- which(rr==risk)
 master2 <- master2 %>%
     mutate(clusterix = ifelse(locid %in% clusterix,1,0)) 
 master2 <- master2 %>%
-    mutate(coverage.bic = ifelse((risk < adjusted.bic.UB & risk > adjusted.bic.LB & clusterix==1), 1, 0))
+    mutate(coverage_buckland.bic = ifelse((risk < adjusted.bic.log.UB & risk > adjusted.bic.log.LB & clusterix==1), 1, 0),
+           coverage_mata.bic = ifelse((risk < mata.bic.UB & risk > mata.bic.LB & clusterix==1), 1, 0),
+           coverage_buckland.aic = ifelse((risk < adjusted.aic.log.UB & risk > adjusted.aic.log.LB & clusterix==1), 1, 0),
+           coverage_mata.aic = ifelse((risk < mata.aic.UB & risk > mata.aic.LB & clusterix==1), 1, 0))
 
 ################################
 #Coverage probability
@@ -241,9 +255,41 @@ master2 %>%
     ggplot(aes(x=fct_inorder(locidF), y=thetaa.bic))+
     geom_point() +
     theme_bw() +
-    geom_pointrange(aes(ymin = adjusted.bic.LB, ymax = adjusted.bic.UB,color=factor(simID)), alpha=0.5, size=1) +
+    geom_pointrange(aes(ymin = adjusted.bic.log.LB, ymax = adjusted.bic.log.UB,color=factor(simID)), alpha=0.5, size=1) +
     geom_hline(yintercept = 2, color="red") +
-    ggtitle("nsim=10, estimates & bounds inside RR=2 cluster")
+    ggtitle("estimates & bounds inside RR=2 cluster (Buckland, BIC)")
+master2 %>%
+    dplyr::filter(clusterix==1) %>%
+    arrange(thetaa.aic) %>%
+    droplevels() %>%
+    ggplot(aes(x=fct_inorder(locidF), y=thetaa.aic))+
+    geom_point() +
+    theme_bw() +
+    geom_pointrange(aes(ymin = adjusted.aic.log.LB, ymax = adjusted.aic.log.UB,color=factor(simID)), alpha=0.5, size=1) +
+    geom_hline(yintercept = 2, color="red") +
+    ggtitle("estimates & bounds inside RR=2 cluster (Buckland, AIC)")
+
+
+master2 %>%
+    dplyr::filter(clusterix==1) %>%
+    arrange(thetaa.bic) %>%
+    droplevels() %>%
+    ggplot(aes(x=fct_inorder(locidF), y=thetaa.bic))+
+    geom_point() +
+    theme_bw() +
+    geom_pointrange(aes(ymin = mata.bic.LB, ymax = mata.bic.UB,color=factor(simID)), alpha=0.5, size=1) +
+    geom_hline(yintercept = 2, color="red") +
+    ggtitle("estimates & bounds inside RR=2 cluster (MATA, BIC)")
+master2 %>%
+    dplyr::filter(clusterix==1) %>%
+    arrange(thetaa.aic) %>%
+    droplevels() %>%
+    ggplot(aes(x=fct_inorder(locidF), y=thetaa.aic))+
+    geom_point() +
+    theme_bw() +
+    geom_pointrange(aes(ymin = mata.aic.LB, ymax = mata.aic.UB,color=factor(simID)), alpha=0.5, size=1) +
+    geom_hline(yintercept = 2, color="red") +
+    ggtitle("estimates & bounds inside RR=2 cluster (MATA, AIC)")
 
 ##########################################
 #coverage probability
