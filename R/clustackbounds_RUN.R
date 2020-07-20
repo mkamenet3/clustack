@@ -2,6 +2,7 @@
 #Simulation Study
 #M.Kamenetsky
 #v1: 2020-06-30
+#V2: 20200-7-18
 
 rm(list=ls())
 library(dplyr)
