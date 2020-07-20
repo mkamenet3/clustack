@@ -38,9 +38,10 @@ sparseMAT <- spacetimeMat(potentialclusters, numCenters, Time)
 ###################################################
 #By location
 maxclust <- 15
-test_loc <-detectclusters(sparseMAT, Ex, Yx, numCenters, Time, maxclust, bylocation = TRUE, model="poisson")
+test_loc <-detectclusters(sparseMAT, Ex, Yx, numCenters, Time, maxclust, bylocation = TRUE, model="poisson", overdisp.est = NULL)
 #BIC
-plotmap(test_loc$wLambda[test_loc$selection.bic,],genpdf = FALSE)
+#plotmap(test_loc$wLambda[test_loc$selection.bic,],genpdf = FALSE)
+plotmap(test_loc$wLambda[test_loc$selection.aic,],genpdf = TRUE, "bylocation_bic")
 summary(test_loc$wLambda[test_loc$selection.bic,])
 
 #AIC/AICc
@@ -51,13 +52,88 @@ summary(test_loc$wLambda[test_loc$selection.aic,])
 plotmap(test_loc$wLambda[test_loc$selection.aicc,],genpdf = FALSE)
 summary(test_loc$wLambda[test_loc$selection.aicc,])
 
+rr <-Yx/Ex
+plotmapAllIC(res.bic = test_loc$wLambda[test_loc$selection.bic,],
+                               res.aic = test_loc$wLambda[test_loc$selection.aic,],
+                               oracle = rr,
+             maxrr = 1.1,
+             minrr=0.9,
+                               genpdf = TRUE,
+                               pdfname = "bylocation.pdf", obs=TRUE)
+################################
+#QP
+################################
+maxclust <- 15
+offset_reg <- glm(Yx ~ as.factor(rep(c("1","2","3","4","5"),  each=length(Ex)/Time)) + offset(log(Ex)),
+                                             family=quasipoisson)
+overdisp.est <- overdisp(offset_reg, sim = FALSE, overdispfloor = TRUE)
+
+test_loc <-detectclusters(sparseMAT, Ex, Yx, numCenters, Time, maxclust, bylocation = TRUE, model="poisson", overdisp.est = overdisp.est)
+#BIC
+#plotmap(test_loc$wLambda[test_loc$selection.bic,],genpdf = FALSE)
+plotmap(test_loc$wLambda[test_loc$selection.aic,],genpdf = FALSE, "bylocation_bic")
+summary(test_loc$wLambda[test_loc$selection.bic,])
+
+#AIC/AICc
+plotmap(test_loc$wLambda[test_loc$selection.aic,],genpdf = FALSE)
+summary(test_loc$wLambda[test_loc$selection.aic,])
+
+#AICc
+plotmap(test_loc$wLambda[test_loc$selection.aicc,],genpdf = FALSE)
+summary(test_loc$wLambda[test_loc$selection.aicc,])
+
+rr <-Yx/Ex
+plotmapAllIC(res.bic = test_loc$wLambda[test_loc$selection.bic,],
+             res.aic = test_loc$wLambda[test_loc$selection.aic,],
+             oracle = rr,
+             maxrr = 1.1,
+             minrr=0.9,
+             genpdf = TRUE,
+             pdfname = "bylocation_qp.pdf", obs=TRUE)
+
+
 ###################
 #By PC
-test_pc <-detectclusters(sparseMAT, Ex, Yx, numCenters, Time, maxclust, bylocation = FALSE, model="poisson")
+test_pc <-detectclusters(sparseMAT, Ex, Yx, numCenters, Time, maxclust, bylocation = FALSE, model="poisson", overdisp.est = NULL)
 
 #BIC and AIC/AICc all select same thing
 plotmap(test_pc$wLambda[test_pc$selection.bic,],genpdf = FALSE)
 plotmap(test_pc$wLambda[test_pc$selection.aic,],genpdf = FALSE)
 
 summary(test_pc$wLambda[test_pc$selection.bic,])
+
+rr <-Yx/Ex
+plotmapAllIC(res.bic = test_loc$wLambda[test_loc$selection.bic,],
+             res.aic = test_loc$wLambda[test_loc$selection.aic,],
+             oracle = rr,
+             maxrr = 1.1,
+             minrr=0.9,
+             genpdf = TRUE,
+             pdfname = "byPC.pdf", obs=TRUE)
+
+
+################################
+#QP
+################################
+test_pc <-detectclusters(sparseMAT, Ex, Yx, numCenters, Time, maxclust, bylocation = FALSE, model="poisson", overdisp.est = overdisp.est)
+
+#BIC and AIC/AICc all select same thing
+plotmap(test_pc$wLambda[test_pc$selection.bic,],genpdf = FALSE)
+plotmap(test_pc$wLambda[test_pc$selection.aic,],genpdf = FALSE)
+
+summary(test_pc$wLambda[test_pc$selection.bic,])
+
+rr <-Yx/Ex
+plotmapAllIC(res.bic = test_loc$wLambda[test_loc$selection.bic,],
+             res.aic = test_loc$wLambda[test_loc$selection.aic,],
+             oracle = rr,
+             maxrr = 1.1,
+             minrr=0.9,
+             genpdf = TRUE,
+             pdfname = "byPC_qp.pdf", obs=TRUE)
+
+
+
+
+
 
