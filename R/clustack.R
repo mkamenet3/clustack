@@ -821,42 +821,19 @@ extract_thetai <- function(param_ix, w_q, Lambda_dense){
 #calculate profile-likelihood confidence bounds and adjust for model-averaaging
 #' @param null Null model likelihood
 #' @param proflik Vector of profiled likelihoods for set of thetas
-calcbounds <- function(Yx, Ex, thetai,thetaa, param_ix, w_q,sparsematrix, logscale, overdisp.est) {
-    #################################
-    #Added 7-8-20
-    #thetai <- modelthetas.bic$thetai
-    #thetaa <- modelthetas.bic$thetaa@x
-    #################################
-    if(logscale==FALSE){
-        variance <- vector(mode = "list", length = dim(thetai)[1])
-        #model averaged calc
-        if(!is.null(overdisp.est)){
-            varthetai <- apply(thetai, 2, function(x) 1/outEx@x[param_ix])*overdisp.est
-        } else {
-            varthetai <- apply(thetai, 2, function(x) 1/outEx@x[param_ix])   
-        }
-        withintheta <- apply(thetai,1, function(x) (x-as.vector(thetaa))^2)
-        var <- sapply(1:ncol(varthetai ), function(k) sqrt(varthetai[k,1]+withintheta[,k]))
-        varthetas_w <- matrix(as.vector(w_q), nrow=1)%*%varthetai
-        var_thetaa <- as.vector(varthetas_w)
-        UBa = exp(log(thetaa) + 1.96*sqrt(var_thetaa))
-        LBa = exp(log(thetaa) - 1.96*sqrt(var_thetaa))
-    } else {
+calcbounds <- function(Yx, Ex, thetai,thetaa, param_ix, w_q,sparsematrix, overdisp.est) {
         variance <- vector(mode = "list", length = dim(thetai)[1])
         if(!is.null(overdisp.est)){
             varthetai <- apply(thetai, 2, function(x) 1/outEx@x[param_ix])*overdisp.est
         } else {
             varthetai <- apply(thetai, 2, function(x) 1/outEx@x[param_ix])    
         }
-        
         withintheta <- apply(thetai,1, function(x) (log(x)-log(as.vector(thetaa)))^2)
-        var <- sapply(1:ncol(varthetai), function(k) sqrt(varthetai[k,1]+withintheta[,k]))
-        varthetas_w <- matrix(as.vector(w_q), nrow=1)%*%varthetai
+        var <- sapply(1:nrow(varthetai), function(k) sqrt(varthetai[k,]+withintheta[,k]))
+        varthetas_w <- var%*%matrix(as.vector(w_q), ncol=1) #matrix(as.vector(w_q), nrow=1)%*%var #varthetai
         var_thetaa <- as.vector(varthetas_w)
-        UBa = exp(log(thetaa) + 1.96*sqrt(var_thetaa))
-        LBa = exp(log(thetaa) - 1.96*sqrt(var_thetaa))
-        
-    }
+        UBa = exp(log(as.vector(thetaa)) + 1.96*sqrt(var_thetaa))
+        LBa = exp(log(as.vector(thetaa)) - 1.96*sqrt(var_thetaa))
     return(ma_adjusted = c(LBa, UBa))
 }
 

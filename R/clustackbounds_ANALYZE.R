@@ -98,6 +98,9 @@ master2 %>%
 #make a quick and dirty plot
 dat <- cbind.data.frame(thetaa=as.vector(modelthetas.bic$thetaa), UBa = as.vector(bounds.bic$ma_adjusted[[2]]), 
                         LBa=as.vector(bounds.bic$ma_adjusted[[1]]))
+
+dat <- cbind.data.frame(UBa= UBa, LBa=LBa, thetaa=as.vector(thetaa))
+
 dat <- dat %>%arrange(thetaa) %>%mutate(id = 1:nrow(.))
 ggplot(data=dat) +
     geom_line(aes(x=id, y=thetaa), size=2) +

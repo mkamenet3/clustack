@@ -19,6 +19,8 @@ set.seed(20200630)
 #library(clusso)
 library(MASS)
 library(clusso)
+#source("clustack.R")
+#load("../data/japanbreastcancer.RData")
 source("R/clustack.R")
 load("../clustack/data/japanbreastcancer.RData")
 cases <- japanbreastcancer$death
@@ -49,22 +51,22 @@ maxclust <- 15
 ##############################
 #Arguments passed will only control theta parameter
 ##R CMD BATCH "--args arg1 arg2" myscript.R -> 
-args<- commandArgs(TRUE)
-theta <- args[1]
-nsim <- args[2]
+#args<- commandArgs(TRUE)
+theta <- 60#as.numeric(args[1])
+nsim <- 2#100#as.numeric(args[2])
 #Fixed Params
 cent <- 150
 tim <- c(1:5)
 
 #Sim-Over Params
-risks <- c(1.1, 1.5, 2.0)
-radii <- c(9, 11, 18)
+# risks <- c(1.1, 1.5, 2.0)
+# radii <- c(9, 11, 18)
 
 #tester
-# risk = 2
+risk = 1.5
 # cent = 150
-# rad = 11
-# tim <- c(1:5)
+rad = 9
+# # tim <- c(1:5)
 
 
 ##############################
@@ -76,6 +78,8 @@ for(rad in radii){
             print(paste0("SimID: ",s,
                          "Risk: ", risk,
                          "Radius: ", rad))
+            print(paste0("Theta: ", theta))
+            print(str(theta))
             simid <- s
             #put the cluster in
             clusters <- clusters2df(x,y,rMax, utm = TRUE, length(x))
@@ -141,74 +145,110 @@ for(rad in radii){
                                                numCenters, Time, maxclust,
                                                bylocation = FALSE, model="poisson",
                                                overdisp.est = overdisp.est)
+            #print(str(sim_superclust_pc))
             #BIC
-            clusterlocs.bic <- clusterlocs_ident(sim_superclust_pc, selection="selection.bic", sparsematrix)
-            modelthetas.bic <- extract_thetai(clusterlocs.bic$param_ix, clusterlocs.bic$w_q, Lambda_dense)
-            #calculate null and model curves
-            bounds.bic.log <- calcbounds(Yx, Ex,
-                                         modelthetas.bic$thetai, 
-                                         modelthetas.bic$thetaa, 
-                                         clusterlocs.bic$param_ix, 
-                                         clusterlocs.bic$w_q,
-                                         sparsematrix, logscale = TRUE,
-                                         overdisp.est=overdisp.est)
-            if(sim_superclust_pc$selection.bic!=sim_superclust_pc$selection.aic){
-                #AIC
-                clusterlocs.aic <- clusterlocs_ident(sim_superclust_pc, selection="selection.aic", sparsematrix)
-                modelthetas.aic <- extract_thetai(clusterlocs.aic$param_ix, clusterlocs.aic$w_q, Lambda_dense)
+            if(sim_superclust_pc$selection.bic!=0){
+                clusterlocs.bic <- clusterlocs_ident(sim_superclust_pc, selection="selection.bic", sparsematrix)
+                modelthetas.bic <- extract_thetai(clusterlocs.bic$param_ix, clusterlocs.bic$w_q, Lambda_dense)
                 #calculate null and model curves
-                bounds.aic.log <- calcbounds(Yx, Ex,
-                                             modelthetas.aic$thetai, 
-                                             modelthetas.aic$thetaa, 
-                                             clusterlocs.aic$param_ix, 
-                                             clusterlocs.aic$w_q,
-                                             sparsematrix, logscale = TRUE,
-                                             overdisp.est=overdisp.est) 
+                bounds.bic.log <- calcbounds(Yx, Ex,
+                                             modelthetas.bic$thetai, 
+                                             modelthetas.bic$thetaa, 
+                                             clusterlocs.bic$param_ix, 
+                                             clusterlocs.bic$w_q,
+                                             sparsematrix, 
+                                             overdisp.est=overdisp.est)
             } else {
-                print("BIC and AIC select the same path.")
-                bounds.aic.log <- bounds.bic.log
-                modelthetas.aic <- modelthetas.bic
+                modelthetas.bic <- list(thetai = rep(1, 1040), thetaa = rep(1, 1040))
+                bounds.bic.log <- vector(mode = "list", length = 2)
+                bounds.bic.log[[1]] <- rep(NA, 1040)
+                bounds.bic.log[[2]] <- rep(NA, 1040)
             }
+            print("BIC finished")
+            
+            if(sim_superclust_pc$selection.aic!=0) {
+                if(sim_superclust_pc$selection.bic!=sim_superclust_pc$selection.aic){
+                    #AIC
+                    clusterlocs.aic <- clusterlocs_ident(sim_superclust_pc, selection="selection.aic", sparsematrix)
+                    modelthetas.aic <- extract_thetai(clusterlocs.aic$param_ix, clusterlocs.aic$w_q, Lambda_dense)
+                    #calculate null and model curves
+                    bounds.aic.log <- calcbounds(Yx, Ex,
+                                                 modelthetas.aic$thetai, 
+                                                 modelthetas.aic$thetaa, 
+                                                 clusterlocs.aic$param_ix, 
+                                                 clusterlocs.aic$w_q,
+                                                 sparsematrix, 
+                                                 overdisp.est=overdisp.est) 
+                } else {
+                    print("BIC and AIC select the same path.")
+                    bounds.aic.log <- bounds.bic.log
+                    modelthetas.aic <- modelthetas.bic
+                }
+            } else {
+                modelthetas.aic <- list(thetai = rep(1, 1040), thetaa = rep(1, 1040))
+                bounds.aic.log <- vector(mode = "list", length = 2)
+                bounds.aic.log[[1]] <- rep(NA, 1040)
+                bounds.aic.log[[2]] <- rep(NA, 1040)
+                
+            }
+            print("AIC finished")
             ########################
             #Calculate MATA-Bounds
             ########################
             #BIC
-            if(!is.null(overdisp.est)) {
-                se.thetai.bic <- sqrt(apply(thetai, 2, function(x) 1/outEx@x[clusterlocs.bic$param_ix]))*sqrt(overdisp.est)
-            } else{
-                se.thetai.bic <- sqrt(apply(thetai, 2, function(x) 1/outEx@x[clusterlocs.bic$param_ix]))   
-            }
-            modelthetas_thetai.bic.log <- log(modelthetas.bic$thetai)
-            mata_st.bic <- sapply(1:1040, function(x) mata_solvebounds(modelthetas_thetai.bic.log[,x],
-                                                                       se.thetaii = se.thetai.bic[,x],
-                                                                       w_q =  clusterlocs.bic$w_q,
-                                                                       alpha = 0.025,
-                                                                       tol=1e-8))
-            mata_st.bic <- t(mata_st.bic)
-            if(sim_superclust_pc$selection.bic!=sim_superclust_pc$selection.aic){
-                #AIC
+            if(sim_superclust_pc$selection.bic!=0){
                 if(!is.null(overdisp.est)) {
-                    se.thetai.aic <- sqrt(apply(thetai, 2, function(x) 1/outEx@x[clusterlocs.aic$param_ix]))*sqrt(overdisp.est)   
-                } else {
-                    se.thetai.aic <- sqrt(apply(thetai, 2, function(x) 1/outEx@x[clusterlocs.aic$param_ix]))    
+                    se.thetai.bic <- sqrt(apply(modelthetas.bic$thetai, 2, function(x) 1/outEx@x[clusterlocs.bic$param_ix]))*sqrt(overdisp.est)
+                } else{
+                    se.thetai.bic <- sqrt(apply(modelthetas.bic$thetai, 2, function(x) 1/outEx@x[clusterlocs.bic$param_ix]))   
                 }
-                modelthetas_thetai.aic.log <- log(modelthetas.aic$thetai)
-                mata_st.aic <- sapply(1:1040, function(x) mata_solvebounds(modelthetas_thetai.aic.log[,x],
-                                                                           se.thetaii = se.thetai.aic[,x],
-                                                                           w_q =  clusterlocs.aic$w_q,
+                modelthetas_thetai.bic.log <- log(modelthetas.bic$thetai)
+                mata_st.bic <- sapply(1:1040, function(x) mata_solvebounds(modelthetas_thetai.bic.log[,x],
+                                                                           se.thetaii = se.thetai.bic[,x],
+                                                                           w_q =  clusterlocs.bic$w_q,
                                                                            alpha = 0.025,
                                                                            tol=1e-8))
-                mata_st.aic <- t(mata_st.aic)
+                mata_st.bic <- t(mata_st.bic)
+            } else {
+                mata_st.bic <- matrix(rep(NA, 1040*2),ncol=2)
+            }
+            print("BIC MATA finished")
+
+            #AIC
+            if(sim_superclust_pc$selection.aic!=0) {
+                if(sim_superclust_pc$selection.bic!=sim_superclust_pc$selection.aic){
+                    
+                    if(!is.null(overdisp.est)) {
+                        se.thetai.aic <- sqrt(apply(modelthetas.aic$thetai, 2, function(x) 1/outEx@x[clusterlocs.aic$param_ix]))*sqrt(overdisp.est)   
+                    } else {
+                        se.thetai.aic <- sqrt(apply(modelthetas.aic$thetai, 2, function(x) 1/outEx@x[clusterlocs.aic$param_ix]))    
+                    }
+                    modelthetas_thetai.aic.log <- log(modelthetas.aic$thetai)
+                    mata_st.aic <- sapply(1:1040, function(x) mata_solvebounds(modelthetas_thetai.aic.log[,x],
+                                                                               se.thetaii = se.thetai.aic[,x],
+                                                                               w_q =  clusterlocs.aic$w_q,
+                                                                               alpha = 0.025,
+                                                                               tol=1e-8))
+                    mata_st.aic <- t(mata_st.aic)
+                    
+                } else {
+                    print("BIC and AIC select the same path.")
+                    mata_st.aic <- mata_st.bic
+                }
                 
             } else {
-                print("BIC and AIC select the same path.")
-                mata_st.aic <- mata_st.bic
+                mata_st.aic <- matrix(rep(NA, 1040*2),ncol=2)
             }
+            print("AIC MATA finished")
             #Create simrow
             row <- cbind(simID = rep(s,1040),
                          risk = rep(risk, 1040),
                          radius = rep(rad, 1040),
                          theta = rep(theta, 1040),
+                         YSIM = YSIM,
+                         Ex = Ex,
+                         select.bic = rep(sim_superclust_pc$selection.bic,1040),
+                         select.aic = rep(sim_superclust_pc$selection.aic,1040),
                          thetaa.bic= as.vector(modelthetas.bic$thetaa),
                          thetaa.aic = as.vector(modelthetas.aic$thetaa),
                          adjusted.bic.log.LB = as.vector(bounds.bic.log[[1]]),
@@ -219,6 +259,7 @@ for(rad in radii){
                          mata.bic.UB = mata_st.bic[,2],
                          mata.aic.LB = mata_st.aic[,1],
                          mata.aic.UB = mata_st.aic[,2])
+            #print(row)
             master <- rbind(master, row)
         }
     }
