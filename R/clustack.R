@@ -834,7 +834,9 @@ calcbounds <- function(Yx, Ex, thetai,thetaa, param_ix, w_q,sparsematrix, overdi
         var_thetaa <- as.vector(varthetas_w)
         UBa = exp(log(as.vector(thetaa)) + 1.96*sqrt(var_thetaa))
         LBa = exp(log(as.vector(thetaa)) - 1.96*sqrt(var_thetaa))
-    return(ma_adjusted = c(LBa, UBa))
+    #return(ma_adjusted = c(LBa, UBa))
+        return(list(ma_adjusted.LB = LBa,
+                    ma_adjusted.UB = UBa))
 }
 
 #MATA-intervals

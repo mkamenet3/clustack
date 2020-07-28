@@ -19,10 +19,10 @@ set.seed(20200630)
 #library(clusso)
 library(MASS)
 library(clusso)
-#source("clustack.R")
-#load("../data/japanbreastcancer.RData")
-source("R/clustack.R")
-load("../clustack/data/japanbreastcancer.RData")
+source("clustack.R")
+load("../data/japanbreastcancer.RData")
+# source("R/clustack.R")
+# load("../clustack/data/japanbreastcancer.RData")
 cases <- japanbreastcancer$death
 expected <- japanbreastcancer$expdeath
 
@@ -53,19 +53,19 @@ maxclust <- 15
 ##R CMD BATCH "--args arg1 arg2" myscript.R -> 
 #args<- commandArgs(TRUE)
 theta <- 60#as.numeric(args[1])
-nsim <- 2#100#as.numeric(args[2])
+nsim <- 100#as.numeric(args[2])
 #Fixed Params
 cent <- 150
 tim <- c(1:5)
 
 #Sim-Over Params
-# risks <- c(1.1, 1.5, 2.0)
-# radii <- c(9, 11, 18)
+risks <- c(1.1, 1.5, 2.0)
+radii <- c(9, 11, 18)
 
 #tester
-risk = 1.5
-# cent = 150
-rad = 9
+ risk = 2
+# # cent = 150
+ rad = 18
 # # tim <- c(1:5)
 
 
@@ -251,10 +251,10 @@ for(rad in radii){
                          select.aic = rep(sim_superclust_pc$selection.aic,1040),
                          thetaa.bic= as.vector(modelthetas.bic$thetaa),
                          thetaa.aic = as.vector(modelthetas.aic$thetaa),
-                         adjusted.bic.log.LB = as.vector(bounds.bic.log[[1]]),
-                         adjusted.bic.log.UB = as.vector(bounds.bic.log[[2]]),
-                         adjusted.aic.log.LB = as.vector(bounds.aic.log[[1]]),
-                         adjusted.aic.log.UB = as.vector(bounds.aic.log[[2]]),
+                         adjusted.bic.log.LB = as.vector(bounds.bic.log$ma_adjusted.LB),
+                         adjusted.bic.log.UB = as.vector(bounds.bic.log$ma_adjusted.UB),
+                         adjusted.aic.log.LB = as.vector(bounds.aic.log$ma_adjusted.LB),
+                         adjusted.aic.log.UB = as.vector(bounds.aic.log$ma_adjusted.UB),
                          mata.bic.LB = mata_st.bic[,1],
                          mata.bic.UB = mata_st.bic[,2],
                          mata.aic.LB = mata_st.aic[,1],
