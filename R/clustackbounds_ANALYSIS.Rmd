@@ -1,0 +1,1098 @@
+---
+title: "clustackbounds_ANALYSIS"
+author: "Maria Kamenetsky"
+date: "August 4, 2020"
+output: html_document
+---
+
+This Rmd file creates plots following clustackbounds simulation
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+```{r}
+##########################################################################################
+#POST ANALYSIS
+##########################################################################################
+#need to figure out st locs that are in each cluster I created (should be according to 3 radii (9, 11, 18))
+library(MASS)
+library(clusso)
+library(tidyverse)
+source("clustack.R")
+```
+
+
+
+```{r}
+master2 <- read.csv("../../../results/CLUSTACKBOUNDS/clustackbounds_sim_bypc_theta60.csv")
+load("../data/japanbreastcancer.RData")
+```
+
+#Clean Up and Create Sub-Datasets
+
+```{r}
+nsim <-100
+#set global
+nsim <-100
+rMax <- 20 
+Time <- 5
+x <- utmJapan$utmx/1000
+y <- utmJapan$utmy/1000
+cent <- 150
+tim <- c(1:5)
+```
+
+Identify ClusterIx by Radius
+
+```{r}
+#Sim-Over Params
+clusters <- clusters2df(x,y,rMax, utm = TRUE, length(x))
+n <- length(x)
+tmp <- clusters[clusters$center==cent,]
+
+#9km
+cluster9km <- tmp[(tmp$r <= 9),]
+rr9km = matrix(1, nrow=n, ncol=Time)
+rr9km[cluster9km$last, tim[1]:tail(tim, n=1)] <- NA
+clusterix9km = which(is.na(rr9km))
+#11km
+cluster11km <- tmp[(tmp$r <= 11),]
+rr11km = matrix(1, nrow=n, ncol=Time)
+rr11km[cluster11km$last, tim[1]:tail(tim, n=1)] <- NA
+clusterix11km = which(is.na(rr11km))
+#18km
+cluster18km <- tmp[(tmp$r <= 18),]
+rr18km = matrix(1, nrow=n, ncol=Time)
+rr18km[cluster18km$last, tim[1]:tail(tim, n=1)] <- NA
+clusterix18km = which(is.na(rr18km))
+
+```
+
+Add location IDs and clusterIx indicators
+
+```{r}
+master2$locid <- rep(1:1040, times=nsim)
+master2$locidF <- as.factor(rep(1:1040, times=nsim))
+
+master2 <- master2 %>%
+    mutate(clusterix = if_else(radius==9 & (locid %in% clusterix9km),1,
+                               if_else(radius==11 & (locid %in% clusterix11km),1,
+                                       if_else(radius==18 & (locid %in% clusterix18km),1,0)))) 
+```
+
+###Create Subsets
+
+```{r}
+master<- master2 %>%
+    mutate(coverage_buckland.bic = ifelse((risk < adjusted.bic.log.UB & risk > adjusted.bic.log.LB), 1, 0),
+           coverage_mata.bic = ifelse((risk < mata.bic.UB & risk > mata.bic.LB), 1, 0),
+           coverage_buckland.aic = ifelse((risk < adjusted.aic.log.UB & risk > adjusted.aic.log.LB), 1, 0),
+           coverage_mata.aic = ifelse((risk < mata.aic.UB & risk > mata.aic.LB), 1, 0))
+#previously called mastercoverage_select
+#condition on simulations where something was detected
+mastercoverage <- master %>%
+    dplyr::filter(select.aic!=0 & select.bic!=0) %>%
+    group_by(risk, radius, simID) %>%
+    mutate(Indclustercoverage_mata.bic = ifelse(any(coverage_mata.bic==1 & clusterix==1),1,0),
+           Indclustercoverage_mata.aic = ifelse(any(coverage_mata.aic==1 & clusterix==1),1,0),
+           Indclustercoverage_buckland.bic = ifelse(any(coverage_buckland.bic==1 & clusterix==1),1,0),
+           Indclustercoverage_buckland.aic = ifelse(any(coverage_buckland.aic==1 & clusterix==1),1,0)) %>%
+    replace_na(list(Indclustercoverage_mata.bic = 0, Indclustercoverage_mata.aic = 0,
+                     Indclustercoverage_buckland.bic = 0,  Indclustercoverage_buckland.aic = 0)) %>%
+    group_by(risk, radius) %>%
+    summarise(clustercoverage_mata.bic = mean(Indclustercoverage_mata.bic),
+              clustercoverage_mata.aic = mean(Indclustercoverage_mata.aic),
+              clustercoverage_buckland.bic = mean(Indclustercoverage_buckland.bic),
+              clustercoverage_buckland.aic = mean(Indclustercoverage_buckland.aic)) %>%
+    ungroup() %>%
+    pivot_longer(cols=clustercoverage_mata.bic:clustercoverage_mata.aic, names_to="ICmata", values_to="probMATA") %>%
+    pivot_longer(cols=clustercoverage_buckland.bic:clustercoverage_buckland.aic, names_to="ICbuck", values_to="probBuck")%>%
+    mutate(ICmata = ifelse(ICmata=="clustercoverage_mata.aic", "QAIC", "QBIC"),
+           ICbuck = ifelse(ICbuck=="clustercoverage_buckland.aic", "QAIC", "QBIC"))d%>%
+    dplyr::filter(ICmata==ICbuck)
+
+
+################################
+#Coverage probability: by location, clusters only
+################################
+masterlocs <- master %>%
+    dplyr::filter(clusterix==1) %>%
+    dplyr::filter(select.aic!=0 & select.bic!=0) %>%
+    arrange(thetaa.bic) %>%
+    droplevels() %>%
+    group_by(locid, risk, radius) %>%
+    summarize(thetaa.bic.mean = mean(thetaa.bic),
+              thetaa.aic.mean = mean(thetaa.aic)) %>%
+    pivot_longer(cols=thetaa.bic.mean:thetaa.aic.mean, names_to="IC", values_to="thetaa")%>%
+    mutate(IC = ifelse(IC=="thetaa.aic.mean", "QAIC", "QBIC"))
+
+################################
+#Upper and Lower bounds
+#both Mata and Buckland
+#by location, conditional on detection
+################################
+masterlocs_all <- master %>%
+        dplyr::filter(select.aic!=0 & select.bic!=0) %>%
+        arrange(thetaa.bic) %>%
+        droplevels() %>%
+        group_by(locid, risk, radius, clusterix) %>%
+        summarize(thetaa.bic.mean = mean(thetaa.bic),
+                  thetaa.aic.mean = mean(thetaa.aic),
+                  mata.bic.UB.mean = mean(mata.bic.UB, na.rm=TRUE),
+                  mata.bic.LB.mean = mean(mata.bic.LB, na.rm=TRUE),
+                  mata.aic.UB.mean = mean(mata.aic.UB, na.rm=TRUE),
+                  mata.aic.LB.mean = mean(mata.aic.LB, na.rm=TRUE),
+                  buckland.aic.UB.mean = mean(adjusted.aic.log.UB, na.rm=TRUE),
+                  buckland.aic.LB.mean = mean(adjusted.aic.log.LB, na.rm=TRUE),
+                  buckland.bic.UB.mean = mean(adjusted.aic.log.UB, na.rm=TRUE),
+                  buckland.bic.LB.mean = mean(adjusted.aic.log.LB, na.rm=TRUE),.groups="keep") %>%
+        pivot_longer(cols=thetaa.bic.mean:thetaa.aic.mean, names_to="IC", values_to="thetaa")%>%
+        #pivot_longer(cols=thetaa.bic.mean:mata.bic.UB.mean, names_to="IC", values_to="thetaa")%>%
+        mutate(IC = ifelse(IC=="thetaa.aic.mean", "QAIC", "QBIC")) %>%
+        pivot_longer(cols=c(mata.bic.UB.mean,mata.aic.UB.mean), names_to="mataUB", values_to="thetamata.UB") %>%
+        pivot_longer(cols=c(mata.bic.LB.mean,mata.aic.LB.mean), names_to="mataLB", values_to="thetamata.LB") %>%
+        pivot_longer(cols=c(buckland.bic.UB.mean,buckland.aic.UB.mean), names_to="buckUB", values_to="thetabuck.UB") %>%
+        pivot_longer(cols=c(buckland.bic.LB.mean,buckland.aic.LB.mean), names_to="buckLB", values_to="thetabuck.LB") %>%
+        mutate(mataUB = ifelse(mataUB=="mata.aic.UB.mean", "QAIC", "QBIC"),
+               mataLB = ifelse(mataLB=="mata.aic.LB.mean", "QAIC", "QBIC"),
+               buckLB = ifelse(buckLB=="buckland.aic.LB.mean", "QAIC", "QBIC"),
+               buckUB = ifelse(buckUB=="buckland.aic.UB.mean", "QAIC", "QBIC")) %>%
+        dplyr::filter(IC == mataUB & IC==mataLB & IC == buckLB & IC == buckUB) %>%
+    dplyr::select(-mataLB, -buckLB, -mataUB, -buckUB)
+    
+clusters_uniq <- clusters %>%
+    dplyr::select(center, x,y) %>%
+    dplyr::distinct()
+#create distances dataframe to merge
+distances <- as.matrix(dist(cbind(clusters_uniq$x, clusters_uniq$y)))[,cent]
+distancesfromcenter <- cbind.data.frame(distfromcent=rep(distances, times=Time),
+                                        center = rep(as.numeric(names(distances)), times=Time),
+                                        Period = rep(c("Period 1","Period 2","Period 3","Period 4","Period 5"),each=208),
+                                        centerTime = 1:1040)
+masterlocs_dist <- merge(masterlocs, distancesfromcenter, by.x="locid", by.y="centerTime", all.x=TRUE)
+masterlocs_all_dist <- merge(masterlocs_all, distancesfromcenter, by.x="locid", by.y="centerTime", all.x=TRUE)
+masterlocs_all_dist <- masterlocs_all_dist %>%
+    dplyr::mutate(radius2=ifelse(clusterix==1,radius, "Outside of Cluster"))
+
+#dataset identifies max theta by ST location
+masterlocs_all_dist_maxthetaa <- masterlocs_all_dist %>%
+    dplyr::filter(clusterix==1) %>%
+    group_by(radius, risk, IC, Period) %>%
+    dplyr::filter(thetaa== max(thetaa))
+
+#dataset identifies max theta bt ST location not in the cluster
+masterlocs_all_dist_maxthetaa_noclust <- masterlocs_all_dist %>%
+    dplyr::filter(clusterix==0) %>%
+    group_by(risk, IC, Period) %>%
+    dplyr::filter(thetaa== max(thetaa))
+
+
+#add distance from center for each simulation
+master_select <- master %>%
+    dplyr::filter(select.aic!=0 & select.bic!=0) 
+master_dist <- merge(master_select, distancesfromcenter, by.x="locid", by.y="centerTime", all.x=TRUE)
+
+```
+
+
+```{r}
+masterlocs_all_dist_9km <- masterlocs_all_dist %>%
+    dplyr::filter(radius==9)
+
+
+masterlocs_all_dist_11km <- masterlocs_all_dist %>%
+    dplyr::filter(radius==11)
+
+masterlocs_all_dist_18km <- masterlocs_all_dist %>%
+    dplyr::filter(radius==18)
+
+
+```
+
+
+#Plots
+
+##Coverage Probability
+
+```{r}
+
+
+################################
+#Coverage probability: by simulation
+#if at least 1 cell was within the bounds 
+################################
+
+ggplot(data=mastercoverage, aes(x=risk, y=probMATA)) +
+    geom_line(col="blue", size=2) +
+    facet_grid(radius~ICmata) +
+    xlab("Relative risk (RR)") +
+    ylab("MATA-Interval Coverage Probability") +
+    theme_bw()+
+    ggtitle("MATA-Interval Coverage") +
+    scale_x_continuous(breaks=c(1.1, 1.5,2)) +
+    ylim(0,1)+
+    theme(plot.title = element_text(hjust = 0.5),
+          plot.caption = element_text(face="italic")) +
+    labs(caption="Coverage probability: at least 1 ST cell was within the bounds. \nExcluding sims with no detection.")
+
+ggplot(data=mastercoverage, aes(x=risk, y=probBuck)) +
+    geom_line(col="blue", size=2) +
+    facet_grid(radius~ICmata) +
+    xlab("Relative risk (RR)") +
+    ylab("Buckland-Interval Coverage Probability") +
+    theme_bw()+
+    ggtitle("Buckland-Interval Coverage") +
+    scale_x_continuous(breaks=c(1.1, 1.5,2)) +
+    ylim(0,1)+
+    theme(plot.title = element_text(hjust = 0.5),
+          plot.caption = element_text(face="italic")) +
+    labs(caption="Coverage probability: at least 1 ST cell was within the bounds. \nExcluding sims with no detection.")
+
+
+```
+
+
+##Mean Thetaa
+
+
+```{r, eval=FALSE}
+#original
+ggplot() +
+    geom_line(data=masterlocs_all, aes(x=locid, y=thetaa, group=radius, color=factor(radius)), size=1.5, alpha=0.9)+
+    facet_grid(IC ~ risk) +
+    theme_bw() +
+    scale_x_discrete(breaks=0) +
+    ylab("Mean Thetaa") +
+    xlab("Cell i at Time t in cluster C") +
+    theme(plot.title = element_text(hjust = 0.5),
+          plot.caption = element_text(face="italic")) +
+    labs(title="Mean Model-Averaged thetaa Estimates by Cell i, Time t",
+         caption="Only ST cells inside each respective cluster.\n Mean thetaa calculted across 100 simulations for radius-risk pair. \nIt looks like as cluster increases, \nthe mean thetaa shrinks due to more cells being in the cluster and the relative risk weights dispersed more.\nConditional on a cluster being selected")
+
+# ggplot() +
+#     geom_line(data=subset(masterlocs_all_dist, clusterix==0), aes(x=distfromcent, 
+#                                                                   y=thetaa),
+#               color="black", fill="black",
+#               size=1, alpha=0.8) +
+#     geom_line(data=subset(masterlocs_all_dist, clusterix==1), aes(x=distfromcent, 
+#                                             y=thetaa, group=radius, color=factor(radius)), size=1, alpha=0.8) +
+#     facet_grid(IC ~ risk) +
+#     theme_bw() +
+#     ylab(bquote(bar(theta)[a])) +
+#     xlab("Distance from cluster center (km)") +
+#     theme(plot.title = element_text(hjust = 0.5),
+#           plot.caption = element_text(face="italic")) +
+#     labs(title=bquote(bar(theta)[a] ~  "Estimates by Distance from Cluster Center"),
+#          caption="Only ST cells inside each respective cluster.\n Mean thetaa calculted across 100 simulations for radius-risk pair. \nIt looks like as cluster increases, \nthe mean thetaa shrinks due to more cells being in the cluster and the relative risk weights dispersed more.\nConditional on a cluster being selected",
+#          color = "Cluster radius (km)")
+
+
+```
+
+###Line Plot: Distance from Center by Radius; by IC
+
+```{r}
+pa <- ggplot() +
+    geom_line(data=subset(masterlocs_all_dist, clusterix==0 & IC=="QBIC" & radius==9), 
+              aes(x=distfromcent,  y=thetaa, color="Outside Cluster, 9 km"),
+             # color="black",
+              size=0.5, alpha=0.8, linetype="dashed") +
+    geom_line(data=subset(masterlocs_all_dist, clusterix==0 & IC=="QBIC" & radius==11), 
+              aes(x=distfromcent,  y=thetaa, color="Outside Cluster, 11 km"),
+             # color="black",
+              size=0.5, alpha=0.8, linetype="dashed") +
+    geom_line(data=subset(masterlocs_all_dist, clusterix==0 & IC=="QBIC" & radius==18), 
+              aes(x=distfromcent,  y=thetaa, color="Outside Cluster, 18 km"),
+             # color="black",
+              size=0.5, alpha=0.8, linetype="dashed") +
+    geom_line(data=subset(masterlocs_all_dist, clusterix==1 & IC=="QBIC" & radius==9), 
+              aes(x=distfromcent, y=thetaa, 
+                  group=radius, color="9 km"), size=0.5, alpha=0.8) +
+    geom_line(data=subset(masterlocs_all_dist, clusterix==1 & IC=="QBIC" & radius==11), 
+              aes(x=distfromcent, y=thetaa, 
+                  group=radius, color="11 km"), size=0.5, alpha=0.8) +
+    geom_line(data=subset(masterlocs_all_dist, clusterix==1 & IC=="QBIC" & radius==18), 
+              aes(x=distfromcent, y=thetaa, 
+                  group=radius, color="18 km"), size=0.5, alpha=0.8) +
+    facet_grid(risk ~ Period) +
+    # geom_point(data=subset(masterlocs_all_dist_maxthetaa_noclust, IC=="QBIC"), 
+    #            aes(x=distfromcent, y=thetaa, color="Outside of Cluster"),shape=8) + 
+    geom_point(data=subset(masterlocs_all_dist_maxthetaa, IC=="QBIC" & radius ==9), 
+               aes(x=distfromcent, y=thetaa, color="9 km"),shape=8) + 
+    geom_point(data=subset(masterlocs_all_dist_maxthetaa, IC=="QBIC" & radius ==11), 
+               aes(x=distfromcent, y=thetaa, color="11 km"),shape=8) + 
+    geom_point(data=subset(masterlocs_all_dist_maxthetaa, IC=="QBIC" & radius ==18), 
+               aes(x=distfromcent, y=thetaa, color="18 km"),shape=8) + 
+    theme_minimal() +
+    ylab(bquote(bar(theta)[a])) +
+    xlab("Distance from cluster center (km)") +
+    theme(plot.title = element_text(hjust = 0.5),
+          plot.caption = element_text(face="italic")) +
+    labs(title=bquote(bar(theta)[a] ~  "Estimates by Distance from Cluster Center - QBIC"),
+         color = "Cluster radius (km)") +
+    scale_y_continuous(sec.axis = sec_axis(~., name="Cluster Relative Risk", breaks=0)) +
+    scale_color_manual(name="Cluster radius", values=c("9 km" = "red",
+                                         "11 km" = "seagreen4",
+                                         "18 km" = "royalblue",
+                                         "Outside Cluster, 9 km" = "red",
+                                         "Outside Cluster, 11 km" = "seagreen4",
+                                         "Outside Cluster, 18 km" = "royalblue"),
+                       breaks=c("9 km", "11 km", "18 km")) +
+                       # , "Outside Cluster, 9 km",
+                       #          "Outside Cluster, 11 km", "Outside Cluster, 18 km")) +
+    geom_hline(yintercept = 1, linetype="dashed") 
+
+ggsave(file="../../../figures/SimulationResults/qbic_meanthetaa_sim.pdf", height=8, width=12, units="in")
+
+pb <- ggplot() +
+    geom_line(data=subset(masterlocs_all_dist, clusterix==0 & IC=="QAIC"), 
+              aes(x=distfromcent,  y=thetaa, color="Outside of Cluster"),
+              # color="black",
+              size=1, alpha=0.8) +
+    geom_line(data=subset(masterlocs_all_dist, clusterix==1 & IC=="QAIC" & radius==9), 
+              aes(x=distfromcent, y=thetaa, 
+                  group=radius, color="9 km"), size=1, alpha=0.8) +
+    geom_line(data=subset(masterlocs_all_dist, clusterix==1 & IC=="QAIC" & radius==11), 
+              aes(x=distfromcent, y=thetaa, 
+                  group=radius, color="11 km"), size=1, alpha=0.8) +
+    geom_line(data=subset(masterlocs_all_dist, clusterix==1 & IC=="QAIC" & radius==18), 
+              aes(x=distfromcent, y=thetaa, 
+                  group=radius, color="18 km"), size=1, alpha=0.8) +
+    geom_point(data=subset(masterlocs_all_dist_maxthetaa_noclust, IC=="QAIC"), 
+               aes(x=distfromcent, y=thetaa, color="Outside of Cluster"),shape=8) + 
+    geom_point(data=subset(masterlocs_all_dist_maxthetaa, IC=="QAIC" & radius ==9), 
+               aes(x=distfromcent, y=thetaa, color="9 km"),shape=8) + 
+    geom_point(data=subset(masterlocs_all_dist_maxthetaa, IC=="QAIC" & radius ==11), 
+               aes(x=distfromcent, y=thetaa, color="11 km"),shape=8) + 
+    geom_point(data=subset(masterlocs_all_dist_maxthetaa, IC=="QAIC" & radius ==18), 
+               aes(x=distfromcent, y=thetaa, color="18 km"),shape=8) + 
+    facet_grid(factor(risk) ~ Period) +
+    theme_minimal() +
+    ylab(bquote(bar(theta)[a])) +
+    xlab("Distance from cluster center (km)") +
+    theme(plot.title = element_text(hjust = 0.5),
+          plot.caption = element_text(face="italic")) +
+    labs(title=bquote(bar(theta)[a] ~  "Estimates by Distance from Cluster Center - QAIC"),
+         color = "Cluster radius (km)") +
+    scale_y_continuous(sec.axis = sec_axis(~., name="Cluster Relative Risk", breaks=0)) +
+    scale_color_manual(name="Cluster radius", values=c("Outside of Cluster"="grey20",
+                                                       "9 km" = "red",
+                                                       "11 km" = "orange",
+                                                       "18 km" = "blue"),
+                       breaks=c("9 km", "11 km", "18 km", "Outside of Cluster")) +
+    geom_hline(yintercept = 1, linetype="dashed") 
+pb
+ggsave(file="../../../figures/SimulationResults/qaic_meanthetaa_sim.pdf", height=8, width=12, units="in")
+
+```
+
+
+```{r}
+#combine
+paa <- ggplot() +
+    geom_line(data=subset(masterlocs_all_dist, clusterix==0 & IC=="QBIC"), 
+              aes(x=distfromcent,  y=thetaa, color="Outside of Cluster"),
+              # color="black",
+              size=1, alpha=0.8) +
+    geom_line(data=subset(masterlocs_all_dist, clusterix==1 & IC=="QBIC" & radius==9), 
+              aes(x=distfromcent, y=thetaa, 
+                  group=radius, color="9 km"), size=1, alpha=0.8) +
+    geom_line(data=subset(masterlocs_all_dist, clusterix==1 & IC=="QBIC" & radius==11), 
+              aes(x=distfromcent, y=thetaa, 
+                  group=radius, color="11 km"), size=1, alpha=0.8) +
+    geom_line(data=subset(masterlocs_all_dist, clusterix==1 & IC=="QBIC" & radius==18), 
+              aes(x=distfromcent, y=thetaa, 
+                  group=radius, color="18 km"), size=1, alpha=0.8) +
+    geom_point(data=subset(masterlocs_all_dist_maxthetaa_noclust, IC=="QBIC"), 
+               aes(x=distfromcent, y=thetaa, color="Outside of Cluster"),shape=8) + 
+    geom_point(data=subset(masterlocs_all_dist_maxthetaa, IC=="QBIC" & radius ==9), 
+               aes(x=distfromcent, y=thetaa, color="9 km"),shape=8) + 
+    geom_point(data=subset(masterlocs_all_dist_maxthetaa, IC=="QBIC" & radius ==11), 
+               aes(x=distfromcent, y=thetaa, color="11 km"),shape=8) + 
+    geom_point(data=subset(masterlocs_all_dist_maxthetaa, IC=="QBIC" & radius ==18), 
+               aes(x=distfromcent, y=thetaa, color="18 km"),shape=8) + 
+    facet_grid(factor(risk) ~ Period) +
+    theme_minimal() +
+    ylab(bquote(bar(theta)[a])) +
+    xlab("") +
+    #xlab("Distance from cluster center (km)") +
+    theme(plot.title = element_text(hjust = 0.5),
+          plot.caption = element_text(face="italic")) +
+    # labs(title=bquote(bar(theta)[a] ~  "Estimates by Distance from Cluster Center - QBIC"),
+    #      color = "Cluster radius (km)") +
+    scale_y_continuous(sec.axis = sec_axis(~., name="Cluster Relative Risk", breaks=0)) +
+    scale_color_manual(name="Cluster radius", values=c("Outside of Cluster"="grey20",
+                                                       "9 km" = "red",
+                                                       "11 km" = "orange",
+                                                       "18 km" = "blue"),
+                       breaks=c("9 km", "11 km", "18 km", "Outside of Cluster")) +
+    geom_hline(yintercept = 1, linetype="dashed") 
+
+pbb <- ggplot() +
+    geom_line(data=subset(masterlocs_all_dist, clusterix==0 & IC=="QAIC"), 
+              aes(x=distfromcent,  y=thetaa, color="Outside of Cluster"),
+              # color="black",
+              size=1, alpha=0.8) +
+    geom_line(data=subset(masterlocs_all_dist, clusterix==1 & IC=="QAIC" & radius==9), 
+              aes(x=distfromcent, y=thetaa, 
+                  group=radius, color="9 km"), size=1, alpha=0.8) +
+    geom_line(data=subset(masterlocs_all_dist, clusterix==1 & IC=="QAIC" & radius==11), 
+              aes(x=distfromcent, y=thetaa, 
+                  group=radius, color="11 km"), size=1, alpha=0.8) +
+    geom_line(data=subset(masterlocs_all_dist, clusterix==1 & IC=="QAIC" & radius==18), 
+              aes(x=distfromcent, y=thetaa, 
+                  group=radius, color="18 km"), size=1, alpha=0.8) +
+    geom_point(data=subset(masterlocs_all_dist_maxthetaa_noclust, IC=="QAIC"), 
+               aes(x=distfromcent, y=thetaa, color="Outside of Cluster"),shape=8) + 
+    geom_point(data=subset(masterlocs_all_dist_maxthetaa, IC=="QAIC" & radius ==9), 
+               aes(x=distfromcent, y=thetaa, color="9 km"),shape=8) + 
+    geom_point(data=subset(masterlocs_all_dist_maxthetaa, IC=="QAIC" & radius ==11), 
+               aes(x=distfromcent, y=thetaa, color="11 km"),shape=8) + 
+    geom_point(data=subset(masterlocs_all_dist_maxthetaa, IC=="QAIC" & radius ==18), 
+               aes(x=distfromcent, y=thetaa, color="18 km"),shape=8) + 
+    facet_grid(factor(risk) ~ Period) +
+    theme_minimal() +
+    ylab(bquote(bar(theta)[a])) +
+    xlab("Distance from cluster center (km)") +
+    theme(plot.title = element_text(hjust = 0.5),
+          plot.caption = element_text(face="italic")) +
+    # labs(title=bquote(bar(theta)[a] ~  "Estimates by Distance from Cluster Center - QAIC"),
+    #      color = "Cluster radius (km)") +
+    scale_y_continuous(sec.axis = sec_axis(~., name="Cluster Relative Risk", breaks=0)) +
+    scale_color_manual(name="Cluster radius", values=c("Outside of Cluster"="grey20",
+                                                       "9 km" = "red",
+                                                       "11 km" = "orange",
+                                                       "18 km" = "blue"),
+                       breaks=c("9 km", "11 km", "18 km", "Outside of Cluster")) +
+    geom_hline(yintercept = 1, linetype="dashed")
+
+plotrow <- cowplot::plot_grid(paa+ theme(legend.position="none"),
+                              pbb+ theme(legend.position="none"),
+                              nrow=2, labels=c("QBIC", "QAIC"))
+title <- ggdraw() + 
+    draw_label(label=bquote(bar(theta)[a] ~  "Estimates by Distance from Cluster Center"),
+        hjust = 0.5) 
+# extract the legend from one of the plots
+legend <- get_legend(
+    # create some space to the left of the legend
+    paa + theme(legend.box.margin = margin(0, 0, 0, 12))
+)
+out1 <- plot_grid(
+    title, plotrow,
+    ncol = 1,
+    # rel_heights values control vertical title margins
+    rel_heights = c(0.1, 1)
+)
+plot_grid(out1, legend, rel_widths = c(3, .4))
+ggsave(file="../../../figures/SimulationResults/qbicqaic_meanthetaa_sim.pdf", height=14, width=14, units="in")
+
+
+```
+
+
+###By RR Facet
+
+```{r}
+
+#create separate dataframe for grey rectangle indicating inside cluster
+rectangles_incluster <- cbind.data.frame(radius=c(9,11,18),
+                                         xmin=c(0,0,0),
+                                         xmax = c(9,11,18),
+                                         ymin=c(0.8, 0.8, 0.8),
+                                         ymax = c(1.5, 1.5, 1.5))
+
+
+
+pqbic  <-ggplot() +
+        geom_rect(data=rectangles_incluster, aes(x=NULL, y=NULL,
+                                             xmin=xmin, xmax=xmax,
+                                             ymin=ymin, ymax=ymax), 
+                                             alpha = 0.6, fill="grey70")+
+    #    geom_rect(aes(xmin=0, xmax=11, ymin=0.8, ymax= 1.5), fill="grey70", alpha=0.6)+
+    # geom_line(data=subset(masterlocs_all_dist, clusterix==0 & IC=="QBIC"),
+    #           aes(x=distfromcent,  y=thetaa, color="Outside Cluster"),
+    #           size=1, alpha=0.8) +
+    geom_line(data=subset(masterlocs_all_dist, IC=="QBIC" & risk==1.1),
+              aes(x=distfromcent, y=thetaa,
+                  group=risk, color="1.1"), size=1, alpha=0.8) +
+    geom_line(data=subset(masterlocs_all_dist,  IC=="QBIC" & risk==1.5),
+              aes(x=distfromcent, y=thetaa,
+                  group=risk, color="1.5"), size=1, alpha=0.8) +
+    geom_line(data=subset(masterlocs_all_dist,  IC=="QBIC" & risk==2), 
+              aes(x=distfromcent, y=thetaa, 
+                  group=risk, color="2"), size=1, alpha=0.8) +
+    facet_grid(radius ~ Period) +
+    theme_minimal() +
+    ylab(bquote(bar(theta)[a])) +
+    xlab("") +
+    #xlab("Distance from cluster center (km)") +
+    theme(plot.title = element_text(hjust = 0.5),
+          plot.caption = element_text(face="italic")) +
+    # labs(title=bquote(bar(theta)[a] ~  "Estimates by Distance from Cluster Center"),
+    #      color = "Cluster Relative Risk") +
+    scale_y_continuous(sec.axis = sec_axis(~., name="Cluster radius (km)", breaks=0)) +
+    scale_color_manual(name="Cluster Relative Risk", values=c("1.1" = "orchid4",
+                                         "1.5" = "orange",
+                                         "2" = "royalblue",
+                                         "Outside Cluster" = "grey40"),
+                       breaks=c("1.1", "1.5", "2", "Outside Cluster")) +
+    geom_hline(yintercept = 1, linetype="dashed") 
+
+
+pqaic  <-ggplot() +
+    geom_rect(data=rectangles_incluster, aes(x=NULL, y=NULL,
+                                             xmin=xmin, xmax=xmax,
+                                             ymin=ymin, ymax=ymax), 
+                                             alpha = 0.6, fill="grey70")+
+    # geom_line(data=subset(masterlocs_all_dist, clusterix==0 & IC=="QAIC"),
+    #           aes(x=distfromcent,  y=thetaa, color="Outside Cluster"),
+    #           size=1, alpha=0.8) +
+    geom_line(data=subset(masterlocs_all_dist,  IC=="QAIC" & risk==1.1),
+              aes(x=distfromcent, y=thetaa,
+                  group=risk, color="1.1"), size=1, alpha=0.8) +
+    geom_line(data=subset(masterlocs_all_dist,  IC=="QAIC" & risk==1.5),
+              aes(x=distfromcent, y=thetaa,
+                  group=risk, color="1.5"), size=1, alpha=0.8) +
+    geom_line(data=subset(masterlocs_all_dist,  IC=="QAIC" & risk==2), 
+              aes(x=distfromcent, y=thetaa, 
+                  group=risk, color="2"), size=1, alpha=0.8) +
+    facet_grid(radius ~ Period) +
+    theme_minimal() +
+    ylab(bquote(bar(theta)[a])) +
+    xlab("Distance from cluster center (km)") +
+    theme(plot.title = element_text(hjust = 0.5),
+          plot.caption = element_text(face="italic")) +
+    # labs(title=bquote(bar(theta)[a] ~  "Estimates by Distance from Cluster Center"),
+    #      color = "Cluster Relative Risk") +
+    scale_y_continuous(sec.axis = sec_axis(~., name="Cluster radius (km)", breaks=0)) +
+    scale_color_manual(name="Cluster Relative Risk", values=c("1.1" = "orchid4",
+                                         "1.5" = "orange",
+                                         "2" = "royalblue",
+                                         "Outside Cluster" = "grey40"),
+                       breaks=c("1.1", "1.5", "2", "Outside Cluster")) +
+    geom_hline(yintercept = 1, linetype="dashed") 
+
+plotrow <- cowplot::plot_grid(pqbic+ theme(legend.position="none"),
+                              pqaic+ theme(legend.position="none"),
+                              nrow=2, labels=c("QBIC", "QAIC"))
+title <- ggdraw() + 
+    draw_label(label=bquote(bar(theta)[a] ~  "Estimates by Distance from Cluster Center"),
+        hjust = 0.5) 
+# extract the legend from one of the plots
+legend <- get_legend(
+    # create some space to the left of the legend
+    pqbic + theme(legend.box.margin = margin(0, 0, 0, 12))
+)
+out1 <- plot_grid(
+    title, plotrow,
+    ncol = 1,
+    # rel_heights values control vertical title margins
+    rel_heights = c(0.1, 1)
+)
+plot_grid(out1, legend, rel_widths = c(3, .4))
+ggsave(file="../../../figures/SimulationResults/qbicqaic_meanthetaa_sim_20200805.pdf", height=14, width=14, units="in")
+
+
+```
+
+
+###Mean Thetaa + Bounds
+
+
+```{r}
+pqbic_bounds <- ggplot() +
+    geom_line(data=subset(masterlocs_all_dist, clusterix==0 & IC=="QBIC"),
+              aes(x=distfromcent,  y=thetaa, color="Outside Cluster"),
+              size=1, alpha=0.8) +
+    geom_line(data=subset(masterlocs_all_dist, clusterix==1 & IC=="QBIC" & risk==1.1),
+              aes(x=distfromcent, y=thetaa,
+                  group=risk, color="1.1"), size=1, alpha=0.8) +
+    geom_line(data=subset(masterlocs_all_dist, clusterix==1 & IC=="QBIC" & risk==1.5),
+              aes(x=distfromcent, y=thetaa,
+                  group=risk, color="1.5"), size=1, alpha=0.8) +
+    geom_line(data=subset(masterlocs_all_dist, clusterix==1 & IC=="QBIC" & risk==2), 
+              aes(x=distfromcent, y=thetaa, 
+                  group=risk, color="2"), size=1, alpha=0.8) +
+    
+    geom_line(data=subset(masterlocs_all_dist, clusterix==0 & IC=="QBIC"),
+              aes(x=distfromcent,  y=thetamata.UB, color="Outside Cluster"),
+              size=0.5, alpha=0.8) +
+    geom_line(data=subset(masterlocs_all_dist, clusterix==1 & IC=="QBIC" & risk==1.1),
+              aes(x=distfromcent, y=thetamata.UB,
+                  group=risk, color="1.1"), size=0.5, alpha=0.8) +
+    geom_line(data=subset(masterlocs_all_dist, clusterix==1 & IC=="QBIC" & risk==1.5),
+              aes(x=distfromcent, y=thetamata.UB,
+                  group=risk, color="1.5"), size=0.5, alpha=0.8) +
+    geom_line(data=subset(masterlocs_all_dist, clusterix==1 & IC=="QBIC" & risk==2), 
+              aes(x=distfromcent, y=thetamata.UB, 
+                  group=risk, color="2"), size=0.5, alpha=0.8) +
+    
+    geom_line(data=subset(masterlocs_all_dist, clusterix==0 & IC=="QBIC"),
+              aes(x=distfromcent,  y=thetamata.LB, color="Outside Cluster"),
+              size=0.5, alpha=0.8) +
+    geom_line(data=subset(masterlocs_all_dist, clusterix==1 & IC=="QBIC" & risk==1.1),
+              aes(x=distfromcent, y=thetamata.LB,
+                  group=risk, color="1.1"), size=0.5, alpha=0.8) +
+    geom_line(data=subset(masterlocs_all_dist, clusterix==1 & IC=="QBIC" & risk==1.5),
+              aes(x=distfromcent, y=thetamata.LB,
+                  group=risk, color="1.5"), size=0.5, alpha=0.8) +
+    geom_line(data=subset(masterlocs_all_dist, clusterix==1 & IC=="QBIC" & risk==2), 
+              aes(x=distfromcent, y=thetamata.LB, 
+                  group=risk, color="2"), size=0.5, alpha=0.8) +
+    facet_grid(radius ~ Period) +
+    theme_minimal() +
+    ylab(bquote(bar(theta)[a])) +
+    xlab("") +
+    #xlab("Distance from cluster center (km)") +
+    theme(plot.title = element_text(hjust = 0.5),
+          plot.caption = element_text(face="italic")) +
+    ggtitle("MATA Bounds") +
+    # labs(title=bquote(bar(theta)[a] ~  "Estimates by Distance from Cluster Center"),
+    #      color = "Cluster Relative Risk") +
+    scale_y_continuous(sec.axis = sec_axis(~., name="Cluster radius (km)", breaks=0)) +
+    scale_color_manual(name="Cluster Relative Risk", values=c("1.1" = "orchid4",
+                                         "1.5" = "orange",
+                                         "2" = "royalblue",
+                                         "Outside Cluster" = "grey40"),
+                       breaks=c("1.1", "1.5", "2", "Outside Cluster")) +
+    geom_hline(yintercept = 1, linetype="dashed") 
+```
+
+
+
+###MATA vs. Buckland
+####by Radius
+
+```{r}
+# ggplot() +
+#     geom_rect(aes(xmin=0, xmax=11, ymin=0.4331, ymax= 4.244), fill="grey70", alpha=0.6)+
+#     geom_line(data=subset(masterlocs_all_dist_11km, clusterix==0 & IC=="QBIC"),
+#               aes(x=distfromcent,  y=thetaa),
+#               size=1.5, alpha=0.8, color="black") +
+#      geom_line(data=subset(masterlocs_all_dist_11km, clusterix==1 & IC=="QBIC" & risk==2), 
+#               aes(x=distfromcent, y=thetaa, 
+#                   group=risk), color="black", size=1.5, alpha=0.8)
+
+pqbic_bounds_9km <- ggplot() +
+    geom_rect(aes(xmin=0, xmax=9, ymin=0.4331, ymax= 4.244), fill="grey70", alpha=0.6)+
+    geom_line(data=subset(masterlocs_all_dist_9km, clusterix==0 & IC=="QBIC"),
+              aes(x=distfromcent,  y=thetaa),
+              size=1.5, alpha=0.8, color="black") +
+    # geom_line(data=subset(masterlocs_all_dist_9km, clusterix==1 & IC=="QBIC" & risk==1.1),
+    #           aes(x=distfromcent, y=thetaa,
+    #               color="1.1"), size=1, alpha=0.8) +
+    geom_line(data=subset(masterlocs_all_dist_9km, clusterix==1 & IC=="QBIC" & risk==1.5),
+              aes(x=distfromcent, y=thetaa,
+                  group=risk), color="black", size=1.5, alpha=0.8) +
+    geom_line(data=subset(masterlocs_all_dist_9km, clusterix==1 & IC=="QBIC" & risk==2), 
+              aes(x=distfromcent, y=thetaa, 
+                  group=risk), color="black", size=1.5, alpha=0.8) +
+
+
+    
+    geom_line(data=subset(masterlocs_all_dist_9km, clusterix==0 & IC=="QBIC"),
+              aes(x=distfromcent,  y=thetamata.UB, color="MATA"),
+              size=1, alpha=0.8) +
+    # geom_line(data=subset(masterlocs_all_dist_9km, clusterix==1 & IC=="QBIC" & risk==1.1),
+    #           aes(x=distfromcent, y=thetamata.UB,
+    #               group=risk, color="1.1"), size=0.5, alpha=0.8) +
+    geom_line(data=subset(masterlocs_all_dist_9km, clusterix==1 & IC=="QBIC" & risk==1.5),
+              aes(x=distfromcent, y=thetamata.UB,
+                  group=risk, color="MATA"),size=1, alpha=0.8) +
+    geom_line(data=subset(masterlocs_all_dist_9km, clusterix==1 & IC=="QBIC" & risk==2), 
+              aes(x=distfromcent, y=thetamata.UB, 
+                  group=risk, color="MATA"), size=1, alpha=0.8) +
+    
+    geom_line(data=subset(masterlocs_all_dist_9km, clusterix==0 & IC=="QBIC"),
+              aes(x=distfromcent,  y=thetamata.LB, color="MATA"),
+              size=1, alpha=0.8) +
+    # geom_line(data=subset(masterlocs_all_dist_9km, clusterix==1 & IC=="QBIC" & risk==1.1),
+    #           aes(x=distfromcent, y=thetamata.LB,
+    #               group=risk, color="1.1"), size=0.5, alpha=0.8) +
+    geom_line(data=subset(masterlocs_all_dist_9km, clusterix==1 & IC=="QBIC" & risk==1.5),
+              aes(x=distfromcent, y=thetamata.LB,
+                  group=risk, color="MATA"), size=1, alpha=0.8) +
+    geom_line(data=subset(masterlocs_all_dist_9km, clusterix==1 & IC=="QBIC" & risk==2), 
+              aes(x=distfromcent, y=thetamata.LB, 
+                  group=risk, color="MATA"), size=1, alpha=0.8) +
+    
+    #buck
+    
+    geom_line(data=subset(masterlocs_all_dist_9km, clusterix==0 & IC=="QBIC"),
+              aes(x=distfromcent,  y=thetabuck.UB, color="Buckland"),
+              size=1, alpha=0.8) +
+    # geom_line(data=subset(masterlocs_all_dist_9km, clusterix==1 & IC=="QBIC" & risk==1.1),
+    #           aes(x=distfromcent, y=thetamata.UB,
+    #               group=risk, color="1.1"), size=0.5, alpha=0.8) +
+    geom_line(data=subset(masterlocs_all_dist_9km, clusterix==1 & IC=="QBIC" & risk==1.5),
+              aes(x=distfromcent, y=thetabuck.UB,
+                  group=risk, color="Buckland"), size=1, alpha=0.8) +
+    geom_line(data=subset(masterlocs_all_dist_9km, clusterix==1 & IC=="QBIC" & risk==2), 
+              aes(x=distfromcent, y=thetabuck.UB, 
+                  group=risk, color="Buckland"), size=1, alpha=0.8) +
+    
+    geom_line(data=subset(masterlocs_all_dist_9km, clusterix==0 & IC=="QBIC"),
+              aes(x=distfromcent,  y=thetabuck.LB, color="Buckland"),
+              size=1, alpha=0.8) +
+    # geom_line(data=subset(masterlocs_all_dist_9km, clusterix==1 & IC=="QBIC" & risk==1.1),
+    #           aes(x=distfromcent, y=thetamata.LB,
+    #               group=risk, color="1.1"), size=0.5, alpha=0.8) +
+    geom_line(data=subset(masterlocs_all_dist_9km, clusterix==1 & IC=="QBIC" & risk==1.5),
+              aes(x=distfromcent, y=thetabuck.LB,
+                  group=risk, color="Buckland"), size=1, alpha=0.8) +
+    geom_line(data=subset(masterlocs_all_dist_9km, clusterix==1 & IC=="QBIC" & risk==2), 
+              aes(x=distfromcent, y=thetabuck.LB, 
+                  group=risk, color="Buckland"), size=1, alpha=0.8) +
+    facet_grid(risk ~ Period) +
+    theme_minimal() +
+    ylab(bquote(bar(theta)[a])) +
+    xlab("") +
+    #xlab("Distance from cluster center (km)") +
+    theme(plot.title = element_text(hjust = 0.5),
+          plot.caption = element_text(face="italic")) +
+    #ylim(0,4.5) +
+    #ggtitle("MATA vs. Buckland Bounds") +
+
+    # labs(title=bquote(bar(theta)[a] ~  "Estimates by Distance from Cluster Center"),
+    #      color = "Cluster Relative Risk") +
+    scale_y_continuous(sec.axis = sec_axis(~., name="Cluster RR", breaks=0), limits=c(0, 4.5),
+                       minor_breaks = seq(1, 4.5, 1)) +
+    scale_color_manual(name="Method", values=c("MATA" = "olivedrab3",
+                                         "Buckland" = "royalblue"))   
+    
+
+pqbic_bounds_11km <- ggplot() +
+    geom_rect(aes(xmin=0, xmax=11, ymin=0.4331, ymax= 4.244), fill="grey70", alpha=0.6)+
+    geom_line(data=subset(masterlocs_all_dist_11km, clusterix==0 & IC=="QBIC"),
+              aes(x=distfromcent,  y=thetaa),
+              size=1.5, alpha=0.8, color="black") +
+    # geom_line(data=subset(masterlocs_all_dist_11km, clusterix==1 & IC=="QBIC" & risk==1.1),
+    #           aes(x=distfromcent, y=thetaa,
+    #               color="1.1"), size=1, alpha=0.8) +
+    geom_line(data=subset(masterlocs_all_dist_11km, clusterix==1 & IC=="QBIC" & risk==1.5),
+              aes(x=distfromcent, y=thetaa,
+                  group=risk), color="black", size=1.5, alpha=0.8) +
+    geom_line(data=subset(masterlocs_all_dist_11km, clusterix==1 & IC=="QBIC" & risk==2), 
+              aes(x=distfromcent, y=thetaa, 
+                  group=risk), color="black", size=1.5, alpha=0.8) +
+
+
+    
+    geom_line(data=subset(masterlocs_all_dist_11km, clusterix==0 & IC=="QBIC"),
+              aes(x=distfromcent,  y=thetamata.UB, color="MATA"),
+              size=1, alpha=0.8) +
+    # geom_line(data=subset(masterlocs_all_dist_11km, clusterix==1 & IC=="QBIC" & risk==1.1),
+    #           aes(x=distfromcent, y=thetamata.UB,
+    #               group=risk, color="1.1"), size=0.5, alpha=0.8) +
+    geom_line(data=subset(masterlocs_all_dist_11km, clusterix==1 & IC=="QBIC" & risk==1.5),
+              aes(x=distfromcent, y=thetamata.UB,
+                  group=risk, color="MATA"),size=1, alpha=0.8) +
+    geom_line(data=subset(masterlocs_all_dist_11km, clusterix==1 & IC=="QBIC" & risk==2), 
+              aes(x=distfromcent, y=thetamata.UB, 
+                  group=risk, color="MATA"), size=1, alpha=0.8) +
+    
+    geom_line(data=subset(masterlocs_all_dist_11km, clusterix==0 & IC=="QBIC"),
+              aes(x=distfromcent,  y=thetamata.LB, color="MATA"),
+              size=1, alpha=0.8) +
+    # geom_line(data=subset(masterlocs_all_dist_11km, clusterix==1 & IC=="QBIC" & risk==1.1),
+    #           aes(x=distfromcent, y=thetamata.LB,
+    #               group=risk, color="1.1"), size=0.5, alpha=0.8) +
+    geom_line(data=subset(masterlocs_all_dist_11km, clusterix==1 & IC=="QBIC" & risk==1.5),
+              aes(x=distfromcent, y=thetamata.LB,
+                  group=risk, color="MATA"), size=1, alpha=0.8) +
+    geom_line(data=subset(masterlocs_all_dist_11km, clusterix==1 & IC=="QBIC" & risk==2), 
+              aes(x=distfromcent, y=thetamata.LB, 
+                  group=risk, color="MATA"), size=1, alpha=0.8) +
+    
+    #buck
+    
+    geom_line(data=subset(masterlocs_all_dist_11km, clusterix==0 & IC=="QBIC"),
+              aes(x=distfromcent,  y=thetabuck.UB, color="Buckland"),
+              size=1, alpha=0.8) +
+    # geom_line(data=subset(masterlocs_all_dist_11km, clusterix==1 & IC=="QBIC" & risk==1.1),
+    #           aes(x=distfromcent, y=thetamata.UB,
+    #               group=risk, color="1.1"), size=0.5, alpha=0.8) +
+    geom_line(data=subset(masterlocs_all_dist_11km, clusterix==1 & IC=="QBIC" & risk==1.5),
+              aes(x=distfromcent, y=thetabuck.UB,
+                  group=risk, color="Buckland"), size=1, alpha=0.8) +
+    geom_line(data=subset(masterlocs_all_dist_11km, clusterix==1 & IC=="QBIC" & risk==2), 
+              aes(x=distfromcent, y=thetabuck.UB, 
+                  group=risk, color="Buckland"), size=1, alpha=0.8) +
+    
+    geom_line(data=subset(masterlocs_all_dist_11km, clusterix==0 & IC=="QBIC"),
+              aes(x=distfromcent,  y=thetabuck.LB, color="Buckland"),
+              size=1, alpha=0.8) +
+    # geom_line(data=subset(masterlocs_all_dist_11km, clusterix==1 & IC=="QBIC" & risk==1.1),
+    #           aes(x=distfromcent, y=thetamata.LB,
+    #               group=risk, color="1.1"), size=0.5, alpha=0.8) +
+    geom_line(data=subset(masterlocs_all_dist_11km, clusterix==1 & IC=="QBIC" & risk==1.5),
+              aes(x=distfromcent, y=thetabuck.LB,
+                  group=risk, color="Buckland"), size=1, alpha=0.8) +
+    geom_line(data=subset(masterlocs_all_dist_11km, clusterix==1 & IC=="QBIC" & risk==2), 
+              aes(x=distfromcent, y=thetabuck.LB, 
+                  group=risk, color="Buckland"), size=1, alpha=0.8) +
+    facet_grid(risk ~ Period) +
+    theme_minimal() +
+    ylab(bquote(bar(theta)[a])) +
+    xlab("") +
+    #xlab("Distance from cluster center (km)") +
+    theme(plot.title = element_text(hjust = 0.5),
+          plot.caption = element_text(face="italic")) +
+    #ylim(0,4.5) +
+    #ggtitle("MATA vs. Buckland Bounds") +
+
+    # labs(title=bquote(bar(theta)[a] ~  "Estimates by Distance from Cluster Center"),
+    #      color = "Cluster Relative Risk") +
+    scale_y_continuous(sec.axis = sec_axis(~., name="Cluster RR", breaks=0), limits=c(0, 4.5),
+                       minor_breaks = seq(1, 4.5, 1)) +
+    scale_color_manual(name="Method", values=c("MATA" = "olivedrab3",
+                                         "Buckland" = "royalblue")) 
+    
+
+pqbic_bounds_18km <- ggplot() +
+    geom_rect(aes(xmin=0, xmax=18, ymin=0.4331, ymax= 4.244), fill="grey70", alpha=0.6)+
+    geom_line(data=subset(masterlocs_all_dist_18km, clusterix==0 & IC=="QBIC"),
+              aes(x=distfromcent,  y=thetaa),
+              size=1.5, alpha=0.8, color="black") +
+       geom_line(data=subset(masterlocs_all_dist_18km, clusterix==1 & IC=="QBIC" & risk==1.1),
+              aes(x=distfromcent, y=thetaa,
+                  group=risk), color="black", size=1.5, alpha=0.8) +
+    geom_line(data=subset(masterlocs_all_dist_18km, clusterix==1 & IC=="QBIC" & risk==1.5),
+              aes(x=distfromcent, y=thetaa,
+                  group=risk), color="black", size=1.5, alpha=0.8) +
+    geom_line(data=subset(masterlocs_all_dist_18km, clusterix==1 & IC=="QBIC" & risk==2), 
+              aes(x=distfromcent, y=thetaa, 
+                  group=risk), color="black", size=1.5, alpha=0.8) +
+
+    geom_line(data=subset(masterlocs_all_dist_18km, clusterix==0 & IC=="QBIC"),
+              aes(x=distfromcent,  y=thetamata.UB, color="MATA"),
+              size=1, alpha=0.8) +
+   geom_line(data=subset(masterlocs_all_dist_18km, clusterix==1 & IC=="QBIC" & risk==1.1),
+              aes(x=distfromcent, y=thetamata.UB,
+                  group=risk, color="MATA"),size=1, alpha=0.8) +
+    geom_line(data=subset(masterlocs_all_dist_18km, clusterix==1 & IC=="QBIC" & risk==1.5),
+              aes(x=distfromcent, y=thetamata.UB,
+                  group=risk, color="MATA"),size=1, alpha=0.8) +
+    geom_line(data=subset(masterlocs_all_dist_18km, clusterix==1 & IC=="QBIC" & risk==2), 
+              aes(x=distfromcent, y=thetamata.UB, 
+                  group=risk, color="MATA"), size=1, alpha=0.8) +
+    
+    geom_line(data=subset(masterlocs_all_dist_18km, clusterix==0 & IC=="QBIC"),
+              aes(x=distfromcent,  y=thetamata.LB, color="MATA"),
+              size=1, alpha=0.8) +
+   geom_line(data=subset(masterlocs_all_dist_18km, clusterix==1 & IC=="QBIC" & risk==1.1),
+              aes(x=distfromcent, y=thetamata.LB,
+                  group=risk, color="MATA"), size=1, alpha=0.8) +
+    geom_line(data=subset(masterlocs_all_dist_18km, clusterix==1 & IC=="QBIC" & risk==1.5),
+              aes(x=distfromcent, y=thetamata.LB,
+                  group=risk, color="MATA"), size=1, alpha=0.8) +
+    geom_line(data=subset(masterlocs_all_dist_18km, clusterix==1 & IC=="QBIC" & risk==2), 
+              aes(x=distfromcent, y=thetamata.LB, 
+                  group=risk, color="MATA"), size=1, alpha=0.8) +
+    
+    #buck
+    
+    geom_line(data=subset(masterlocs_all_dist_18km, clusterix==0 & IC=="QBIC"),
+              aes(x=distfromcent,  y=thetabuck.UB, color="Buckland"),
+              size=1, alpha=0.8) +
+    geom_line(data=subset(masterlocs_all_dist_18km, clusterix==1 & IC=="QBIC" & risk==1.1),
+              aes(x=distfromcent, y=thetabuck.UB,
+                  group=risk, color="Buckland"), size=1, alpha=0.8) +
+    geom_line(data=subset(masterlocs_all_dist_18km, clusterix==1 & IC=="QBIC" & risk==1.5),
+              aes(x=distfromcent, y=thetabuck.UB,
+                  group=risk, color="Buckland"), size=1, alpha=0.8) +
+    geom_line(data=subset(masterlocs_all_dist_18km, clusterix==1 & IC=="QBIC" & risk==2), 
+              aes(x=distfromcent, y=thetabuck.UB, 
+                  group=risk, color="Buckland"), size=1, alpha=0.8) +
+    
+    geom_line(data=subset(masterlocs_all_dist_18km, clusterix==0 & IC=="QBIC"),
+              aes(x=distfromcent,  y=thetabuck.LB, color="Buckland"),
+              size=1, alpha=0.8) +
+    geom_line(data=subset(masterlocs_all_dist_18km, clusterix==1 & IC=="QBIC" & risk==1.1),
+              aes(x=distfromcent, y=thetabuck.LB,
+                  group=risk, color="Buckland"), size=1, alpha=0.8) + 
+    geom_line(data=subset(masterlocs_all_dist_18km, clusterix==1 & IC=="QBIC" & risk==1.5),
+              aes(x=distfromcent, y=thetabuck.LB,
+                  group=risk, color="Buckland"), size=1, alpha=0.8) +
+    geom_line(data=subset(masterlocs_all_dist_18km, clusterix==1 & IC=="QBIC" & risk==2), 
+              aes(x=distfromcent, y=thetabuck.LB, 
+                  group=risk, color="Buckland"), size=1, alpha=0.8) +
+    facet_grid(risk ~ Period) +
+    theme_minimal() +
+    ylab(bquote(bar(theta)[a])) +
+    xlab("") +
+    #xlab("Distance from cluster center (km)") +
+    theme(plot.title = element_text(hjust = 0.5),
+          plot.caption = element_text(face="italic")) +
+    #ylim(0,4.5) +
+    #ggtitle("MATA vs. Buckland Bounds") +
+
+    # labs(title=bquote(bar(theta)[a] ~  "Estimates by Distance from Cluster Center"),
+    #      color = "Cluster Relative Risk") +
+    scale_y_continuous(sec.axis = sec_axis(~., name="Cluster RR", breaks=0), limits=c(0, 4.5),
+                       minor_breaks = seq(1, 4.5, 1)) +
+    scale_color_manual(name="Method", values=c("MATA" = "olivedrab3",
+                                         "Buckland" = "royalblue")) 
+    
+
+
+plotrow <- cowplot::plot_grid(pqbic_bounds_9km+ theme(legend.position="none"),
+                              pqbic_bounds_11km+ theme(legend.position="none"),
+                              pqbic_bounds_18km+ theme(legend.position="none"),
+                              nrow=3, labels=c("9 km", "11 km", "18 km"))
+title <- ggdraw() + 
+    draw_label(label=bquote(bar(theta)[a] ~  "Estimates by Distance from Cluster Center"),
+        hjust = 0.5) 
+# extract the legend from one of the plots
+legend <- get_legend(
+    # create some space to the left of the legend
+    pqbic_bounds_11km + theme(legend.box.margin = margin(0, 0, 0, 12))
+)
+out1 <- plot_grid(
+    title, plotrow,
+    ncol = 1,
+    # rel_heights values control vertical title margins
+    rel_heights = c(0.1, 1)
+)
+plot_grid(out1, legend, rel_widths = c(3, .4))
+ggsave(file="../../../figures/SimulationResults/qbic_bounds_sim_20200805.pdf", height=14, width=14, units="in")
+
+```
+
+###Show Simulations
+
+```{r}
+
+rectangles_incluster2 <- cbind.data.frame(radius=c(9,11,18),
+                                         xmin=c(0,0,0),
+                                         xmax = c(9,11,18),
+                                         ymin=c(0, 0, 0),
+                                         ymax = c(7, 7, 7))
+
+#################
+#QAIC
+#################
+pqaic_sim_mata <- ggplot() +
+    geom_rect(data=rectangles_incluster2, aes(x=NULL, y=NULL,
+                                             xmin=xmin, xmax=xmax,
+                                             ymin=ymin, ymax=ymax), 
+                                             alpha = 0.6, fill="grey70") +
+    geom_line(data=subset(masterlocs_all_dist, IC=="QAIC"), aes(x=distfromcent, y=thetaa, group=radius),color="black", size=1)+
+    facet_grid(radius ~ risk) +
+    theme_minimal() +
+    geom_line(data=master_dist, aes(x=distfromcent, y=mata.aic.LB, group=simID, color=factor(radius)), size=0.1, alpha=0.3) +
+    geom_line(data=master_dist, aes(x=distfromcent, y=mata.aic.UB, group=simID, color=factor(radius)), size=0.1, alpha=0.3) +
+    ylab(bquote(bar(theta)[a])) +
+    #xlab("") +
+    xlab("Distance from cluster center (km)") +
+    theme(plot.title = element_text(hjust = 0.5),
+          plot.caption = element_text(face="italic")) +
+    scale_y_continuous(sec.axis = sec_axis(~., name="Cluster Radius (km)", breaks=0), limits=c(0, 7)) +
+    labs(color = "Cluster Radius (km)")
+   
+
+pqaic_sim_buck <- ggplot() +
+    geom_rect(data=rectangles_incluster2, aes(x=NULL, y=NULL,
+                                             xmin=xmin, xmax=xmax,
+                                             ymin=ymin, ymax=ymax), 
+                                             alpha = 0.6, fill="grey70") +
+    geom_line(data=subset(masterlocs_all_dist, IC=="QAIC"), aes(x=distfromcent, y=thetaa, group=radius),color="black", size=1)+
+    facet_grid(radius ~ risk) +
+    theme_minimal() +
+    geom_line(data=master_dist, aes(x=distfromcent, y=adjusted.aic.log.LB, group=simID, color=factor(radius)), size=0.1, alpha=0.3) +
+    geom_line(data=master_dist, aes(x=distfromcent, y=adjusted.aic.log.UB, group=simID, color=factor(radius)), size=0.1, alpha=0.3) +
+    ylab(bquote(bar(theta)[a])) +
+    #xlab("") +
+    xlab("Distance from cluster center (km)") +
+    theme(plot.title = element_text(hjust = 0.5),
+          plot.caption = element_text(face="italic")) +
+    scale_y_continuous(sec.axis = sec_axis(~., name="Cluster Radius (km)", breaks=0), limits=c(0, 7)) +
+    labs(color = "Cluster Radius (km)")
+
+plotrow <- cowplot::plot_grid(pqaic_sim_mata + theme(legend.position="none"),
+                              pqaic_sim_buck + theme(legend.position="none"),
+                              ncol=2, labels=c("MATA", "Buckland"))
+title <- ggdraw() + 
+    draw_label(label=bquote(bar(theta)[a] ~  "Estimates by Distance from Cluster Center - QAIC"),
+        hjust = 0.5) 
+# extract the legend from one of the plots
+legend <- get_legend(
+    # create some space to the left of the legend
+    pqaic_sim_buck + guides(color = guide_legend(nrow = 1)) +
+    theme(legend.position = "bottom")
+)
+out1 <- plot_grid(
+    title, plotrow,
+    ncol = 1,
+    # rel_heights values control vertical title margins
+    rel_heights = c(0.1, 1)
+)
+plot_grid(out1, legend, ncol = 1, rel_heights = c(1, .1))
+ggsave(file="../../../figures/SimulationResults/qaic_matavsbuck_sim_20200805.pdf", height=8, width=14, units="in")
+
+#################
+#QBIC
+#################
+
+pqbic_sim_mata <- ggplot() +
+    geom_rect(data=rectangles_incluster2, aes(x=NULL, y=NULL,
+                                             xmin=xmin, xmax=xmax,
+                                             ymin=ymin, ymax=ymax), 
+                                             alpha = 0.6, fill="grey70") +
+    geom_line(data=subset(masterlocs_all_dist, IC=="QBIC"), aes(x=distfromcent, y=thetaa, group=radius),color="black", size=1)+
+    facet_grid(radius ~ risk) +
+    theme_minimal() +
+    geom_line(data=master_dist, aes(x=distfromcent, y=mata.bic.LB, group=simID, color=factor(radius)), size=0.1, alpha=0.3) +
+    geom_line(data=master_dist, aes(x=distfromcent, y=mata.bic.UB, group=simID, color=factor(radius)), size=0.1, alpha=0.3) +
+    ylab(bquote(bar(theta)[a])) +
+    #xlab("") +
+    xlab("Distance from cluster center (km)") +
+    theme(plot.title = element_text(hjust = 0.5),
+          plot.caption = element_text(face="italic")) +
+    scale_y_continuous(sec.axis = sec_axis(~., name="Cluster Radius (km)", breaks=0), limits=c(0, 7)) +
+    labs(color = "Cluster Radius (km)")
+   
+
+pqbic_sim_buck <- ggplot() +
+    geom_rect(data=rectangles_incluster2, aes(x=NULL, y=NULL,
+                                             xmin=xmin, xmax=xmax,
+                                             ymin=ymin, ymax=ymax), 
+                                             alpha = 0.6, fill="grey70") +
+    geom_line(data=subset(masterlocs_all_dist, IC=="QBIC"), aes(x=distfromcent, y=thetaa, group=radius),color="black", size=1)+
+    facet_grid(radius ~ risk) +
+    theme_minimal() +
+    geom_line(data=master_dist, aes(x=distfromcent, y=adjusted.bic.log.LB, group=simID, color=factor(radius)), size=0.1, alpha=0.3) +
+    geom_line(data=master_dist, aes(x=distfromcent, y=adjusted.bic.log.UB, group=simID, color=factor(radius)), size=0.1, alpha=0.3) +
+    ylab(bquote(bar(theta)[a])) +
+    #xlab("") +
+    xlab("Distance from cluster center (km)") +
+    theme(plot.title = element_text(hjust = 0.5),
+          plot.caption = element_text(face="italic")) +
+    scale_y_continuous(sec.axis = sec_axis(~., name="Cluster Radius (km)", breaks=0), limits=c(0, 7)) +
+    labs(color = "Cluster Radius (km)")
+
+plotrow <- cowplot::plot_grid(pqbic_sim_mata + theme(legend.position="none"),
+                              pqbic_sim_buck + theme(legend.position="none"),
+                              ncol=2, labels=c("MATA", "Buckland"))
+title <- ggdraw() + 
+    draw_label(label=bquote(bar(theta)[a] ~  "Estimates by Distance from Cluster Center - QBIC"),
+        hjust = 0.5) 
+# extract the legend from one of the plots
+legend <- get_legend(
+    # create some space to the left of the legend
+    pqaic_sim_buck + guides(color = guide_legend(nrow = 1)) +
+    theme(legend.position = "bottom")
+)
+out1 <- plot_grid(
+    title, plotrow,
+    ncol = 1,
+    # rel_heights values control vertical title margins
+    rel_heights = c(0.1, 1)
+)
+plot_grid(out1, legend, ncol = 1, rel_heights = c(1, .1))
+ggsave(file="../../../figures/SimulationResults/qbic_matavsbuck_sim_20200805.pdf", height=8, width=14, units="in")
+
+```
+

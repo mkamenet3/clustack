@@ -53,7 +53,7 @@ maxclust <- 15
 ##R CMD BATCH "--args arg1 arg2" myscript.R -> 
 #args<- commandArgs(TRUE)
 theta <- 60#as.numeric(args[1])
-nsim <- 100#as.numeric(args[2])
+nsim <- 50#as.numeric(args[2])
 #Fixed Params
 cent <- 150
 tim <- c(1:5)
@@ -144,7 +144,7 @@ for(rad in radii){
             sim_superclust_pc<- detectclusters(sparsematrix, Ex, YSIM,
                                                numCenters, Time, maxclust,
                                                bylocation = FALSE, model="poisson",
-                                               overdisp.est = overdisp.est)
+                                               overdisp.est = overdisp.est, forceidentify=TRUE)
             #print(str(sim_superclust_pc))
             #BIC
             if(sim_superclust_pc$selection.bic!=0){
