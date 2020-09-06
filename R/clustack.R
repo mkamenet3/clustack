@@ -509,9 +509,14 @@ bylocation <- function(Lik, Lambda_dense,sparsemat, maxclust){
     wt0 <- likweights(Lik)
     ixall <- NULL
     ix <- NULL
+    stop <- FALSE
     for(i in 1:maxclust){
+        #wtmp <- likweights(Lik)
+        
+        
         wtmp <-wt0
         wtmp[ixall] <-0
+        #if unique(wtmp)
         #Find maxloc
         wi_loc <- t(wtmp)%*%sparsemat
         maxloc <- which.max(as.vector(wi_loc))
@@ -523,23 +528,37 @@ bylocation <- function(Lik, Lambda_dense,sparsemat, maxclust){
         pclocmax <- as.vector(t(locmax)%*%t(sparsemat))
         ix <- which(pclocmax!=0) #indices of all PCs that overlap max location
         #upweight Lik* to 1 in all Pcs that overlap max cluster
-        Lik[ix] <-1
+        #Lik[ix] <-1
         #reweight everything inside cluster to sum to 1
-        wtmp[ix] <- likweights(Lik[ix]) 
+        wtmp[ix] <- likweights(Lik[ix])
         #save wtmp vector into master weight matrix
         wtMAT[,i] <- wtmp
+        if(all(ix %in% ixall)){
+            stop <- TRUE
+            maxi = i
+            break
+        }
+        if(stop){break}
         #save everything that's already been considered
         ixall <- c(ixall, ix)
+        maxi = i 
+        #Lik[ixall] <-0
     }
-    wLambda <- crossprod(wtMAT, Lambda_dense)
+    wLambda <- crossprod(wtMAT[,1:(maxi)], Lambda_dense)
     #Lambda_sparse <- Lambda_dense
     #Lambda_sparse[Lambda_sparse==1] <- FALSE
     #Lambda_sparse <- Matrix::drop0(Lambda_sparse)
+    # return(list(wLambda = wLambda,
+    #             #sparsemat = sparsemat,
+    #             wtMAT = wtMAT))#,
+    #             #Lambda_sparse = Lambda_sparse))
     return(list(wLambda = wLambda,
                 #sparsemat = sparsemat,
-                wtMAT = wtMAT))#,
-                #Lambda_sparse = Lambda_sparse))
+                wtMAT = wtMAT,
+                wtMAT0 = wtMAT0,
+                maxpcs = maxpcs))
 }
+
 
 
 
@@ -557,39 +576,52 @@ bycluster <-  function(Lik, Lambda_dense, sparsemat,maxclust){
     maxpcs <- rep(NA, maxclust)
     stop = FALSE
     ixall <- NULL
-    ix <- NULL
-    for (i in 1:maxclust){
-        wtmp <- wt0
-        wtmp[ixall] <-0
-        #find potential cluster with largest weight
-        maxpc <- which.max(as.vector(wtmp))
-        #maxloc <- which.max(as.vector(wi_loc))
-        message(paste0("Potential cluster identified: ",(maxpc)))
-        maxpcs[i] <- maxpc 
-        
-        wtMAT0[,i] <- wtmp
-        #find all potential clusters that overlap that PC
-        pcmax <- rep(0,length(wtmp)); pcmax[maxpc] <-1; pcmax <- matrix(pcmax,ncol=1)
-        pcpcmax <- t(t(sparsemat)%*%pcmax)%*%t(sparsemat); pcpcmax <- ifelse(pcpcmax!=0,1,0)
-        ix <- which(pcpcmax!=0)
-        
-        
-        #upweight Lik* to 1 in all PCs that overlap max PC
-        Lik[ix] <- 1
-        #reweight so that everything inside the PCs that overlap max cluster sum to 1
-        wtmp[ix] <- likweights(Lik[ix]) 
-        wtMAT[,i] <- wtmp
-        if(all(ix %in% ixall)){
-            stop = TRUE
+        for (i in 1:maxclust){
+            wtmp <- wt0
+            wtmp[ixall] <-0
+            #find potential cluster with largest weight
+            maxpc <- which.max(as.vector(wtmp))
+            #maxloc <- which.max(as.vector(wi_loc))
+            message(paste0("Potential cluster identified: ",(maxpc)))
+            maxpcs[i] <- maxpc 
+            
+            wtMAT0[,i] <- wtmp
+            #find all potential clusters that overlap that PC
+            pcmax <- rep(0,length(wtmp)); pcmax[maxpc] <-1; pcmax <- matrix(pcmax,ncol=1)
+            pcpcmax <- t(t(sparsemat)%*%pcmax)%*%t(sparsemat); pcpcmax <- ifelse(pcpcmax!=0,1,0)
+            ix <- which(pcpcmax!=0)
+            
+            
+            #upweight Lik* to 1 in all PCs that overlap max PC
+            #Lik[ix] <- 1
+            #reweight so that everything inside the PCs that overlap max cluster sum to 1
+            #aa <- likweights(Lik[ix]) 
+            
+            wtmp[ix] <- likweights(Lik[ix]) 
+            wtMAT[,i] <- wtmp
+            if(all(ix %in% ixall)){
+                stop = TRUE
+                maxi = i
+                break
+            }
+            if (stop){break}
+            #save everything that's already been considered
+            ixall <- c(ixall,ix)
             maxi = i
-            break
         }
-        if (stop){break}
-        #save everything that's already been considered
-        ixall <- c(ixall,ix)
-        maxi = i
-    }
     wLambda <- crossprod(wtMAT[,1:(maxi)], Lambda_dense)
+#########################################    
+# #test    
+# #map ix to locs
+# sum(wtmp[ix]);sum(wtmp[-ix])
+# 
+# wLambda <- as.vector(wLambda)
+# aa <- ifelse(as.vector(matrix(pcpcmax,nrow=1)%*%sparsemat)!=0,1,0)
+# #########################
+# Lambda_dense2 <- ifelse(Lambda_dense>1,2,1)
+# wLambda2 <- as.vector(crossprod(wtMAT[,1:(maxi)], Lambda_dense2))
+    
+#########################################
     #Lambda_sparse <- Lambda_dense
     #Lambda_sparse[Lambda_sparse==1] <- FALSE
     #Lambda_sparse <- Matrix::drop0(Lambda_sparse)
@@ -616,7 +648,8 @@ bycluster <-  function(Lik, Lambda_dense, sparsemat,maxclust){
 #'@param overdisp.est Overdispersion parameter estimated across all simulations (max).
 #'@return Returns list for each iteration with weighted relative risks by location inside identified cluster.
 #'@export
-detectclusters <- function(sparseMAT, Ex, Yx,numCenters,Time, maxclust,bylocation=TRUE, model=c("poisson", "binomial"),cv=FALSE, overdisp.est){
+detectclusters <- function(sparseMAT, Ex, Yx,numCenters,Time, maxclust,bylocation=TRUE, model=c("poisson", "binomial"),
+                           cv=FALSE,  overdisp.est) {
     if(is.null(overdisp.est)){
         quasi <- FALSE
         message(paste0("Model specified: ", model))
@@ -640,32 +673,39 @@ detectclusters <- function(sparseMAT, Ex, Yx,numCenters,Time, maxclust,bylocatio
     Lambda_dense <- out$Lambda_dense
     #locLambdas <- vector("list", maxclust)
     if(bylocation==FALSE){
-        message("Cluster detection by potential cluster")
+        print("Cluster detection by potential cluster")
         res <- bycluster(Lik, Lambda_dense, sparsemat, maxclust)
         #perform selection by IC/CV
         selection <- clusterselect(res[[1]], Yx, Ex, model,maxclust, numCenters, Time, quasi,cv=FALSE,overdisp.est)
         return(list(wLambda = res[[1]],
                     loglik = selection$loglik,
-                    selection.bic = selection$select.bic,
-                    selection.aic = selection$select.aic,
-                    selection.aicc = selection$select.aicc,
+                    selection.bic_orig = selection$select.bic,
+                    selection.aic_orig = selection$select.aic,
+                    selection.aicc_orig = selection$select.aicc,
+                    selection.bic = ifelse(selection$select.bic==0,1, selection$select.bic),
+                    selection.aic = ifelse(selection$select.aic==0,1, selection$select.aic),
+                    selection.aicc = ifelse(selection$select.aicc==0,1,selection$select.aicc),
                     #sparsemat = res[[2]],
                     wtMAT = res[[2]],
                     wtMAT0 = res[[3]],
-                    maxpcs = res[[4]]))#,
+                    maxpcs = res[[4]],
+                    Lambda_dense = Lambda_dense))#,
                     #Lambda_sparse = res[[3]]))
     }
     else{
         #default
-        message("Cluster detection by location")
+        print("Cluster detection by location")
         res <- bylocation(Lik, Lambda_dense, sparsemat, maxclust)
         #perform selection by IC/CV
         selection <- clusterselect(res[[1]], Yx, Ex, model,maxclust, numCenters, Time, quasi,cv=FALSE,overdisp.est)
         return(list(wLambda = res[[1]],
                     loglik = selection$loglik,
-                    selection.bic = selection$select.bic,
-                    selection.aic = selection$select.aic,
-                    selection.aicc = selection$select.aicc,
+                    selection.bic_orig = selection$select.bic,
+                    selection.aic_orig = selection$select.aic,
+                    selection.aicc_orig = selection$select.aicc,
+                    selection.bic = ifelse(selection$select.bic==0,1,selection$select.bic),
+                    selection.aic = ifelse(selection$select.aic==0,1, selection$select.aic),
+                    selection.aicc = ifelse(selection$select.aic==0,1,selection$select.aicc),
                     #sparsemat = res[[2]],
                     wtMAT = res[[2]]))#,
                     #wtMAT0 = res[[3]]))#,
@@ -806,6 +846,7 @@ clusterlocs_ident <- function(res, selection, sparsematrix){
 #' @param Lambda_dense Large matrix of relative risks for each potential cluster
 extract_thetai <- function(param_ix, w_q, Lambda_dense){
     #create a sparematrix
+    #M <- Matrix(0, nrow=dim(Lambda_dense)[2], ncol=length(param_ix), sparse=TRUE)
     M <- Matrix(0, nrow=dim(Lambda_dense)[2], ncol=length(param_ix), sparse=TRUE)
     for (i in 1:length(param_ix)){
         M[,i][param_ix[i]] <- 1    
@@ -822,22 +863,24 @@ extract_thetai <- function(param_ix, w_q, Lambda_dense){
 #' @param null Null model likelihood
 #' @param proflik Vector of profiled likelihoods for set of thetas
 calcbounds <- function(Yx, Ex, thetai,thetaa, param_ix, w_q,sparsematrix, overdisp.est) {
-        variance <- vector(mode = "list", length = dim(thetai)[1])
-        if(!is.null(overdisp.est)){
-            varthetai <- apply(thetai, 2, function(x) 1/outEx@x[param_ix])*overdisp.est
-        } else {
-            varthetai <- apply(thetai, 2, function(x) 1/outEx@x[param_ix])    
-        }
-        withintheta <- apply(thetai,1, function(x) (log(x)-log(as.vector(thetaa)))^2)
-        var <- sapply(1:nrow(varthetai), function(k) sqrt(varthetai[k,]+withintheta[,k]))
-        varthetas_w <- var%*%matrix(as.vector(w_q), ncol=1) #matrix(as.vector(w_q), nrow=1)%*%var #varthetai
-        var_thetaa <- as.vector(varthetas_w)
-        UBa = exp(log(as.vector(thetaa)) + 1.96*sqrt(var_thetaa))
-        LBa = exp(log(as.vector(thetaa)) - 1.96*sqrt(var_thetaa))
+    variance <- vector(mode = "list", length = dim(thetai)[1])
+    if(!is.null(overdisp.est)){
+        sethetai <- sapply(1:length(param_ix), function(k) sqrt(thetai[k]*overdisp.est)/outExp@x[param_ix[k]])
+    } else {
+        sethetai <- sapply(1:length(param_ix), function(k) sqrt(thetai[k])/outExp@x[param_ix[k]])
+    }
+    withintheta <- apply(thetai,1, function(x) (log(x)-log(as.vector(thetaa)))^2)
+    var <- sapply(1:nrow(varthetai), function(k) sqrt(varthetai[k,]+withintheta[,k]))
+    varthetas_w <- var%*%matrix(as.vector(w_q), ncol=1) #matrix(as.vector(w_q), nrow=1)%*%var #varthetai
+    var_thetaa <- as.vector(varthetas_w)
+    UBa = exp(log(as.vector(thetaa)) + 1.96*sqrt(var_thetaa))
+    LBa = exp(log(as.vector(thetaa)) - 1.96*sqrt(var_thetaa))
     #return(ma_adjusted = c(LBa, UBa))
-        return(list(ma_adjusted.LB = LBa,
-                    ma_adjusted.UB = UBa))
+    return(list(ma_adjusted.LB = LBa,
+                ma_adjusted.UB = UBa))
 }
+
+
 
 #MATA-intervals
 mata_tailareazscore <- function(thetaii, thetaaa, se.thetaii, w_q, alpha){
@@ -857,7 +900,7 @@ mata_solvebounds <- function(thetaii, se.thetaii, w_q, alpha, tol){
                       thetaii= thetaii,
                       se.thetaii=se.thetaii,
                       w_q=w_q, alpha=1-alpha, tol=tol)$root
-    return(exp(cbind(mataLB, mataUB)))
+    return(cbind(mataLB, mataUB))
 }
 
 
