@@ -572,12 +572,13 @@ bylocation <- function(Lik, Lambda_dense,sparsemat, maxclust){
 bycluster <-  function(Lik, Lambda_dense, sparsemat,maxclust){
     wtMAT <- matrix(rep(NA, maxclust*nrow(sparsemat)), ncol=maxclust)
     wtMAT0 <- matrix(rep(NA, maxclust*nrow(sparsemat)), ncol=maxclust)
-    wt0 <- likweights(Lik)
+    #wt0 <- likweights(Lik)
     maxpcs <- rep(NA, maxclust)
     stop = FALSE
     ixall <- NULL
         for (i in 1:maxclust){
-            wtmp <- wt0
+            Lik[ixall] <-0
+            wtmp <- likweights(Lik)#wt0
             wtmp[ixall] <-0
             #find potential cluster with largest weight
             maxpc <- which.max(as.vector(wtmp))
@@ -727,8 +728,11 @@ detectclusters <- function(sparseMAT, Ex, Yx,numCenters,Time, maxclust,bylocatio
 #'@param overdisp.est Overdispersion parameter estimated across all simulations (max).
 #'@return TODO
 clusterselect <- function(wLambda,Yx, Ex, model,maxclust, numCenters, Time,quasi,cv=FALSE,overdisp.est){
+    #preprocess wLambda
+    remtab <- which(sapply(1:nrow(wLambda), function(k) all(is.nan(wLambda[k,])))==FALSE)
+    
     #test <- t(a)%*%Lambda_dense
-    loglik <- sapply(1:nrow(wLambda), function(i) dpoisson(Yx, wLambda[i,], Ex))
+    loglik <- sapply(1:length(remtab), function(i) dpoisson(Yx, wLambda[i,], Ex))
     #loglik <- sapply(1:nrow(wLambda), function(i) dpoisson(YSIM[[1]], wLambda[i,], Ex[[1]]))
     #add null model loglik
     if (model=="poisson"){
@@ -862,15 +866,21 @@ extract_thetai <- function(param_ix, w_q, Lambda_dense){
 #calculate profile-likelihood confidence bounds and adjust for model-averaaging
 #' @param null Null model likelihood
 #' @param proflik Vector of profiled likelihoods for set of thetas
-calcbounds <- function(Yx, Ex, thetai,thetaa, param_ix, w_q,sparsematrix, overdisp.est) {
-    variance <- vector(mode = "list", length = dim(thetai)[1])
+calcbounds <- function(thetai,thetaa, param_ix, w_q,sparsematrix, overdisp.est) {
+    #NT <- colSums(sparseMAT)
+    NT <- rowSums(sparsematrix)
+    #variance <- vector(mode = "list", length = dim(thetai)[1])
     if(!is.null(overdisp.est)){
-        sethetai <- sapply(1:length(param_ix), function(k) sqrt(thetai[k]*overdisp.est)/outExp@x[param_ix[k]])
+        varthetai <- sapply(1:length(param_ix), function(k) overdisp.est*thetai[k]/NT[k])
+        #sethetai <- sapply(1:length(param_ix), function(k) sqrt(thetai[k]*overdisp.est)/outExp@x[param_ix[k]])
     } else {
-        sethetai <- sapply(1:length(param_ix), function(k) sqrt(thetai[k])/outExp@x[param_ix[k]])
+        varthetai <- sapply(1:length(param_ix), function(k) thetai[k]/NT[k])
+        #sethetai <- sapply(1:length(param_ix), function(k) sqrt(thetai[k])/outExp@x[param_ix[k]])
     }
-    withintheta <- apply(thetai,1, function(x) (log(x)-log(as.vector(thetaa)))^2)
-    var <- sapply(1:nrow(varthetai), function(k) sqrt(varthetai[k,]+withintheta[,k]))
+    withintheta <- (thetai - thetaa)^2#apply(thetai,1, function(x) (x-as.vector(thetaa))^2)
+    #withintheta <- apply(thetai,1, function(x) (x-as.vector(thetaa))^2)
+    #var <- sapply(1:nrow(varthetai), function(k) sqrt(varthetai[k,]+withintheta[,k]))
+    var <- sqrt(varthetai+withintheta)
     varthetas_w <- var%*%matrix(as.vector(w_q), ncol=1) #matrix(as.vector(w_q), nrow=1)%*%var #varthetai
     var_thetaa <- as.vector(varthetas_w)
     UBa = exp(log(as.vector(thetaa)) + 1.96*sqrt(var_thetaa))
@@ -883,13 +893,7 @@ calcbounds <- function(Yx, Ex, thetai,thetaa, param_ix, w_q,sparsematrix, overdi
 
 
 #MATA-intervals
-mata_tailareazscore <- function(thetaii, thetaaa, se.thetaii, w_q, alpha){
-    thetaii <- as.vector(thetaii)
-    zval <- (thetaaa - thetaii)/se.thetaii
-    zpnorm <- pnorm(zval)
-    w_zpnorm <- sum((w_q*zpnorm))-alpha
-    
-}	
+	
 mata_solvebounds <- function(thetaii, se.thetaii, w_q, alpha, tol){
     mataLB <- uniroot(f=mata_tailareazscore, interval=c(-3, 3),
                       thetaii= thetaii,
