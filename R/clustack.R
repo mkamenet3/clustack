@@ -511,12 +511,8 @@ bylocation <- function(Lik, Lambda_dense,sparsemat, maxclust){
     ix <- NULL
     stop <- FALSE
     for(i in 1:maxclust){
-        #wtmp <- likweights(Lik)
-        
-        
         wtmp <-wt0
         wtmp[ixall] <-0
-        #if unique(wtmp)
         #Find maxloc
         wi_loc <- t(wtmp)%*%sparsemat
         maxloc <- which.max(as.vector(wi_loc))
@@ -528,7 +524,6 @@ bylocation <- function(Lik, Lambda_dense,sparsemat, maxclust){
         pclocmax <- as.vector(t(locmax)%*%t(sparsemat))
         ix <- which(pclocmax!=0) #indices of all PCs that overlap max location
         #upweight Lik* to 1 in all Pcs that overlap max cluster
-        #Lik[ix] <-1
         #reweight everything inside cluster to sum to 1
         wtmp[ix] <- likweights(Lik[ix])
         #save wtmp vector into master weight matrix
@@ -545,15 +540,7 @@ bylocation <- function(Lik, Lambda_dense,sparsemat, maxclust){
         #Lik[ixall] <-0
     }
     wLambda <- crossprod(wtMAT[,1:(maxi)], Lambda_dense)
-    #Lambda_sparse <- Lambda_dense
-    #Lambda_sparse[Lambda_sparse==1] <- FALSE
-    #Lambda_sparse <- Matrix::drop0(Lambda_sparse)
-    # return(list(wLambda = wLambda,
-    #             #sparsemat = sparsemat,
-    #             wtMAT = wtMAT))#,
-    #             #Lambda_sparse = Lambda_sparse))
     return(list(wLambda = wLambda,
-                #sparsemat = sparsemat,
                 wtMAT = wtMAT,
                 wtMAT0 = wtMAT0,
                 maxpcs = maxpcs))
@@ -572,7 +559,6 @@ bylocation <- function(Lik, Lambda_dense,sparsemat, maxclust){
 bycluster <-  function(Lik, Lambda_dense, sparsemat,maxclust){
     wtMAT <- matrix(rep(NA, maxclust*nrow(sparsemat)), ncol=maxclust)
     wtMAT0 <- matrix(rep(NA, maxclust*nrow(sparsemat)), ncol=maxclust)
-    #wt0 <- likweights(Lik)
     maxpcs <- rep(NA, maxclust)
     stop = FALSE
     ixall <- NULL
@@ -591,13 +577,9 @@ bycluster <-  function(Lik, Lambda_dense, sparsemat,maxclust){
             pcmax <- rep(0,length(wtmp)); pcmax[maxpc] <-1; pcmax <- matrix(pcmax,ncol=1)
             pcpcmax <- t(t(sparsemat)%*%pcmax)%*%t(sparsemat); pcpcmax <- ifelse(pcpcmax!=0,1,0)
             ix <- which(pcpcmax!=0)
-            
-            
             #upweight Lik* to 1 in all PCs that overlap max PC
-            #Lik[ix] <- 1
             #reweight so that everything inside the PCs that overlap max cluster sum to 1
             #aa <- likweights(Lik[ix]) 
-            
             wtmp[ix] <- likweights(Lik[ix]) 
             wtMAT[,i] <- wtmp
             if(all(ix %in% ixall)){
@@ -611,27 +593,10 @@ bycluster <-  function(Lik, Lambda_dense, sparsemat,maxclust){
             maxi = i
         }
     wLambda <- crossprod(wtMAT[,1:(maxi)], Lambda_dense)
-#########################################    
-# #test    
-# #map ix to locs
-# sum(wtmp[ix]);sum(wtmp[-ix])
-# 
-# wLambda <- as.vector(wLambda)
-# aa <- ifelse(as.vector(matrix(pcpcmax,nrow=1)%*%sparsemat)!=0,1,0)
-# #########################
-# Lambda_dense2 <- ifelse(Lambda_dense>1,2,1)
-# wLambda2 <- as.vector(crossprod(wtMAT[,1:(maxi)], Lambda_dense2))
-    
-#########################################
-    #Lambda_sparse <- Lambda_dense
-    #Lambda_sparse[Lambda_sparse==1] <- FALSE
-    #Lambda_sparse <- Matrix::drop0(Lambda_sparse)
     return(list(wLambda = wLambda,
-                #sparsemat = sparsemat,
                 wtMAT = wtMAT,
                 wtMAT0 = wtMAT0,
-                maxpcs = maxpcs))#,
-                #Lambda_sparse = Lambda_sparse))
+                maxpcs = maxpcs))
 }
 
 
@@ -811,103 +776,138 @@ clusterselect <- function(wLambda,Yx, Ex, model,maxclust, numCenters, Time,quasi
 }
 
 ####################################################################
-#HELPER FUNCTIONS
+#CLUSTACKBOUNDS FUNCTIONS
 ####################################################################
-dpoisson_theta <- function (y, lambda, E0, ix) {
-    #print(str(ix))
-    ell <- rep(NA, length(lambda))
-    for(i in 1:length(lambda)){
-        x <- rep(1,1040)
-        x[ix] <- lambda[i]
-        ell[i] <- sum(y * log(x * E0 ) - (x * E0))
-    }
-    return(ell)
-}
 
-#identify clusters and their locations
-#' @param res result of model-averaging
-#' @param selection Character string indicating which information criterion to use. Options include \code{"selection.aic"}, \code{"selection.aicc"}, or \code{"selection.bic"}
-#' @param  sparsematrix sparse design matrix where rows are locations and columns are potential clusters
-clusterlocs_ident <- function(res, selection, sparsematrix){
-    maxpc <- res$maxpcs[unlist(res[selection])]
-    pcmax <- rep(0,dim(sparsematrix)[2]); pcmax[maxpc] <-1; pcmax <- matrix(pcmax,ncol=1)
-    pcpcmax <- t(sparsematrix%*%pcmax)%*%sparsematrix; pcpcmax <- ifelse(pcpcmax!=0,1,0)
-    #Q = which models actually have parameter of interest
-    Qmods_pc_ix<- which(pcpcmax!=0)
-    param_ix <- which(pcpcmax!=0)
-    w2_q <- res[["wtMAT"]][,unlist(res[selection])][param_ix]#w2[param_ix]
-    #pclocs should identify all  models that contrain cluster65193
-    pclocs <- as.vector(matrix(pcpcmax, nrow=1)%*%t(sparsematrix))
-    pclocs <- ifelse(pclocs!=0,1,0)
-    return(list(param_ix = param_ix,
-                pclocs = pclocs,
-                w_q = w2_q))
-}
-
-#Extract all estimated theta_i for each model that overlaps max identified cluster
-#' @param param_ix Indices of potential clusters (models) that overlap max identified cluster
-#' @param w_q Weights for each of the identified potential clusters (models) that overlap the max identified cluster
-#' @param Lambda_dense Large matrix of relative risks for each potential cluster
-extract_thetai <- function(param_ix, w_q, Lambda_dense){
-    #create a sparematrix
-    #M <- Matrix(0, nrow=dim(Lambda_dense)[2], ncol=length(param_ix), sparse=TRUE)
-    M <- Matrix(0, nrow=dim(Lambda_dense)[2], ncol=length(param_ix), sparse=TRUE)
-    for (i in 1:length(param_ix)){
-        M[,i][param_ix[i]] <- 1    
-    }
-    thetas <- t(M)%*%t(Lambda_dense)
-    thetaa <- matrix(w_q, nrow=1)%*%thetas
-    return(list(thetai = thetas,
-                thetaa = thetaa))
-}
-
-
-
-#calculate profile-likelihood confidence bounds and adjust for model-averaaging
-#' @param null Null model likelihood
-#' @param proflik Vector of profiled likelihoods for set of thetas
-calcbounds <- function(thetai,thetaa, param_ix, w_q,sparsematrix, overdisp.est) {
-    #NT <- colSums(sparseMAT)
+bucklandbounds <- function(thetai,thetaa, w_q,sparsematrix, overdisp.est) {
     NT <- rowSums(sparsematrix)
-    #variance <- vector(mode = "list", length = dim(thetai)[1])
     if(!is.null(overdisp.est)){
-        varthetai <- sapply(1:length(param_ix), function(k) overdisp.est*thetai[k]/NT[k])
-        #sethetai <- sapply(1:length(param_ix), function(k) sqrt(thetai[k]*overdisp.est)/outExp@x[param_ix[k]])
+        varthetai <- sapply(1:nrow(sparsematrix), function(k) overdisp.est*thetai[k]/NT[k])
     } else {
-        varthetai <- sapply(1:length(param_ix), function(k) thetai[k]/NT[k])
-        #sethetai <- sapply(1:length(param_ix), function(k) sqrt(thetai[k])/outExp@x[param_ix[k]])
+        varthetai <- sapply(1:nrow(sparsematrix), function(k) thetai[k]/NT[k])
     }
-    withintheta <- (thetai - thetaa)^2#apply(thetai,1, function(x) (x-as.vector(thetaa))^2)
-    #withintheta <- apply(thetai,1, function(x) (x-as.vector(thetaa))^2)
-    #var <- sapply(1:nrow(varthetai), function(k) sqrt(varthetai[k,]+withintheta[,k]))
-    var <- sqrt(varthetai+withintheta)
-    varthetas_w <- var%*%matrix(as.vector(w_q), ncol=1) #matrix(as.vector(w_q), nrow=1)%*%var #varthetai
+    withintheta <- (thetai - thetaa)^2
+    varthetas_w <- sum(w_q*sqrt(varthetai + withintheta))
     var_thetaa <- as.vector(varthetas_w)
-    UBa = exp(log(as.vector(thetaa)) + 1.96*sqrt(var_thetaa))
-    LBa = exp(log(as.vector(thetaa)) - 1.96*sqrt(var_thetaa))
-    #return(ma_adjusted = c(LBa, UBa))
-    return(list(ma_adjusted.LB = LBa,
-                ma_adjusted.UB = UBa))
+    UBa = as.vector(thetaa) + 1.96*sqrt(var_thetaa)
+    LBa = as.vector(thetaa) - 1.96*sqrt(var_thetaa)
+    return(list(buckland.LB = LBa,
+                clusterMA = thetaa,
+                buckland.UB = UBa))
+}
+
+maw1 <- function(thetai,thetaa, w_q,sparsematrix, overdisp.est) {
+    NT <- rowSums(sparsematrix)
+    if(!is.null(overdisp.est)){
+        varthetai <- sapply(1:nrow(sparsematrix), function(k) overdisp.est*thetai[k]/NT[k])
+    } else {
+        varthetai <- sapply(1:nrow(sparsematrix), function(k) thetai[k]/NT[k])
+    }
+    withintheta <- (thetai - thetaa)^2
+    se_thetaa <- sum(w_q*sqrt(varthetai+withintheta))
+    var_thetaa <- as.vector(se_thetaa)
+    UBa = as.vector(thetaa) + 1.96*(se_thetaa)
+    LBa = as.vector(thetaa) - 1.96*(se_thetaa)
+    return(list(maw1.LB = LBa,
+                clusterMA = thetaa,
+                maw1.UB = UBa))
+}
+
+maw2 <- function(thetai,thetaa, w_q,sparsematrix, overdisp.est) {
+    NT <- rowSums(sparsematrix)
+    if(!is.null(overdisp.est)){
+        varthetai <- sapply(1:nrow(sparsematrix), function(k) overdisp.est*thetai[k]/NT[k])
+    } else {
+        varthetai <- sapply(1:nrow(sparsematrix), function(k) thetai[k]/NT[k])
+    }
+    withintheta <- (thetai - thetaa)^2
+    var_thetaa <- sum(w_q*(varthetai + withintheta))
+    var_thetaa <- as.vector(varthetaa)
+    UBa = as.vector(thetaa) + 1.96*sqrt(var_thetaa)
+    LBa = as.vector(thetaa) - 1.96*sqrt(var_thetaa)
+    return(list(maw2.LB = LBa,
+                clusterMA = thetaa,
+                maw2.UB = UBa))
 }
 
 
-
-#MATA-intervals
-	
-mata_solvebounds <- function(thetaii, se.thetaii, w_q, alpha, tol){
-    mataLB <- uniroot(f=mata_tailareazscore, interval=c(-3, 3),
-                      thetaii= thetaii,
-                      se.thetaii=se.thetaii,
-                      w_q=w_q, alpha=alpha, tol=tol)$root
+mata_tailareazscore <- function(thetaii, thetaaa, se.thetaii, w_q, alpha){
+    thetaii <- as.vector(thetaii)
+    zval <- (thetaaa - thetaii)/se.thetaii
+    zpnorm <- pnorm(zval)
+    w_zpnorm <- sum((w_q*zpnorm))-alpha
     
-    mataUB <- uniroot(f=mata_tailareazscore, interval=c(-3, 3),
-                      thetaii= thetaii,
-                      se.thetaii=se.thetaii,
-                      w_q=w_q, alpha=1-alpha, tol=tol)$root
-    return(cbind(mataLB, mataUB))
 }
 
+matabounds <- function(thetai,thetaa, w_q,sparsematrix, overdisp.est, transform=c("none","log", "sqrt")) {
+    NT <- rowSums(sparsematrix)
+    switch(transform,
+           none = matabounds_none(thetai,thetaa, w_q,sparsematrix, overdisp.est, NT),
+           log = matabounds_log(thetai,thetaa, w_q,sparsematrix, overdisp.est, NT),
+           sqrt = matabounds_sqrt(thetai,thetaa, w_q,sparsematrix, overdisp.est, NT))
+}
 
+matabounds_none <- function(thetai,thetaa, w_q,sparsematrix, overdisp.est, NT) {
+    if(!is.null(overdisp.est)){
+        varthetai <- sapply(1:nrow(sparsematrix), function(k) overdisp.est*thetai[k]/NT[k])
+    } else {
+        varthetai <- sapply(1:nrow(sparsematrix), function(k) thetai[k]/NT[k])
+    }
+    mataLB <- uniroot(f=mata_tailareazscore, interval=c(-1, 3),
+                      thetaii= thetai,
+                      se.thetaii=sqrt(varthetai),
+                      w_q=w_q, alpha=0.025, tol=1e-8)$root    
+    
+    mataUB <- uniroot(f=mata_tailareazscore, interval=c(-1, 3),
+                      thetaii= thetai,
+                      se.thetaii=sqrt(varthetai),
+                      w_q=w_q, alpha=1-0.025, tol=1e-8)$root 
+    return(list(mata.LB = mataLB,
+                clusterMA = thetaa,
+                mata.UB = mataUB))
+}
+
+matabounds_sqrt <- function(thetai,thetaa, w_q,sparsematrix, overdisp.est, NT) {
+    Tvarthetai <- sapply(1:nrow(sparsematrix), function(k) 1/(4*NT[k]))
+    mataLB <- uniroot(f=mata_tailareazscore, interval=c(-10, 10),
+                      thetaii= sqrt(thetai),
+                      se.thetaii=sqrt(Tvarthetai),
+                      w_q=w_q, alpha=0.025, tol=1e-8)$root
+
+    mataUB <- uniroot(f=mata_tailareazscore, interval=c(-10, 10),
+                      thetaii= sqrt(thetai),
+                      se.thetaii=sqrt(Tvarthetai),
+                      w_q=w_q, alpha=1-0.025, tol=1e-8)$root
+    return(list(matasqrt.LB = (mataLB)^2,
+                clusterMA = thetaa,
+                matasqrt.UB = (mataUB)^2))
+}
+
+matabounds_log <- function(thetai,thetaa, w_q,sparsematrix, overdisp.est, NT) {
+    logTvarthetai <- sapply(1:nrow(sparsematrix), function(k) 1/(thetai[k]*NT[k]))
+    mataLB <- uniroot(f=mata_tailareazscore, interval=c(-5, 5),
+                      thetaii= log(thetai),
+                      se.thetaii=sqrt(logTvarthetai),
+                      w_q=w_q, alpha=0.025, tol=1e-8)$root
+
+    mataUB <- uniroot(f=mata_tailareazscore, interval=c(-5, 5),
+                      thetaii= log(thetai),
+                      se.thetaii=sqrt(logTvarthetai),
+                      w_q=w_q, alpha=1-0.025, tol=1e-8)$root
+    return(list(matalog.LB = exp(mataLB),
+                clusterMA = thetaa,
+                matalog.UB = exp(mataUB)))
+}
+
+selectuniqRR <- function(uniqRRs){
+    clusterRR_i <- rep(NA, nrow(uniqRRs))
+    flag1 <- sapply(1:nrow(uniqRRs), function(k) length(unique(uniqRRs[k,])))
+    non1s <- uniqRRs[which(flag1==2),]
+    clusterRR_i[which(flag1==2)] <- sapply(1:nrow(non1s), function(k) non1s[k,which(non1s[k,]!=1)])
+    clusterRR_i[which(flag1==1)] <- 1    
+    return(unlist(clusterRR_i))
+    
+}
 
 
 
