@@ -509,6 +509,7 @@ bylocation <- function(Lik, Lambda_dense,sparsemat, maxclust){
     wt0 <- likweights(Lik)
     ixall <- NULL
     ix <- NULL
+    maxlocs <- rep(NA, maxclust)
     stop <- FALSE
     for(i in 1:maxclust){
         wtmp <-wt0
@@ -517,6 +518,7 @@ bylocation <- function(Lik, Lambda_dense,sparsemat, maxclust){
         wi_loc <- t(wtmp)%*%sparsemat
         maxloc <- which.max(as.vector(wi_loc))
         message(paste0("Location identified: ",(maxloc)))
+        maxlocs[i] <- maxloc 
         #find all potential clusters that overlap that location
         locmax <- rep(0,numCenters*Time); 
         locmax[maxloc] <-1;
@@ -542,8 +544,8 @@ bylocation <- function(Lik, Lambda_dense,sparsemat, maxclust){
     wLambda <- crossprod(wtMAT[,1:(maxi)], Lambda_dense)
     return(list(wLambda = wLambda,
                 wtMAT = wtMAT,
-                wtMAT0 = wtMAT0,
-                maxpcs = maxpcs))
+                #wtMAT0 = wtMAT0,
+                maxlocs = maxlocs))
 }
 
 
@@ -595,7 +597,7 @@ bycluster <-  function(Lik, Lambda_dense, sparsemat,maxclust){
     wLambda <- crossprod(wtMAT[,1:(maxi)], Lambda_dense)
     return(list(wLambda = wLambda,
                 wtMAT = wtMAT,
-                wtMAT0 = wtMAT0,
+                #wtMAT0 = wtMAT0,
                 maxpcs = maxpcs))
 }
 
@@ -653,8 +655,8 @@ detectclusters <- function(sparseMAT, Ex, Yx,numCenters,Time, maxclust,bylocatio
                     selection.aicc = ifelse(selection$select.aicc==0,1,selection$select.aicc),
                     #sparsemat = res[[2]],
                     wtMAT = res[[2]],
-                    wtMAT0 = res[[3]],
-                    maxpcs = res[[4]],
+                    #wtMAT0 = res[[3]],
+                    maxpcs = res[[3]],
                     Lambda_dense = Lambda_dense))#,
                     #Lambda_sparse = res[[3]]))
     }
@@ -673,7 +675,9 @@ detectclusters <- function(sparseMAT, Ex, Yx,numCenters,Time, maxclust,bylocatio
                     selection.aic = ifelse(selection$select.aic==0,1, selection$select.aic),
                     selection.aicc = ifelse(selection$select.aic==0,1,selection$select.aicc),
                     #sparsemat = res[[2]],
-                    wtMAT = res[[2]]))#,
+                    wtMAT = res[[2]],
+                    maxlocs = res[[3]],
+                    Lambda_dense = Lambda_dense))#,
                     #wtMAT0 = res[[3]]))#,
                     #Lambda_sparse = res[[3]]))
     }
@@ -885,12 +889,12 @@ matabounds_sqrt <- function(thetai,thetaa, w_q,sparsematrix, overdisp.est, NT) {
 
 matabounds_log <- function(thetai,thetaa, w_q,sparsematrix, overdisp.est, NT) {
     logTvarthetai <- sapply(1:nrow(sparsematrix), function(k) 1/(thetai[k]*NT[k]))
-    mataLB <- uniroot(f=mata_tailareazscore, interval=c(-5, 5),
+    mataLB <- uniroot(f=mata_tailareazscore, interval=c(-10, 10),
                       thetaii= log(thetai),
                       se.thetaii=sqrt(logTvarthetai),
                       w_q=w_q, alpha=0.025, tol=1e-8)$root
 
-    mataUB <- uniroot(f=mata_tailareazscore, interval=c(-5, 5),
+    mataUB <- uniroot(f=mata_tailareazscore, interval=c(-10, 10),
                       thetaii= log(thetai),
                       se.thetaii=sqrt(logTvarthetai),
                       w_q=w_q, alpha=1-0.025, tol=1e-8)$root
