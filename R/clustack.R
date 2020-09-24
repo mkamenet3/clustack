@@ -8,6 +8,46 @@ library(Matrix)
 ########################################
 #Functions
 ########################################
+plotmeanrr_stack <- function(ric, Time, sim.i,ic, flav){
+    #color.ic <- sapply(1:Time, function(i) redblue(log(2 *pmax(1/2, pmin(ric[, i], 2)))/log(4)))
+    color.ic <- sapply(1:Time, function(i) redblue(log(1.1 *pmax(1/1.1, pmin(ric[, i], 1.1)))/log(1.1^2)))
+    pdf(paste0(sim.i,"_meanrr_pc_",flav, "_",ic,".pdf"), height=11, width=10)
+    
+    par(fig=c(0,.2,.4,.8), mar=c(.5,0.5,0.5,0))
+    plot(japan.poly2,type='n',asp=1,axes=F,xlab='',ylab='')
+    polygon(japan.poly2,col=color.ic[,1],border=F)
+    segments(japan.prefect2$x1,japan.prefect2$y1,japan.prefect2$x2,japan.prefect2$y2)
+    text(270,4120,paste0(ic," - ", flav),cex=1.00, srt=90)
+    
+    par(fig=c(0.2,.4,.4,.8), mar=c(.5,0.5,0.5,0), new=T)   
+    plot(japan.poly2,type='n',asp=1,axes=F,xlab='',ylab='')
+    polygon(japan.poly2,col=color.ic[,2],border=F)
+    segments(japan.prefect2$x1,japan.prefect2$y1,japan.prefect2$x2,japan.prefect2$y2)
+    
+    par(fig=c(0.4,.6,.4,.8), mar=c(.5,0.5,0.5,0), new=T) 
+    plot(japan.poly2,type='n',asp=1,axes=F,xlab='',ylab='')
+    polygon(japan.poly2,col=color.ic[,3],border=F)
+    segments(japan.prefect2$x1,japan.prefect2$y1,japan.prefect2$x2,japan.prefect2$y2)
+    
+    par(fig=c(0.6,.8,.4,.8), mar=c(.5,0.5,0.5,0), new=T)
+    plot(japan.poly2,type='n',asp=1,axes=F,xlab='',ylab='')
+    polygon(japan.poly2,col=color.ic[,4],border=F)
+    segments(japan.prefect2$x1,japan.prefect2$y1,japan.prefect2$x2,japan.prefect2$y2)
+    
+    par(fig=c(0.8,1,.4,.8), mar=c(.5,0.5,0.5,0), new=T)
+    plot(japan.poly2,type='n',asp=1,axes=F,xlab='',ylab='')
+    polygon(japan.poly2,col=color.ic[,5],border=F)
+    segments(japan.prefect2$x1,japan.prefect2$y1,japan.prefect2$x2,japan.prefect2$y2)
+    
+    #legend
+    par(fig=c(.35,.75,0,.1), new=T)
+    plot(1, xlim=c(0.6,1.5), ylim=c(0.2,1), axes=F, type='n',  xlab="", ylab="")
+    rect(seq(.6,1.4,length=50)[-50],.5,seq(.65,1.4,length=50)[-1],.62,col=redblue(0:50/50),border=F)
+    #rect(seq(.6,1.4,length=50)[-50],.5,seq(.65,1.4,length=50)[-1],.62,col=redblue(0:50/50),border=F)
+    text(seq(.6,1.4,length=5),rep(.45,5),seq(0.9,1.1,length.out=5),srt=330,adj=0)
+    
+    dev.off()
+}
 
 clusso_prob_clusteroverlap <- function(sparseMAT,lassoresult,selected,rr, risk.ratio,nsim,Time, ncentroids, pow){
     #DEFINE TRUTH
