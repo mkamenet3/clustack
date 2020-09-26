@@ -68,25 +68,8 @@ for(risk in risks){
             
             E0 <- rep(ecount, 1040)
             E1 <- rr*E0
-            #Ex <- rep(ecounts,1040)
-            #YSIM <- as.vector(rr)*Ex
             YSIM <- lapply(1:nsim, function(i) rpois(length(E1), lambda = E1))
-            #init <- clusso::setVectors(japanbreastcancer$period, japanbreastcancer$expdeath, japanbreastcancer$death,covars=NULL, Time=Time)
-            # std <- lapply(1:nsim,
-            #               function(i) sapply(1:Time,
-            #                                  function(j) (matrix(E0, ncol = Time)[, j]) * (sum(matrix(YSIM[[i]], ncol = Time)[,j])/sum(matrix(E0, ncol = Time)[, j]))))
-            # Ex <- lapply(1:nsim, function(i) as.vector(std[[i]]))
-            
-            # E0 <- rep(ecounts, 1040)
-            # E1 <- rr*E0
-            # #Ex <- rep(ecounts,1040)
-            # #YSIM <- as.vector(rr)*Ex
-            # YSIM <- lapply(1:nsim, function(i) rpois(length(E1), lambda = E1))
-            # #init <- clusso::setVectors(japanbreastcancer$period, japanbreastcancer$expdeath, japanbreastcancer$death,covars=NULL, Time=Time)
-            # # std <- lapply(1:nsim, 
-            # #               function(i) sapply(1:Time, 
-            # #                                  function(j) (matrix(E0, ncol = Time)[, j]) * (sum(matrix(YSIM[[i]], ncol = Time)[,j])/sum(matrix(E0, ncol = Time)[, j]))))
-            Ex <- lapply(1:nsim, function(i) E0)#lapply(1:nsim, function(i) as.vector(std[[i]]))
+            Ex <- lapply(1:nsim, function(i) E0)
             outExp <- lapply(1:nsim, function(i) t(sparseMAT)%*%Ex[[i]])
             outObs <- lapply(1:nsim, function(i) t(sparseMAT)%*%YSIM[[i]])
             ix <- which(rr==risk) #ix ST cells wi
@@ -97,54 +80,16 @@ for(risk in risks){
                                                                                  bylocation = FALSE, model="poisson",
                                                                                  overdisp.est = overdisp.est))
             
-            
-            ##############
-            #maxlocs start
-            # sim_superclust_pc_large <- lapply(1:nsim, function(i) detectclusters(sparseMAT, Ex[[i]], YSIM[[i]],
-            #                                                                      numCenters, Time, maxclust,
-            #                                                                      bylocation = TRUE, model="poisson", 
-            #                                                                      overdisp.est = overdisp.est))
-            #find all PCs that overlap max location
-            # wslarge <- lapply(1:nsim, function(i) sim_superclust_pc_large[[i]]$wtMAT[,sim_superclust_pc_large[[i]]$selection.bic])
-            # clusterRR_uniqlarge <- lapply(1:nsim, function(i) sapply(1:nrow(sim_superclust_pc_large[[i]]$Lambda_dense), 
-            #                                                          function(k) unique(sim_superclust_pc_large[[i]]$Lambda_dense[k,]))) 
-            # ###
-            # # #id pcs that overlap maxloc
-            # # ix_locs<- rep(0,1040);ix_locs[ix] <-1
-            # # ix_locs_mat <- matrix(aa, nrow = 1)%*%sparseMAT
-            # # ix_locs_mods <- which(ix_locs_mat!=0)
-            # # #ix_locs_mods <- ifelse(test!=0,1,0)
-            # # 
-            # # cluster_thetaa_locs <- lapply(1:nsim, function(i) sum(clusterRR_ilarge[[i]][ix_locs_mods]*wslarge[[i]][ix_locs_mods]))
-            # 
-            # ###
-            # clusterRR_ilarge <- lapply(1:nsim, function(i) rep(NA, 66870))
-            # clusterRR_uniq_ilarge <- lapply(1:nsim, function(i) as.matrix(do.call(rbind, clusterRR_uniqlarge[[i]]), ncol=2))
-            # clusterRR_ilarge <- lapply(1:nsim, function(i) selectuniqRR(clusterRR_uniq_ilarge[[i]]))
-            # cluster_thetaa <- lapply(1:nsim, function(i) sum(clusterRR_ilarge[[i]]*wslarge[[i]]))
-            # 
-            # 
-            # 
-            # clusterRRlarge <- lapply(1:nsim, 
-            #                          function(i) unique(sim_superclust_pc_large[[i]]$Lambda_dense[sim_superclust_pc_large[[i]]$maxpcs[sim_superclust_pc_large[[i]]$selection.bic],])[2])
-            # 
-            # 
-            # #maxlocs end
-            # 
-            # 
             ##################################################
             ##################################################
             #NON-MA VARIANCE
             ##################################################
             ##################################################
-            
-            # clusterRRlarge <- lapply(1:nsim, 
-            #                          function(i) unique(sim_superclust_pc_large[[i]]$Lambda_dense[sim_superclust_pc_large[[i]]$maxpcs[sim_superclust_pc_large[[i]]$selection.bic_orig],])[2])
             clusterRRlarge <- lapply(1:nsim, 
                                      function(i) unique(sim_superclust_pc_large[[i]]$Lambda_dense[sim_superclust_pc_large[[i]]$maxpcs[sim_superclust_pc_large[[i]]$selection.bic_forceid],])[2])
             
-            se_clusterRRlarge <- lapply(1:nsim, function(i)sqrt(clusterRRlarge[[i]]/outExp[[i]][sim_superclust_pc_large[[i]]$maxpcs[sim_superclust_pc_large[[i]]$selection.bic_forceid]]))
-            #se_clusterRRlarge <- lapply(1:nsim, function(i)sqrt(clusterRRlarge[[i]]/(sum(Ex[[i]]))))
+            se_clusterRRlarge <- lapply(1:nsim, 
+                                        function(i)sqrt(clusterRRlarge[[i]]/outExp[[i]][sim_superclust_pc_large[[i]]$maxpcs[sim_superclust_pc_large[[i]]$selection.bic_forceid]]))
             nonma.time <- system.time(nonma <- lapply(1:nsim, function(i) cbind(lb=clusterRRlarge[[i]]-1.96*se_clusterRRlarge[[i]], 
                                                       clusterMA = clusterRRlarge[[i]],
                                                       ub=clusterRRlarge[[i]]+1.96*se_clusterRRlarge[[i]])))
@@ -153,7 +98,6 @@ for(risk in risks){
             #n
             se_clusterRRlarge_asymp <- lapply(1:nsim, 
                                               function(i) sqrt(clusterRRlarge[[i]]/outObs[[i]][sim_superclust_pc_large[[i]]$maxpcs[sim_superclust_pc_large[[i]]$selection.bic_forceid]]))
-            #se_clusterRRlarge_asymp <- lapply(1:nsim, function(i) sqrt(clusterRRlarge[[i]]/(sum(YSIM[[i]][ix]))))
             nonma_asymp.time <- system.time(nonma_asymp <- lapply(1:nsim, 
                                                                   function(i) cbind(lbasymp=clusterRRlarge[[i]]-1.96*se_clusterRRlarge_asymp[[i]], 
                                                             clusterMA = clusterRRlarge[[i]],
@@ -165,16 +109,9 @@ for(risk in risks){
             #Buckland 1997
             ##################################################
             ##################################################
-            # wslarge <- lapply(1:nsim, function(i) sim_superclust_pc_large[[i]]$wtMAT[,sim_superclust_pc_large[[i]]$selection.bic])
             wslarge <- lapply(1:nsim, function(i) sim_superclust_pc_large[[i]]$wtMAT[,sim_superclust_pc_large[[i]]$selection.bic_forceid])
             clusterRR_uniqlarge <- lapply(1:nsim, function(i) sapply(1:nrow(sim_superclust_pc_large[[i]]$Lambda_dense), 
                                                                      function(k) unique(sim_superclust_pc_large[[i]]$Lambda_dense[k,]))) 
-            # clusterRR_uniqlarge <- lapply(1:nsim, function(i) sapply(1:nrow(sim_superclust_pc_large[[i]]$Lambda_dense), 
-            #                               function(k) unique(sim_superclust_pc_large[[i]]$Lambda_dense[k,]))) 
-            
-            # uniqRRslarge<- lapply(1:nsim, function(i) t(clusterRR_uniqlarge[[i]]))#as.matrix(do.call(rbind, clusterRR_uniqlarge), nrow=2, byrow=TRUE)
-            # clusterRR_ilarge <- lapply(1:nsim, function(i) selectuniqRR(t(clusterRR_uniqlarge[[i]])))
-            
             ##########################
             #model-average clusterMA
             clusterRR_ilarge <- lapply(1:nsim, function(i) rep(NA, 66870))
@@ -189,8 +126,6 @@ for(risk in risks){
                                                          w_q=wslarge[[i]], sparsematrix=t(sparseMAT), overdisp.est = NULL)))
             outbuck
             
-            
-            
             ##################################################
             ##################################################
             #(un-adjusted) MAW1 (B&A pg. 164) = Buckland 1997
@@ -204,9 +139,6 @@ for(risk in risks){
             outmaw1
             
             
-            
-            
-            
             ##################################################
             ##################################################
             #MAW2 (B&A pg. 345)
@@ -217,21 +149,16 @@ for(risk in risks){
                                                        w_q=wslarge[[i]], sparsematrix=t(sparseMAT), overdisp.est = NULL)))
             outmaw2
             
-            
-            
-            
             ##################################################
             ##################################################
             #Turek-Fletcher MATA Bounds (for non-normal data)
             ##################################################
             ##################################################
-            
-            
-            # outmata <- lapply(1:nsim, function(i) matabounds(thetai=clusterRR_ilarge[[i]], thetaa = clusterRRlarge[[i]], 
-            #w_q=wslarge[[i]], sparsematrix=t(sparseMAT), overdisp.est = NULL))
-            # outmata
-            outmata.time <- system.time(outmata <- lapply(1:nsim, function(i) matabounds(thetai=clusterRR_ilarge[[i]], thetaa = cluster_thetaa[[i]], 
-                                                             w_q=wslarge[[i]], sparsematrix=t(sparseMAT), overdisp.est = NULL, transform="none")))
+
+            outmata.time <- system.time(outmata <- lapply(1:nsim, function(i) matabounds(thetai=clusterRR_ilarge[[i]], 
+                                                                                         thetaa = cluster_thetaa[[i]], 
+                                                             w_q=wslarge[[i]], sparsematrix=t(sparseMAT), 
+                                                             overdisp.est = NULL, transform="none")))
             outmata
             ##################################################
             ##################################################
@@ -239,11 +166,8 @@ for(risk in risks){
             ##################################################
             ##################################################
             
-            # outmataT <- lapply(1:nsim, function(i) mataboundsT(thetai=clusterRR_ilarge[[i]], thetaa = clusterRRlarge[[i]], 
-            #                                                    w_q=wslarge[[i]], sparsematrix=t(sparseMAT), overdisp.est = NULL))
-            # outmataT
-            
-            outmataT.time <- system.time(outmataT <- lapply(1:nsim, function(i) matabounds(thetai=clusterRR_ilarge[[i]], thetaa = cluster_thetaa[[i]], 
+            outmataT.time <- system.time(outmataT <- lapply(1:nsim, function(i) matabounds(thetai=clusterRR_ilarge[[i]], 
+                                                                                           thetaa = cluster_thetaa[[i]], 
                                                                w_q=wslarge[[i]], sparsematrix=t(sparseMAT), 
                                                                overdisp.est = NULL, transform="sqrt")))
             outmataT
@@ -253,33 +177,19 @@ for(risk in risks){
             #Turek-Fletcher MATA Bounds: LOG TRANSFORMED
             ##################################################
             ##################################################
-            
-            # outmataTlog <- lapply(1:nsim, function(i) logmataboundsT(thetai=clusterRR_ilarge[[i]], thetaa = clusterRRlarge[[i]], 
-            #                                                          w_q=wslarge[[i]], sparsematrix=t(sparseMAT), overdisp.est = NULL))
-            # outmataTlog
+
             outmataTlog.time <- system.time(outmataTlog <- lapply(1:nsim, function(i) matabounds(thetai=clusterRR_ilarge[[i]], 
                                                                                                  thetaa = cluster_thetaa[[i]], 
                                                                      w_q=wslarge[[i]], sparsematrix=t(sparseMAT), 
                                                                      overdisp.est = NULL, transform="log")))
             outmataTlog
             
-            
-            # master_std <- cbind.data.frame(matrix(unlist(nonma), byrow=TRUE, ncol=3),
-            #                     matrix(unlist(nonma_asymp), byrow=TRUE, ncol=3),
-            #                     matrix(unlist(outmaw1), byrow=TRUE, ncol=3),
-            #                     matrix(unlist(outmaw2), byrow=TRUE, ncol=3),
-            #                     matrix(unlist(outmata), byrow=TRUE, ncol=3),
-            #                     matrix(unlist(outmataT), byrow=TRUE, ncol=3),
-            #                     matrix(unlist(outmataTlog), byrow=TRUE, ncol=3))
-            # names(master_std) <- c("nonma.LB", "clusterMA", "nonma.UB",
-            #                        "nonma_asymp.LB", "clusterMA", "nonma_asymp.UB",
-            #                        "maw1.LB", "clusterMA", "maw1.UB",
-            #                        "maw2.LB", "clusterMA", "maw2.UB",
-            #                        "mata.LB", "clusterMA", "mata.UB",
-            #                        "matasqrt.LB", "clusterMA", "matasqrt.UB",
-            #                        "matalog.LB", "clusterMA", "matalog.UB")
-            
-            
+            ##################################################
+            ##################################################
+            #Create Master for Output
+            ##################################################
+            ##################################################
+    
             master <- cbind.data.frame(matrix(unlist(nonma), byrow=TRUE, ncol=3),
                                        matrix(unlist(nonma_asymp), byrow=TRUE, ncol=3),
                                        matrix(unlist(outmaw1), byrow=TRUE, ncol=3),
