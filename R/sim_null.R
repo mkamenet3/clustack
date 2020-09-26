@@ -10,29 +10,33 @@ source("clustack.R")
 #0) Setup
 #source clusso files
 #file.sources = list.files(path="../../../clusso_KamenetskyLeeZhuGangnon/scripts/clusso/R/",pattern="*.R", full.names = TRUE)
-file.sources = list.files(path="../../../../clusso-newpenalty/clusso/R/",pattern="*.R", full.names = TRUE)
-sapply(file.sources, source, .GlobalEnv)
+#file.sources = list.files(path="../../../../clusso-newpenalty/clusso/R/",pattern="*.R", full.names = TRUE)
+#sapply(file.sources, source, .GlobalEnv)
 
 #source clusso sim files
 #file.sources = list.files(path="clusso-newpenalty/clusso/clusso/clussoSIMULATION/R_simulation/",pattern="*.R", full.names = TRUE)
-file.sources = list.files(path="../../../../clusso-newpenalty/clusso/clussoSIMULATION/R_simulation/",pattern="*.R", full.names = TRUE)
-sapply(file.sources, source, .GlobalEnv)
+#file.sources = list.files(path="../../../../clusso-newpenalty/clusso/clussoSIMULATION/R_simulation/",pattern="*.R", full.names = TRUE)
+#sapply(file.sources, source, .GlobalEnv)
 
 
 
 #dframe1 <- read.csv("clusso-newpenalty/clusso/clusso/data/jap.breast.F.9.10.11.csv")
 #dframe2 <- read.csv("clusso-newpenalty/clusso/clusso/data/utmJapan.csv")
-dframe1 <- read.csv("../../../../clusso-newpenalty/clusso/data/jap.breast.F.9.10.11.csv")
-dframe2 <- read.csv("../../../../clusso-newpenalty/clusso/data/utmJapan.csv")
+#dframe1 <- read.csv("../../../../clusso-newpenalty/clusso/data/jap.breast.F.9.10.11.csv")
+#dframe2 <- read.csv("../../../../clusso-newpenalty/clusso/data/utmJapan.csv")
+dframe1 <- read.csv("../../../../clusso_KamenetskyLeeZhuGangnon/data/JBC/jap.breast.F.9.10.11.csv")
+dframe2 <- read.csv("../../../../clusso_KamenetskyLeeZhuGangnon/data/JBC/utmJapan.csv")
 dframe3 <- aggregate(dframe1, by=list(as.factor(rep(1:(nrow(dframe1)/4),each=4))), FUN="sum")
 dframe=data.frame(id=as.factor(dframe3$id/4),period=as.factor(dframe3$year),death=dframe3$death,expdeath=dframe3$expdeath)
 levels(dframe$period) <- c("1","2","3","4","5")
 
 #dframe.poly2 <- read.csv("clusso-newpenalty/clusso/clusso/data/japan_poly2.csv")
-dframe.poly2 <- read.csv("../../../../clusso-newpenalty/clusso/data/japan_poly2.csv")
+#dframe.poly2 <- read.csv("../../../../clusso-newpenalty/clusso/data/japan_poly2.csv")
+dframe.poly2 <- read.csv("../../../../clusso_KamenetskyLeeZhuGangnon/data/JBC/japan_poly2.csv")
 japan.poly2 <- dframe.poly2[,2:3]
 #dframe.prefect2 <- read.csv("clusso-newpenalty/clusso/clusso/data/japan_prefect2.csv")
-dframe.prefect2 <- read.csv("../../../../clusso-newpenalty/clusso/data/japan_prefect2.csv")
+#dframe.prefect2 <- read.csv("../../../../clusso-newpenalty/clusso/data/japan_prefect2.csv")
+dframe.prefect2 <- read.csv("../../../../clusso_KamenetskyLeeZhuGangnon/data/JBC/japan_prefect2.csv")
 japan.prefect2 <- dframe.prefect2[,2:5]
 japanbreastcancer <- dframe3
 japanbreastcancer$period <- japanbreastcancer$year
@@ -78,7 +82,7 @@ reval <- function(probs, ix){
     return(probs)
 }
 #nsims
-nsim <- 100
+#nsim <- 2#100
 cent=1
 rad=18
 tim = c(1:5)
@@ -115,8 +119,8 @@ table.bounds.pc.space <- NULL
 eps <- 3
 path.figures <- "../../../figures/OUTOct20/"
 path.tables <- "../../../results/OUTOct20/"
-# path.figures <- "../../../figures/OUTDec19/"
-# path.tables <- "../../../results/OUTDec19/"
+# path.figures <- "."
+# path.tables <- "."
 
 
 #################################################################################################
@@ -200,6 +204,7 @@ for(theta in thetas){
     #BY BIC
     #####################################################################################
     #####################################################################################
+    #ix <- which(rr==risk)
     wslarge <- lapply(1:nsim, function(i) sim_superclust_loc[[i]]$wtMAT[,sim_superclust_loc[[i]]$selection.bic])
     clusterRR_uniqlarge <- lapply(1:nsim, function(i) sapply(1:nrow(sim_superclust_loc[[i]]$Lambda_dense), 
                                                              function(k) unique(sim_superclust_loc[[i]]$Lambda_dense[k,]))) 
@@ -211,52 +216,60 @@ for(theta in thetas){
     #NON-MA VARIANCE
     #TODO 2020-09-22
     ##################################################
+    ######################
+    #MA by maxloc
+    # ix_locs<- rep(0,1040);ix_locs[ix] <-1
+    # ix_locs_mat <- matrix(aa, nrow = 1)%*%sparsematrix 
+    # ix_locs_mods <- which(ix_locs_mat!=0)
+    cluster_thetaa_locs <- lapply(1:nsim, function(i) 1)#lapply(1:nsim, function(i) sum(clusterRR_ilarge[[i]][ix_locs_mods]*wslarge[[i]][ix_locs_mods]))
+    cluster_thetaa <- lapply(1:nsim, function(i) sum(clusterRR_ilarge[[i]]*wslarge[[i]]))
+    ######################
     clusterRRlarge <- lapply(1:nsim, 
                              function(i) unique(sim_superclust_loc[[i]]$Lambda_dense[sim_superclust_loc[[i]]$maxpcs[sim_superclust_loc[[i]]$selection.bic],])[2])
-    se_clusterRRlarge <- lapply(1:nsim, function(i)sqrt(clusterRRlarge[[i]]/(Time*n)))
-    nonma.bic <- lapply(1:nsim, function(i) cbind(lb=clusterRRlarge[[i]]-1.96*se_clusterRRlarge[[i]], 
-                                              clusterMA = clusterRRlarge[[i]],
-                                              ub=clusterRRlarge[[i]]+1.96*se_clusterRRlarge[[i]]))
-    cluster_thetaa <- lapply(1:nsim, function(i) sum(clusterRR_ilarge[[i]]*wslarge[[i]]))
-    
+    se_clusterRRlarge <- lapply(1:nsim, function(i)sqrt(cluster_thetaa_locs[[i]]/(Time*n)))
+    nonma.bic <- lapply(1:nsim, function(i) cbind(lb=cluster_thetaa_locs[[i]]-1.96*se_clusterRRlarge[[i]], 
+                                              clusterMA = cluster_thetaa_locs[[i]],
+                                              ub=cluster_thetaa_locs[[i]]+1.96*se_clusterRRlarge[[i]]))
+
+
     #asymptotic
-    se_clusterRRlarge_asymp <- lapply(1:nsim, function(i) sqrt(clusterRRlarge[[i]]/(sum(YSIM[[i]][ix]))))
-    nonma_asymp.bic <- lapply(1:nsim, function(i) cbind(lbasymp=clusterRRlarge[[i]]-1.96*se_clusterRRlarge_asymp[[i]], 
-                                                    clusterMA = clusterRRlarge[[i]],
-                                                    ubasymp=clusterRRlarge[[i]]+1.96*se_clusterRRlarge_asymp[[i]]))
+    se_clusterRRlarge_asymp <- lapply(1:nsim, function(i) sqrt(cluster_thetaa_locs[[i]]/(sum(YSIM[[i]]))))
+    nonma_asymp.bic <- lapply(1:nsim, function(i) cbind(lbasymp=cluster_thetaa_locs[[i]]-1.96*se_clusterRRlarge_asymp[[i]], 
+                                                    clusterMA = cluster_thetaa_locs[[i]],
+                                                    ubasymp=cluster_thetaa_locs[[i]]+1.96*se_clusterRRlarge_asymp[[i]]))
     
     ##################################################
     #Buckland 1997
     ##################################################
     outbuck.bic <- lapply(1:nsim, 
                       function(i) bucklandbounds(thetai=clusterRR_ilarge[[i]], thetaa = cluster_thetaa[[i]], 
-                                                 w_q=wslarge[[i]], sparsematrix=t(sparseMAT), overdisp.est = NULL))
+                                                 w_q=wslarge[[i]], sparsematrix=t(sparsematrix ), overdisp.est = NULL))
     ##################################################
     #(un-adjusted) MAW1 (B&A pg. 164) = Buckland 1997
     ##################################################
     outmaw1.bic <- lapply(1:nsim, 
                       function(i) maw1(thetai=clusterRR_ilarge[[i]], thetaa = cluster_thetaa[[i]], 
-                                       w_q=wslarge[[i]], sparsematrix=t(sparseMAT), overdisp.est = NULL))
+                                       w_q=wslarge[[i]], sparsematrix=t(sparsematrix ), overdisp.est = NULL))
     ##################################################
     #MAW2 (B&A pg. 345)
     ##################################################
     outmaw2.bic <- lapply(1:nsim, function(i) maw1(thetai=clusterRR_ilarge[[i]], thetaa = cluster_thetaa[[i]], 
-                                               w_q=wslarge[[i]], sparsematrix=t(sparseMAT), overdisp.est = NULL))
+                                               w_q=wslarge[[i]], sparsematrix=t(sparsematrix ), overdisp.est = NULL))
     ##################################################
     #Turek-Fletcher MATA Bounds (for non-normal data)
     ##################################################
     outmata.bic <- lapply(1:nsim, function(i) matabounds(thetai=clusterRR_ilarge[[i]], thetaa = cluster_thetaa[[i]], 
-                                                     w_q=wslarge[[i]], sparsematrix=t(sparseMAT), overdisp.est = NULL, transform="none"))
+                                                     w_q=wslarge[[i]], sparsematrix=t(sparsematrix ), overdisp.est = NULL, transform="none"))
     ##################################################
     #Turek-Fletcher MATA Bounds: SQRT TRANSFORMED
     ##################################################
     outmataT.bic <- lapply(1:nsim, function(i) matabounds(thetai=clusterRR_ilarge[[i]], thetaa = cluster_thetaa[[i]], 
-                                                      w_q=wslarge[[i]], sparsematrix=t(sparseMAT), overdisp.est = NULL, transform="sqrt"))
+                                                      w_q=wslarge[[i]], sparsematrix=t(sparsematrix ), overdisp.est = NULL, transform="sqrt"))
     ##################################################
     #Turek-Fletcher MATA Bounds: LOG TRANSFORMED
     ##################################################
     outmataTlog.bic <- lapply(1:nsim, function(i) matabounds(thetai=clusterRR_ilarge[[i]], thetaa = cluster_thetaa[[i]], 
-                                                         w_q=wslarge[[i]], sparsematrix=t(sparseMAT), overdisp.est = NULL, transform="log"))
+                                                         w_q=wslarge[[i]], sparsematrix=t(sparsematrix ), overdisp.est = NULL, transform="log"))
     
     #####################################################################################
     #####################################################################################
@@ -272,54 +285,61 @@ for(theta in thetas){
         clusterRR_ilarge <- lapply(1:nsim, function(i) rep(NA, 66870))
         clusterRR_uniq_ilarge <- lapply(1:nsim, function(i) as.matrix(do.call(rbind, clusterRR_uniqlarge[[i]]), ncol=2))
         clusterRR_ilarge <- lapply(1:nsim, function(i) selectuniqRR(clusterRR_uniq_ilarge[[i]]))
+        ######################
+        #MA by maxloc
+        # ix_locs<- rep(0,1040);ix_locs[ix] <-1
+        # ix_locs_mat <- matrix(aa, nrow = 1)%*%sparsematrix 
+        # ix_locs_mods <- which(ix_locs_mat!=0)
+        cluster_thetaa_locs <- lapply(1:nsim, function(i) 1)#lapply(1:nsim, function(i) sum(clusterRR_ilarge[[i]][ix_locs_mods]*wslarge[[i]][ix_locs_mods]))
+        cluster_thetaa <- lapply(1:nsim, function(i) sum(clusterRR_ilarge[[i]]*wslarge[[i]]))
+        ######################
         ##################################################
         #NON-MA VARIANCE
         ##################################################
         clusterRRlarge <- lapply(1:nsim, 
                                  function(i) unique(sim_superclust_loc[[i]]$Lambda_dense[sim_superclust_loc[[i]]$maxpcs[sim_superclust_loc[[i]]$selection.aic],])[2])
-        se_clusterRRlarge <- lapply(1:nsim, function(i)sqrt(clusterRRlarge[[i]]/(Time*n)))
-        nonma.aic <- lapply(1:nsim, function(i) cbind(lb=clusterRRlarge[[i]]-1.96*se_clusterRRlarge[[i]], 
-                                                      clusterMA = clusterRRlarge[[i]],
-                                                      ub=clusterRRlarge[[i]]+1.96*se_clusterRRlarge[[i]]))
-        cluster_thetaa <- lapply(1:nsim, function(i) sum(clusterRR_ilarge[[i]]*wslarge[[i]]))
+        se_clusterRRlarge <- lapply(1:nsim, function(i)sqrt(cluster_thetaa_locs[[i]]/(Time*n)))
+        nonma.aic <- lapply(1:nsim, function(i) cbind(lb=cluster_thetaa_locs[[i]]-1.96*se_clusterRRlarge[[i]], 
+                                                      clusterMA = cluster_thetaa_locs[[i]],
+                                                      ub=cluster_thetaa_locs[[i]]+1.96*se_clusterRRlarge[[i]]))
         #asymptotic
-        se_clusterRRlarge_asymp <- lapply(1:nsim, function(i) sqrt(clusterRRlarge[[i]]/(sum(YSIM[[i]][ix]))))
-        nonma_asymp.aic <- lapply(1:nsim, function(i) cbind(lbasymp=clusterRRlarge[[i]]-1.96*se_clusterRRlarge_asymp[[i]], 
-                                                            clusterMA = clusterRRlarge[[i]],
-                                                            ubasymp=clusterRRlarge[[i]]+1.96*se_clusterRRlarge_asymp[[i]]))
+        se_clusterRRlarge_asymp <- lapply(1:nsim, function(i) sqrt(cluster_thetaa_locs[[i]]/(sum(YSIM[[i]]))))
+        nonma_asymp.aic <- lapply(1:nsim, function(i) cbind(lbasymp=cluster_thetaa_locs[[i]]-1.96*se_clusterRRlarge_asymp[[i]], 
+                                                            clusterMA = cluster_thetaa_locs[[i]],
+                                                            ubasymp=cluster_thetaa_locs[[i]]+1.96*se_clusterRRlarge_asymp[[i]]))
         
         ##################################################
         #Buckland 1997
         ##################################################
         outbuck.aic <- lapply(1:nsim, 
                               function(i) bucklandbounds(thetai=clusterRR_ilarge[[i]], thetaa = cluster_thetaa[[i]], 
-                                                         w_q=wslarge[[i]], sparsematrix=t(sparseMAT), overdisp.est = NULL))
+                                                         w_q=wslarge[[i]], sparsematrix=t(sparsematrix ), overdisp.est = NULL))
         ##################################################
         #(un-adjusted) MAW1 (B&A pg. 164) = Buckland 1997
         ##################################################
         outmaw1.aic <- lapply(1:nsim, 
                               function(i) maw1(thetai=clusterRR_ilarge[[i]], thetaa = cluster_thetaa[[i]], 
-                                               w_q=wslarge[[i]], sparsematrix=t(sparseMAT), overdisp.est = NULL))
+                                               w_q=wslarge[[i]], sparsematrix=t(sparsematrix ), overdisp.est = NULL))
         ##################################################
         #MAW2 (B&A pg. 345)
         ##################################################
         outmaw2.aic <- lapply(1:nsim, function(i) maw1(thetai=clusterRR_ilarge[[i]], thetaa = cluster_thetaa[[i]], 
-                                                       w_q=wslarge[[i]], sparsematrix=t(sparseMAT), overdisp.est = NULL))
+                                                       w_q=wslarge[[i]], sparsematrix=t(sparsematrix ), overdisp.est = NULL))
         ##################################################
         #Turek-Fletcher MATA Bounds (for non-normal data)
         ##################################################
         outmata.aic <- lapply(1:nsim, function(i) matabounds(thetai=clusterRR_ilarge[[i]], thetaa = cluster_thetaa[[i]], 
-                                                             w_q=wslarge[[i]], sparsematrix=t(sparseMAT), overdisp.est = NULL, transform="none"))
+                                                             w_q=wslarge[[i]], sparsematrix=t(sparsematrix ), overdisp.est = NULL, transform="none"))
         ##################################################
         #Turek-Fletcher MATA Bounds: SQRT TRANSFORMED
         ##################################################
         outmataT.aic <- lapply(1:nsim, function(i) matabounds(thetai=clusterRR_ilarge[[i]], thetaa = cluster_thetaa[[i]], 
-                                                              w_q=wslarge[[i]], sparsematrix=t(sparseMAT), overdisp.est = NULL, transform="sqrt"))
+                                                              w_q=wslarge[[i]], sparsematrix=t(sparsematrix ), overdisp.est = NULL, transform="sqrt"))
         ##################################################
         #Turek-Fletcher MATA Bounds: LOG TRANSFORMED
         ##################################################
         outmataTlog.aic <- lapply(1:nsim, function(i) matabounds(thetai=clusterRR_ilarge[[i]], thetaa = cluster_thetaa[[i]], 
-                                                                 w_q=wslarge[[i]], sparsematrix=t(sparseMAT), overdisp.est = NULL, transform="log"))
+                                                                 w_q=wslarge[[i]], sparsematrix=t(sparsematrix ), overdisp.est = NULL, transform="log"))
     } else {
         print("AIC identifies same as BIC")
         nonma.aic <- lapply(1:nsim, function(i) rep(NA,3))
@@ -532,33 +552,33 @@ for(theta in thetas){
     ##################################################
     outbuck.bic <- lapply(1:nsim, 
                           function(i) bucklandbounds(thetai=clusterRR_ilarge[[i]], thetaa = cluster_thetaa[[i]], 
-                                                     w_q=wslarge[[i]], sparsematrix=t(sparseMAT), overdisp.est = NULL))
+                                                     w_q=wslarge[[i]], sparsematrix=t(sparsematrix ), overdisp.est = NULL))
     ##################################################
     #(un-adjusted) MAW1 (B&A pg. 164) = Buckland 1997
     ##################################################
     outmaw1.bic <- lapply(1:nsim, 
                           function(i) maw1(thetai=clusterRR_ilarge[[i]], thetaa = cluster_thetaa[[i]], 
-                                           w_q=wslarge[[i]], sparsematrix=t(sparseMAT), overdisp.est = NULL))
+                                           w_q=wslarge[[i]], sparsematrix=t(sparsematrix ), overdisp.est = NULL))
     ##################################################
     #MAW2 (B&A pg. 345)
     ##################################################
     outmaw2.bic <- lapply(1:nsim, function(i) maw1(thetai=clusterRR_ilarge[[i]], thetaa = cluster_thetaa[[i]], 
-                                                   w_q=wslarge[[i]], sparsematrix=t(sparseMAT), overdisp.est = NULL))
+                                                   w_q=wslarge[[i]], sparsematrix=t(sparsematrix ), overdisp.est = NULL))
     ##################################################
     #Turek-Fletcher MATA Bounds (for non-normal data)
     ##################################################
     outmata.bic <- lapply(1:nsim, function(i) matabounds(thetai=clusterRR_ilarge[[i]], thetaa = cluster_thetaa[[i]], 
-                                                         w_q=wslarge[[i]], sparsematrix=t(sparseMAT), overdisp.est = NULL, transform="none"))
+                                                         w_q=wslarge[[i]], sparsematrix=t(sparsematrix ), overdisp.est = NULL, transform="none"))
     ##################################################
     #Turek-Fletcher MATA Bounds: SQRT TRANSFORMED
     ##################################################
     outmataT.bic <- lapply(1:nsim, function(i) matabounds(thetai=clusterRR_ilarge[[i]], thetaa = cluster_thetaa[[i]], 
-                                                          w_q=wslarge[[i]], sparsematrix=t(sparseMAT), overdisp.est = NULL, transform="sqrt"))
+                                                          w_q=wslarge[[i]], sparsematrix=t(sparsematrix ), overdisp.est = NULL, transform="sqrt"))
     ##################################################
     #Turek-Fletcher MATA Bounds: LOG TRANSFORMED
     ##################################################
     outmataTlog.bic <- lapply(1:nsim, function(i) matabounds(thetai=clusterRR_ilarge[[i]], thetaa = cluster_thetaa[[i]], 
-                                                             w_q=wslarge[[i]], sparsematrix=t(sparseMAT), overdisp.est = NULL, transform="log"))
+                                                             w_q=wslarge[[i]], sparsematrix=t(sparsematrix ), overdisp.est = NULL, transform="log"))
     
     #####################################################################################
     #####################################################################################
@@ -596,33 +616,33 @@ for(theta in thetas){
         ##################################################
         outbuck.aic <- lapply(1:nsim, 
                               function(i) bucklandbounds(thetai=clusterRR_ilarge[[i]], thetaa = cluster_thetaa[[i]], 
-                                                         w_q=wslarge[[i]], sparsematrix=t(sparseMAT), overdisp.est = NULL))
+                                                         w_q=wslarge[[i]], sparsematrix=t(sparsematrix ), overdisp.est = NULL))
         ##################################################
         #(un-adjusted) MAW1 (B&A pg. 164) = Buckland 1997
         ##################################################
         outmaw1.aic <- lapply(1:nsim, 
                               function(i) maw1(thetai=clusterRR_ilarge[[i]], thetaa = cluster_thetaa[[i]], 
-                                               w_q=wslarge[[i]], sparsematrix=t(sparseMAT), overdisp.est = NULL))
+                                               w_q=wslarge[[i]], sparsematrix=t(sparsematrix ), overdisp.est = NULL))
         ##################################################
         #MAW2 (B&A pg. 345)
         ##################################################
         outmaw2.aic <- lapply(1:nsim, function(i) maw1(thetai=clusterRR_ilarge[[i]], thetaa = cluster_thetaa[[i]], 
-                                                       w_q=wslarge[[i]], sparsematrix=t(sparseMAT), overdisp.est = NULL))
+                                                       w_q=wslarge[[i]], sparsematrix=t(sparsematrix ), overdisp.est = NULL))
         ##################################################
         #Turek-Fletcher MATA Bounds (for non-normal data)
         ##################################################
         outmata.aic <- lapply(1:nsim, function(i) matabounds(thetai=clusterRR_ilarge[[i]], thetaa = cluster_thetaa[[i]], 
-                                                             w_q=wslarge[[i]], sparsematrix=t(sparseMAT), overdisp.est = NULL, transform="none"))
+                                                             w_q=wslarge[[i]], sparsematrix=t(sparsematrix ), overdisp.est = NULL, transform="none"))
         ##################################################
         #Turek-Fletcher MATA Bounds: SQRT TRANSFORMED
         ##################################################
         outmataT.aic <- lapply(1:nsim, function(i) matabounds(thetai=clusterRR_ilarge[[i]], thetaa = cluster_thetaa[[i]], 
-                                                              w_q=wslarge[[i]], sparsematrix=t(sparseMAT), overdisp.est = NULL, transform="sqrt"))
+                                                              w_q=wslarge[[i]], sparsematrix=t(sparsematrix ), overdisp.est = NULL, transform="sqrt"))
         ##################################################
         #Turek-Fletcher MATA Bounds: LOG TRANSFORMED
         ##################################################
         outmataTlog.aic <- lapply(1:nsim, function(i) matabounds(thetai=clusterRR_ilarge[[i]], thetaa = cluster_thetaa[[i]], 
-                                                                 w_q=wslarge[[i]], sparsematrix=t(sparseMAT), overdisp.est = NULL, transform="log"))
+                                                                 w_q=wslarge[[i]], sparsematrix=t(sparsematrix ), overdisp.est = NULL, transform="log"))
     } else {
         print("AIC identifies same as BIC")
         nonma.aic <- lapply(1:nsim, function(i) rep(NA,3))
@@ -868,20 +888,20 @@ for(theta in thetas){
     probs.aic.p <- Matrix::rowSums(simindicator.aic.p)/nsim
     probs.aicc.p <- Matrix::rowSums(simindicator.aicc.p)/nsim
 
-    #map probability detections by IC to grey scale
-    colprob.qp <- colormapping(list(probs.bic.qp,
-                                    probs.aic.qp,
-                                    probs.aicc.qp,
-                                    as.vector(rrbin_cluster)), Time, cv = NULL,prob=TRUE)
-    #plot map with probability detection by each IC
-    probplotmapAllIC(colprob.qp,genpdf = TRUE, pdfname=paste0(sim.i, "_prob_qp_clusso.pdf"))
-
-    colprob.p <- colormapping(list(probs.bic.p,
-                                   probs.aic.p,
-                                   probs.aicc.p,
-                                   as.vector(rrbin_cluster)), Time, cv = NULL,prob=TRUE)
-    #plot map with probability detection by each IC
-    probplotmapAllIC(colprob.p,genpdf = TRUE, pdfname=paste0(sim.i, "_prob_p_clusso.pdf"))
+    # #map probability detections by IC to grey scale
+    # colprob.qp <- colormapping(list(probs.bic.qp,
+    #                                 probs.aic.qp,
+    #                                 probs.aicc.qp,
+    #                                 as.vector(rrbin_cluster)), Time, cv = NULL,prob=TRUE)
+    # #plot map with probability detection by each IC
+    # probplotmapAllIC(colprob.qp,genpdf = TRUE, pdfname=paste0(sim.i, "_prob_qp_clusso.pdf"))
+    # 
+    # colprob.p <- colormapping(list(probs.bic.p,
+    #                                probs.aic.p,
+    #                                probs.aicc.p,
+    #                                as.vector(rrbin_cluster)), Time, cv = NULL,prob=TRUE)
+    # #plot map with probability detection by each IC
+    # probplotmapAllIC(colprob.p,genpdf = TRUE, pdfname=paste0(sim.i, "_prob_p_clusso.pdf"))
 
     ##################################
     #POWER/FP Rate
@@ -1091,53 +1111,61 @@ for(theta in thetas){
     clusterRR_ilarge <- lapply(1:nsim, function(i) selectuniqRR(clusterRR_uniq_ilarge[[i]]))
     ##################################################
     #NON-MA VARIANCE
+    #TODO 2020-09-22
     ##################################################
+    ######################
+    # #MA by maxloc
+    # ix_locs<- rep(0,1040);ix_locs[ix] <-1
+    # ix_locs_mat <- matrix(aa, nrow = 1)%*%sparsematrix 
+    # ix_locs_mods <- which(ix_locs_mat!=0)
+    cluster_thetaa_locs <- lapply(1:nsim, function(i) 1)#lapply(1:nsim, function(i) sum(clusterRR_ilarge[[i]][ix_locs_mods]*wslarge[[i]][ix_locs_mods]))
+    cluster_thetaa <- lapply(1:nsim, function(i) sum(clusterRR_ilarge[[i]]*wslarge[[i]]))
+    ######################
     clusterRRlarge <- lapply(1:nsim, 
                              function(i) unique(sim_superclust_loc[[i]]$Lambda_dense[sim_superclust_loc[[i]]$maxpcs[sim_superclust_loc[[i]]$selection.bic],])[2])
-    se_clusterRRlarge <- lapply(1:nsim, function(i)sqrt(clusterRRlarge[[i]]/(Time*n)))
-    cluster_thetaa <- lapply(1:nsim, function(i) sum(clusterRR_ilarge[[i]]*wslarge[[i]]))
+    se_clusterRRlarge <- lapply(1:nsim, function(i)sqrt(cluster_thetaa_locs[[i]]/(Time*n)))
     
-    nonma.bic <- lapply(1:nsim, function(i) cbind(lb=clusterRRlarge[[i]]-1.96*se_clusterRRlarge[[i]], 
-                                                  clusterMA = clusterRRlarge[[i]],
-                                                  ub=clusterRRlarge[[i]]+1.96*se_clusterRRlarge[[i]]))
+    nonma.bic <- lapply(1:nsim, function(i) cbind(lb=cluster_thetaa_locs[[i]]-1.96*se_clusterRRlarge[[i]], 
+                                                  clusterMA = cluster_thetaa_locs[[i]],
+                                                  ub=cluster_thetaa_locs[[i]]+1.96*se_clusterRRlarge[[i]]))
     #asymptotic
-    se_clusterRRlarge_asymp <- lapply(1:nsim, function(i) sqrt(clusterRRlarge[[i]]/(sum(YSIM[[i]][ix]))))
-    nonma_asymp.bic <- lapply(1:nsim, function(i) cbind(lbasymp=clusterRRlarge[[i]]-1.96*se_clusterRRlarge_asymp[[i]], 
-                                                        clusterMA = clusterRRlarge[[i]],
-                                                        ubasymp=clusterRRlarge[[i]]+1.96*se_clusterRRlarge_asymp[[i]]))
+    se_clusterRRlarge_asymp <- lapply(1:nsim, function(i) sqrt(cluster_thetaa_locs[[i]]/(sum(YSIM[[i]]))))
+    nonma_asymp.bic <- lapply(1:nsim, function(i) cbind(lbasymp=cluster_thetaa_locs[[i]]-1.96*se_clusterRRlarge_asymp[[i]], 
+                                                        clusterMA = cluster_thetaa_locs[[i]],
+                                                        ubasymp=cluster_thetaa_locs[[i]]+1.96*se_clusterRRlarge_asymp[[i]]))
     
     ##################################################
     #Buckland 1997
     ##################################################
     outbuck.bic <- lapply(1:nsim, 
                           function(i) bucklandbounds(thetai=clusterRR_ilarge[[i]], thetaa = cluster_thetaa[[i]], 
-                                                     w_q=wslarge[[i]], sparsematrix=t(sparseMAT), overdisp.est = NULL))
+                                                     w_q=wslarge[[i]], sparsematrix=t(sparsematrix ), overdisp.est = NULL))
     ##################################################
     #(un-adjusted) MAW1 (B&A pg. 164) = Buckland 1997
     ##################################################
     outmaw1.bic <- lapply(1:nsim, 
                           function(i) maw1(thetai=clusterRR_ilarge[[i]], thetaa = cluster_thetaa[[i]], 
-                                           w_q=wslarge[[i]], sparsematrix=t(sparseMAT), overdisp.est = NULL))
+                                           w_q=wslarge[[i]], sparsematrix=t(sparsematrix ), overdisp.est = NULL))
     ##################################################
     #MAW2 (B&A pg. 345)
     ##################################################
     outmaw2.bic <- lapply(1:nsim, function(i) maw1(thetai=clusterRR_ilarge[[i]], thetaa = cluster_thetaa[[i]], 
-                                                   w_q=wslarge[[i]], sparsematrix=t(sparseMAT), overdisp.est = NULL))
+                                                   w_q=wslarge[[i]], sparsematrix=t(sparsematrix ), overdisp.est = NULL))
     ##################################################
     #Turek-Fletcher MATA Bounds (for non-normal data)
     ##################################################
     outmata.bic <- lapply(1:nsim, function(i) matabounds(thetai=clusterRR_ilarge[[i]], thetaa = cluster_thetaa[[i]], 
-                                                         w_q=wslarge[[i]], sparsematrix=t(sparseMAT), overdisp.est = NULL, transform="none"))
+                                                         w_q=wslarge[[i]], sparsematrix=t(sparsematrix ), overdisp.est = NULL, transform="none"))
     ##################################################
     #Turek-Fletcher MATA Bounds: SQRT TRANSFORMED
     ##################################################
     outmataT.bic <- lapply(1:nsim, function(i) matabounds(thetai=clusterRR_ilarge[[i]], thetaa = cluster_thetaa[[i]], 
-                                                          w_q=wslarge[[i]], sparsematrix=t(sparseMAT), overdisp.est = NULL, transform="sqrt"))
+                                                          w_q=wslarge[[i]], sparsematrix=t(sparsematrix ), overdisp.est = NULL, transform="sqrt"))
     ##################################################
     #Turek-Fletcher MATA Bounds: LOG TRANSFORMED
     ##################################################
     outmataTlog.bic <- lapply(1:nsim, function(i) matabounds(thetai=clusterRR_ilarge[[i]], thetaa = cluster_thetaa[[i]], 
-                                                             w_q=wslarge[[i]], sparsematrix=t(sparseMAT), overdisp.est = NULL, transform="log"))
+                                                             w_q=wslarge[[i]], sparsematrix=t(sparsematrix ), overdisp.est = NULL, transform="log"))
     
     #####################################################################################
     #####################################################################################
@@ -1155,53 +1183,61 @@ for(theta in thetas){
         clusterRR_ilarge <- lapply(1:nsim, function(i) selectuniqRR(clusterRR_uniq_ilarge[[i]]))
         ##################################################
         #NON-MA VARIANCE
+        #TODO 2020-09-22
         ##################################################
+        ######################
+        #MA by maxloc
+        #ix_locs<- rep(0,1040);ix_locs[ix] <-1
+        #ix_locs_mat <- matrix(aa, nrow = 1)%*%sparsematrix 
+        #ix_locs_mods <- which(ix_locs_mat!=0)
+        cluster_thetaa_locs <- lapply(1:nsim, function(i) 1)#lapply(1:nsim, function(i) sum(clusterRR_ilarge[[i]][ix_locs_mods]*wslarge[[i]][ix_locs_mods]))
+        cluster_thetaa <- lapply(1:nsim, function(i) sum(clusterRR_ilarge[[i]]*wslarge[[i]]))
+        ######################
         clusterRRlarge <- lapply(1:nsim, 
                                  function(i) unique(sim_superclust_loc[[i]]$Lambda_dense[sim_superclust_loc[[i]]$maxpcs[sim_superclust_loc[[i]]$selection.aic],])[2])
-        se_clusterRRlarge <- lapply(1:nsim, function(i)sqrt(clusterRRlarge[[i]]/(Time*n)))
-        cluster_thetaa <- lapply(1:nsim, function(i) sum(clusterRR_ilarge[[i]]*wslarge[[i]]))
+        se_clusterRRlarge <- lapply(1:nsim, function(i)sqrt(cluster_thetaa_locs[[i]]/(Time*n)))
         
-        nonma.aic <- lapply(1:nsim, function(i) cbind(lb=clusterRRlarge[[i]]-1.96*se_clusterRRlarge[[i]], 
-                                                      clusterMA = clusterRRlarge[[i]],
-                                                      ub=clusterRRlarge[[i]]+1.96*se_clusterRRlarge[[i]]))
+        nonma.aic <- lapply(1:nsim, function(i) cbind(lb=cluster_thetaa_locs[[i]]-1.96*se_clusterRRlarge[[i]], 
+                                                      clusterMA = cluster_thetaa_locs[[i]],
+                                                      ub=cluster_thetaa_locs[[i]]+1.96*se_clusterRRlarge[[i]]))
         #asymptotic
-        se_clusterRRlarge_asymp <- lapply(1:nsim, function(i) sqrt(clusterRRlarge[[i]]/(sum(YSIM[[i]][ix]))))
-        nonma_asymp.aic <- lapply(1:nsim, function(i) cbind(lbasymp=clusterRRlarge[[i]]-1.96*se_clusterRRlarge_asymp[[i]], 
-                                                            clusterMA = clusterRRlarge[[i]],
-                                                            ubasymp=clusterRRlarge[[i]]+1.96*se_clusterRRlarge_asymp[[i]]))
+        se_clusterRRlarge_asymp <- lapply(1:nsim, function(i) sqrt(cluster_thetaa_locs[[i]]/(sum(YSIM[[i]]))))
+        nonma_asymp.aic <- lapply(1:nsim, function(i) cbind(lbasymp=cluster_thetaa_locs[[i]]-1.96*se_clusterRRlarge_asymp[[i]], 
+                                                            clusterMA = cluster_thetaa_locs[[i]],
+                                                            ubasymp=cluster_thetaa_locs[[i]]+1.96*se_clusterRRlarge_asymp[[i]]))
         
         ##################################################
         #Buckland 1997
         ##################################################
         outbuck.aic <- lapply(1:nsim, 
                               function(i) bucklandbounds(thetai=clusterRR_ilarge[[i]], thetaa = cluster_thetaa[[i]], 
-                                                         w_q=wslarge[[i]], sparsematrix=t(sparseMAT), overdisp.est = NULL))
+                                                         w_q=wslarge[[i]], sparsematrix=t(sparsematrix ), overdisp.est = NULL))
         ##################################################
         #(un-adjusted) MAW1 (B&A pg. 164) = Buckland 1997
         ##################################################
         outmaw1.aic <- lapply(1:nsim, 
                               function(i) maw1(thetai=clusterRR_ilarge[[i]], thetaa = cluster_thetaa[[i]], 
-                                               w_q=wslarge[[i]], sparsematrix=t(sparseMAT), overdisp.est = NULL))
+                                               w_q=wslarge[[i]], sparsematrix=t(sparsematrix ), overdisp.est = NULL))
         ##################################################
         #MAW2 (B&A pg. 345)
         ##################################################
         outmaw2.aic <- lapply(1:nsim, function(i) maw1(thetai=clusterRR_ilarge[[i]], thetaa = cluster_thetaa[[i]], 
-                                                       w_q=wslarge[[i]], sparsematrix=t(sparseMAT), overdisp.est = NULL))
+                                                       w_q=wslarge[[i]], sparsematrix=t(sparsematrix ), overdisp.est = NULL))
         ##################################################
         #Turek-Fletcher MATA Bounds (for non-normal data)
         ##################################################
         outmata.aic <- lapply(1:nsim, function(i) matabounds(thetai=clusterRR_ilarge[[i]], thetaa = cluster_thetaa[[i]], 
-                                                             w_q=wslarge[[i]], sparsematrix=t(sparseMAT), overdisp.est = NULL, transform="none"))
+                                                             w_q=wslarge[[i]], sparsematrix=t(sparsematrix ), overdisp.est = NULL, transform="none"))
         ##################################################
         #Turek-Fletcher MATA Bounds: SQRT TRANSFORMED
         ##################################################
         outmataT.aic <- lapply(1:nsim, function(i) matabounds(thetai=clusterRR_ilarge[[i]], thetaa = cluster_thetaa[[i]], 
-                                                              w_q=wslarge[[i]], sparsematrix=t(sparseMAT), overdisp.est = NULL, transform="sqrt"))
+                                                              w_q=wslarge[[i]], sparsematrix=t(sparsematrix ), overdisp.est = NULL, transform="sqrt"))
         ##################################################
         #Turek-Fletcher MATA Bounds: LOG TRANSFORMED
         ##################################################
         outmataTlog.aic <- lapply(1:nsim, function(i) matabounds(thetai=clusterRR_ilarge[[i]], thetaa = cluster_thetaa[[i]], 
-                                                                 w_q=wslarge[[i]], sparsematrix=t(sparseMAT), overdisp.est = NULL, transform="log"))
+                                                                 w_q=wslarge[[i]], sparsematrix=t(sparsematrix ), overdisp.est = NULL, transform="log"))
     } else {
         print("AIC identifies same as BIC")
         nonma.aic <- lapply(1:nsim, function(i) rep(NA,3))
@@ -1413,33 +1449,33 @@ for(theta in thetas){
     ##################################################
     outbuck.bic <- lapply(1:nsim, 
                           function(i) bucklandbounds(thetai=clusterRR_ilarge[[i]], thetaa = cluster_thetaa[[i]], 
-                                                     w_q=wslarge[[i]], sparsematrix=t(sparseMAT), overdisp.est = NULL))
+                                                     w_q=wslarge[[i]], sparsematrix=t(sparsematrix ), overdisp.est = NULL))
     ##################################################
     #(un-adjusted) MAW1 (B&A pg. 164) = Buckland 1997
     ##################################################
     outmaw1.bic <- lapply(1:nsim, 
                           function(i) maw1(thetai=clusterRR_ilarge[[i]], thetaa = cluster_thetaa[[i]], 
-                                           w_q=wslarge[[i]], sparsematrix=t(sparseMAT), overdisp.est = NULL))
+                                           w_q=wslarge[[i]], sparsematrix=t(sparsematrix ), overdisp.est = NULL))
     ##################################################
     #MAW2 (B&A pg. 345)
     ##################################################
     outmaw2.bic <- lapply(1:nsim, function(i) maw1(thetai=clusterRR_ilarge[[i]], thetaa = cluster_thetaa[[i]], 
-                                                   w_q=wslarge[[i]], sparsematrix=t(sparseMAT), overdisp.est = NULL))
+                                                   w_q=wslarge[[i]], sparsematrix=t(sparsematrix ), overdisp.est = NULL))
     ##################################################
     #Turek-Fletcher MATA Bounds (for non-normal data)
     ##################################################
     outmata.bic <- lapply(1:nsim, function(i) matabounds(thetai=clusterRR_ilarge[[i]], thetaa = cluster_thetaa[[i]], 
-                                                         w_q=wslarge[[i]], sparsematrix=t(sparseMAT), overdisp.est = NULL, transform="none"))
+                                                         w_q=wslarge[[i]], sparsematrix=t(sparsematrix ), overdisp.est = NULL, transform="none"))
     ##################################################
     #Turek-Fletcher MATA Bounds: SQRT TRANSFORMED
     ##################################################
     outmataT.bic <- lapply(1:nsim, function(i) matabounds(thetai=clusterRR_ilarge[[i]], thetaa = cluster_thetaa[[i]], 
-                                                          w_q=wslarge[[i]], sparsematrix=t(sparseMAT), overdisp.est = NULL, transform="sqrt"))
+                                                          w_q=wslarge[[i]], sparsematrix=t(sparsematrix ), overdisp.est = NULL, transform="sqrt"))
     ##################################################
     #Turek-Fletcher MATA Bounds: LOG TRANSFORMED
     ##################################################
     outmataTlog.bic <- lapply(1:nsim, function(i) matabounds(thetai=clusterRR_ilarge[[i]], thetaa = cluster_thetaa[[i]], 
-                                                             w_q=wslarge[[i]], sparsematrix=t(sparseMAT), overdisp.est = NULL, transform="log"))
+                                                             w_q=wslarge[[i]], sparsematrix=t(sparsematrix ), overdisp.est = NULL, transform="log"))
     
     #####################################################################################
     #####################################################################################
@@ -1477,33 +1513,33 @@ for(theta in thetas){
         ##################################################
         outbuck.aic <- lapply(1:nsim, 
                               function(i) bucklandbounds(thetai=clusterRR_ilarge[[i]], thetaa = cluster_thetaa[[i]], 
-                                                         w_q=wslarge[[i]], sparsematrix=t(sparseMAT), overdisp.est = NULL))
+                                                         w_q=wslarge[[i]], sparsematrix=t(sparsematrix ), overdisp.est = NULL))
         ##################################################
         #(un-adjusted) MAW1 (B&A pg. 164) = Buckland 1997
         ##################################################
         outmaw1.aic <- lapply(1:nsim, 
                               function(i) maw1(thetai=clusterRR_ilarge[[i]], thetaa = cluster_thetaa[[i]], 
-                                               w_q=wslarge[[i]], sparsematrix=t(sparseMAT), overdisp.est = NULL))
+                                               w_q=wslarge[[i]], sparsematrix=t(sparsematrix ), overdisp.est = NULL))
         ##################################################
         #MAW2 (B&A pg. 345)
         ##################################################
         outmaw2.aic <- lapply(1:nsim, function(i) maw1(thetai=clusterRR_ilarge[[i]], thetaa = cluster_thetaa[[i]], 
-                                                       w_q=wslarge[[i]], sparsematrix=t(sparseMAT), overdisp.est = NULL))
+                                                       w_q=wslarge[[i]], sparsematrix=t(sparsematrix ), overdisp.est = NULL))
         ##################################################
         #Turek-Fletcher MATA Bounds (for non-normal data)
         ##################################################
         outmata.aic <- lapply(1:nsim, function(i) matabounds(thetai=clusterRR_ilarge[[i]], thetaa = cluster_thetaa[[i]], 
-                                                             w_q=wslarge[[i]], sparsematrix=t(sparseMAT), overdisp.est = NULL, transform="none"))
+                                                             w_q=wslarge[[i]], sparsematrix=t(sparsematrix ), overdisp.est = NULL, transform="none"))
         ##################################################
         #Turek-Fletcher MATA Bounds: SQRT TRANSFORMED
         ##################################################
         outmataT.aic <- lapply(1:nsim, function(i) matabounds(thetai=clusterRR_ilarge[[i]], thetaa = cluster_thetaa[[i]], 
-                                                              w_q=wslarge[[i]], sparsematrix=t(sparseMAT), overdisp.est = NULL, transform="sqrt"))
+                                                              w_q=wslarge[[i]], sparsematrix=t(sparsematrix ), overdisp.est = NULL, transform="sqrt"))
         ##################################################
         #Turek-Fletcher MATA Bounds: LOG TRANSFORMED
         ##################################################
         outmataTlog.aic <- lapply(1:nsim, function(i) matabounds(thetai=clusterRR_ilarge[[i]], thetaa = cluster_thetaa[[i]], 
-                                                                 w_q=wslarge[[i]], sparsematrix=t(sparseMAT), overdisp.est = NULL, transform="log"))
+                                                                 w_q=wslarge[[i]], sparsematrix=t(sparsematrix ), overdisp.est = NULL, transform="log"))
     } else {
         print("AIC identifies same as BIC")
         nonma.aic <- lapply(1:nsim, function(i) rep(NA,3))
@@ -1743,20 +1779,20 @@ for(theta in thetas){
     probs.aic.p <- Matrix::rowSums(simindicator.aic.p)/nsim
     probs.aicc.p <- Matrix::rowSums(simindicator.aicc.p)/nsim
     
-    #map probability detections by IC to grey scale
-    colprob.qp <- colormapping(list(probs.bic.qp,
-                                    probs.aic.qp,
-                                    probs.aicc.qp,
-                                    as.vector(rrbin_cluster)), Time, cv = NULL,prob=TRUE)
-    #plot map with probability detection by each IC
-    probplotmapAllIC(colprob.qp,genpdf = TRUE, pdfname=paste0(sim.i, "_prob_qp_clusso.pdf"))
-    
-    colprob.p <- colormapping(list(probs.bic.p,
-                                   probs.aic.p,
-                                   probs.aicc.p,
-                                   as.vector(rrbin_cluster)), Time, cv = NULL,prob=TRUE)
-    #plot map with probability detection by each IC
-    probplotmapAllIC(colprob.p,genpdf = TRUE, pdfname=paste0(sim.i, "_prob_p_clusso.pdf"))
+    # #map probability detections by IC to grey scale
+    # colprob.qp <- colormapping(list(probs.bic.qp,
+    #                                 probs.aic.qp,
+    #                                 probs.aicc.qp,
+    #                                 as.vector(rrbin_cluster)), Time, cv = NULL,prob=TRUE)
+    # #plot map with probability detection by each IC
+    # probplotmapAllIC(colprob.qp,genpdf = TRUE, pdfname=paste0(sim.i, "_prob_qp_clusso.pdf"))
+    # 
+    # colprob.p <- colormapping(list(probs.bic.p,
+    #                                probs.aic.p,
+    #                                probs.aicc.p,
+    #                                as.vector(rrbin_cluster)), Time, cv = NULL,prob=TRUE)
+    # #plot map with probability detection by each IC
+    # probplotmapAllIC(colprob.p,genpdf = TRUE, pdfname=paste0(sim.i, "_prob_p_clusso.pdf"))
     
     ##################################
     #POWER/FP Rate
