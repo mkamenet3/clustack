@@ -92,18 +92,18 @@ for(risk in risks){
             ix <- which(rr==risk) #ix ST cells wi
             
             
-            # sim_superclust_pc_large <- lapply(1:nsim, function(i) detectclusters(sparseMAT, Ex[[i]], YSIM[[i]],
-            #                                                                      numCenters, Time, maxclust,
-            #                                                                      bylocation = FALSE, model="poisson", 
-            #                                                                      overdisp.est = overdisp.est))
-            
-            
-            ##############
-            #maxlocs start
             sim_superclust_pc_large <- lapply(1:nsim, function(i) detectclusters(sparseMAT, Ex[[i]], YSIM[[i]],
                                                                                  numCenters, Time, maxclust,
-                                                                                 bylocation = TRUE, model="poisson", 
+                                                                                 bylocation = FALSE, model="poisson",
                                                                                  overdisp.est = overdisp.est))
+            
+            
+            # ##############
+            # #maxlocs start
+            # sim_superclust_pc_large <- lapply(1:nsim, function(i) detectclusters(sparseMAT, Ex[[i]], YSIM[[i]],
+            #                                                                      numCenters, Time, maxclust,
+            #                                                                      bylocation = TRUE, model="poisson", 
+            #                                                                      overdisp.est = overdisp.est))
             #find all PCs that overlap max location
             wslarge <- lapply(1:nsim, function(i) sim_superclust_pc_large[[i]]$wtMAT[,sim_superclust_pc_large[[i]]$selection.bic])
             clusterRR_uniqlarge <- lapply(1:nsim, function(i) sapply(1:nrow(sim_superclust_pc_large[[i]]$Lambda_dense), 
