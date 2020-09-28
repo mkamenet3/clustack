@@ -123,20 +123,37 @@ for(risk in risks){
             ##########################
             outbuck.time <- system.time(outbuck <- lapply(1:nsim, 
                               function(i) bucklandbounds(thetai=clusterRR_ilarge[[i]], thetaa =cluster_thetaa[[i]], 
-                                                         w_q=wslarge[[i]], sparsematrix=t(sparseMAT), overdisp.est = NULL)))
+                                                         w_q=wslarge[[i]], sparsematrix=t(sparseMAT), outExp[[i]],
+                                                         overdisp.est = NULL)))
             outbuck
+            ##########################
+            #Log-scale
+            outbuckTlog.time <- system.time(outbuckTlog <- lapply(1:nsim, 
+                                                          function(i) bucklandbounds(thetai=clusterRR_ilarge[[i]], thetaa =cluster_thetaa[[i]], 
+                                                                                     w_q=wslarge[[i]], sparsematrix=t(sparseMAT), outExp[[i]],
+                                                                                     overdisp.est = NULL, transform=TRUE)))
+            outbuckTlog
             
             ##################################################
             ##################################################
-            #(un-adjusted) MAW1 (B&A pg. 164) = Buckland 1997
+            #(adjusted) MAW1 (B&A pg. 164)
             ##################################################
             ##################################################
             
             
             outmaw1.time <- system.time(outmaw1 <- lapply(1:nsim, 
                               function(i) maw1(thetai=clusterRR_ilarge[[i]], thetaa = cluster_thetaa[[i]], 
-                                               w_q=wslarge[[i]], sparsematrix=t(sparseMAT), overdisp.est = NULL)))
+                                               w_q=wslarge[[i]], sparsematrix=t(sparseMAT), outExp[[i]], overdisp.est = NULL)))
             outmaw1
+            
+            ##########################
+            #Log-scale
+            outmaw1Tlog.time <- system.time(outmaw1Tlog <- lapply(1:nsim, 
+                                                          function(i) maw1(thetai=clusterRR_ilarge[[i]], thetaa = cluster_thetaa[[i]], 
+                                                                           w_q=wslarge[[i]], sparsematrix=t(sparseMAT), outExp[[i]], overdisp.est = NULL,
+                                                                           transform=TRUE)))
+            outmaw1Tlog
+            
             
             
             ##################################################
@@ -146,8 +163,16 @@ for(risk in risks){
             ##################################################
             
             outmaw2.time <- system.time(outmaw2 <- lapply(1:nsim, function(i) maw1(thetai=clusterRR_ilarge[[i]], thetaa = cluster_thetaa[[i]], 
-                                                       w_q=wslarge[[i]], sparsematrix=t(sparseMAT), overdisp.est = NULL)))
+                                                       w_q=wslarge[[i]], sparsematrix=t(sparseMAT), outExp[[i]], overdisp.est = NULL)))
             outmaw2
+            
+            ##########################
+            #Log-scale
+            outmaw2Tlog.time <- system.time(outmaw2Tlog  <- lapply(1:nsim, function(i) maw1(thetai=clusterRR_ilarge[[i]], thetaa = cluster_thetaa[[i]], 
+                                                                                   w_q=wslarge[[i]], sparsematrix=t(sparseMAT), outExp[[i]], 
+                                                                                   overdisp.est = NULL,
+                                                                                   transform=TRUE)))
+            outmaw2Tlog
             
             ##################################################
             ##################################################
@@ -157,7 +182,7 @@ for(risk in risks){
 
             outmata.time <- system.time(outmata <- lapply(1:nsim, function(i) matabounds(thetai=clusterRR_ilarge[[i]], 
                                                                                          thetaa = cluster_thetaa[[i]], 
-                                                             w_q=wslarge[[i]], sparsematrix=t(sparseMAT), 
+                                                             w_q=wslarge[[i]], sparsematrix=t(sparseMAT), outExp = outExp[[i]],
                                                              overdisp.est = NULL, transform="none")))
             outmata
             ##################################################
@@ -166,11 +191,11 @@ for(risk in risks){
             ##################################################
             ##################################################
             
-            outmataT.time <- system.time(outmataT <- lapply(1:nsim, function(i) matabounds(thetai=clusterRR_ilarge[[i]], 
+            outmataTsqrt.time <- system.time(outmataTsqrt <- lapply(1:nsim, function(i) matabounds(thetai=clusterRR_ilarge[[i]], 
                                                                                            thetaa = cluster_thetaa[[i]], 
-                                                               w_q=wslarge[[i]], sparsematrix=t(sparseMAT), 
+                                                               w_q=wslarge[[i]], sparsematrix=t(sparseMAT), outExp = outExp[[i]],
                                                                overdisp.est = NULL, transform="sqrt")))
-            outmataT
+            outmataTsqrt
             
             ##################################################
             ##################################################
@@ -180,7 +205,7 @@ for(risk in risks){
 
             outmataTlog.time <- system.time(outmataTlog <- lapply(1:nsim, function(i) matabounds(thetai=clusterRR_ilarge[[i]], 
                                                                                                  thetaa = cluster_thetaa[[i]], 
-                                                                     w_q=wslarge[[i]], sparsematrix=t(sparseMAT), 
+                                                                     w_q=wslarge[[i]], sparsematrix=t(sparseMAT), outExp = outExp[[i]],
                                                                      overdisp.est = NULL, transform="log")))
             outmataTlog
             
@@ -192,10 +217,14 @@ for(risk in risks){
     
             master <- cbind.data.frame(matrix(unlist(nonma), byrow=TRUE, ncol=3),
                                        matrix(unlist(nonma_asymp), byrow=TRUE, ncol=3),
+                                       matrix(unlist(outbuck), byrow=TRUE, ncol=3),
+                                       matrix(unlist(outbuckTlog), byrow=TRUE, ncol=3),
                                        matrix(unlist(outmaw1), byrow=TRUE, ncol=3),
+                                       matrix(unlist(outmaw1Tlog), byrow=TRUE, ncol=3),
                                        matrix(unlist(outmaw2), byrow=TRUE, ncol=3),
+                                       matrix(unlist(outmaw2Tlog), byrow=TRUE, ncol=3),
                                        matrix(unlist(outmata), byrow=TRUE, ncol=3),
-                                       matrix(unlist(outmataT), byrow=TRUE, ncol=3),
+                                       matrix(unlist(outmataTsqrt), byrow=TRUE, ncol=3),
                                        matrix(unlist(outmataTlog), byrow=TRUE, ncol=3))
             
             
@@ -207,24 +236,32 @@ for(risk in risks){
             master$nonma.time <- rep(nonma.time[[3]], nsim)
             master$nonma_asymp.time <- rep(nonma_asymp.time[[3]], nsim)
             master$outbuck.time <- rep(outbuck.time[[3]], nsim)
+            master$outbuckTlog.time <- rep(outbuckTlog.time[[3]], nsim)
             master$outmaw1.time <- rep(outmaw1.time[[3]], nsim)
+            master$outmaw1Tlog.time <- rep(outmaw1Tlog.time[[3]], nsim)
             master$outmaw2.time <- rep(outmaw2.time[[3]], nsim)
+            master$outmaw2Tlog.time <- rep(outmaw2Tlog.time[[3]], nsim)
             master$outmata.time <- rep(outmata.time[[3]], nsim)
-            master$outmataT.time <- rep(outmataT.time[[3]], nsim)
+            master$outmataTsqrt.time <- rep(outmataTsqrt.time[[3]], nsim)
             master$outmataTlog.time <- rep(outmataTlog.time[[3]], nsim)
             
             
             names(master) <- c("nonma.LB", "clusterMA", "nonma.UB",
                                "nonma_asymp.LB", "clusterMA.1", "nonma_asymp.UB",
-                               "maw1.LB", "clusterMA.2", "maw1.UB",
-                               "maw2.LB", "clusterMA.3", "maw2.UB",
-                               "mata.LB", "clusterMA.4", "mata.UB",
-                               "matasqrt.LB", "clusterMA.5", "matasqrt.UB",
-                               "matalog.LB", "clusterMA.6", "matalog.UB", 
+                               "buck.LB", "clusterMA.2", "buck.UB",
+                               "bucklog.LB", "clusterMA.3", "bucklog.UB",
+                               "maw1.LB", "clusterMA.4", "maw1.UB",
+                               "maw1log.LB", "clusterMA.5", "maw1log.UB",
+                               "maw2.LB", "clusterMA.6", "maw2.UB",
+                               "maw2log.LB", "clusterMA.7", "maw2log.UB",
+                               "mata.LB", "clusterMA.8", "mata.UB",
+                               "matasqrt.LB", "clusterMA.9", "matasqrt.UB",
+                               "matalog.LB", "clusterMA.10", "matalog.UB", 
                                "risk", "ecount", "rad", "anyforced","simID", 
                                "nonma.time", "nonma_asymp.time", "outbuck.time",
-                               "outmaw1.time", "outmaw2.time", "outmata.time",
-                               "outmataT.time","outmataTlog.time")
+                               "outbucklog.time","outmaw1.time","outmaw1log.time",
+                               "outmaw2.time","outmaw2log.time", "outmata.time",
+                               "outmataTsqrt.time","outmataTlog.time")
             masterout <- rbind(masterout, master)
 
         }
