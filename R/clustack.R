@@ -832,83 +832,134 @@ clusterselect <- function(wLambda,Yx, Ex, model,maxclust, numCenters, Time,quasi
 }
 
 # 
-# foo <- function(a,b, tr=NULL){
-#     if(!is.null(tr) ){
-#         print("works")
-#     } else {
-#         print("nonlog")
-#     }
-# }
-# foo(2,4,tr=TRUE)
-# foo(2,4)
+
 
 ####################################################################
 #CLUSTACKBOUNDS FUNCTIONS
 ####################################################################
 
-bucklandbounds <- function(thetai,thetaa, w_q,sparsematrix, outExp,overdisp.est, transform=NULL) {
-    #NT <- rowSums(sparsematrix)
-    if(!is.null(transform)){
-        #print("log-scale")
-        #log transform
-        if(!is.null(overdisp.est)){
-            varthetai <- sapply(1:nrow(sparsematrix), function(k) overdisp.est*(1/(thetai[k]*outExp[k])))
+bucklandbounds <- function(thetai,thetaa, w_q,sparsematrix, outExp,overdisp.est, transform=NULL, cellrates=FALSE) {
+    if(cellrates == TRUE){
+        if(!is.null(transform)){
+            if(!is.null(overdisp.est)){
+                varthetai <- sapply(1:nrow(sparsematrix), function(k) overdisp.est*(1/(thetai[k,]*outExp)))
+            } else {
+                varthetai <- sapply(1:nrow(sparsematrix), function(k) 1/thetai[k,]*outExp)
+            }
+            withintheta <- (log(thetai) - log(thetaa))^2
+            wtnbtn <- sapply(1:nrow(sparsematrix), function(k) sqrt(varthetai[,k] + withintheta[k,]))
+            varthetas_w <- matrix(w_q, nrow = 1)%*%t(wtnbtn)
+            var_thetaa <- as.vector(varthetas_w)
+            UBa = exp(as.vector(log(thetaa)) + 1.96*sqrt(var_thetaa))
+            LBa = exp(as.vector(log(thetaa)) - 1.96*sqrt(var_thetaa))
+            
         } else {
-            varthetai <- sapply(1:nrow(sparsematrix), function(k) 1/(thetai[k]*outExp[k]))
+            if(!is.null(overdisp.est)){
+                varthetai <- sapply(1:nrow(sparsematrix), function(k) overdisp.est*thetai[k,]/outExp)
+            } else {
+                varthetai <- sapply(1:nrow(sparsematrix), function(k) thetai[k,]/outExp)
+            }
+            withintheta <- (thetai - thetaa)^2
+            wtnbtn <- sapply(1:nrow(sparsematrix), function(k) sqrt(varthetai[,k] + withintheta[k,]))
+            varthetas_w <- matrix(w_q, nrow = 1)%*%t(wtnbtn)
+            var_thetaa <- as.vector(varthetas_w)
+            UBa = as.vector(thetaa) + 1.96*sqrt(var_thetaa)
+            LBa = as.vector(thetaa) - 1.96*sqrt(var_thetaa)
         }
-        withintheta <- (log(thetai) - log(thetaa))^2
-        varthetas_w <- sum(w_q*sqrt(varthetai + withintheta))^2
-        var_thetaa <- as.vector(varthetas_w)
-        UBa = exp(as.vector(log(thetaa)) + 1.96*sqrt(var_thetaa))
-        LBa = exp(as.vector(log(thetaa)) - 1.96*sqrt(var_thetaa))
-        
     } else {
-        #print("No transform")
-        #no transform
-        if(!is.null(overdisp.est)){
-            varthetai <- sapply(1:nrow(sparsematrix), function(k) overdisp.est*thetai[k]/outExp[k])
+        if(!is.null(transform)){
+            #print("log-scale")
+            #log transform
+            if(!is.null(overdisp.est)){
+                varthetai <- sapply(1:nrow(sparsematrix), function(k) overdisp.est*(1/(thetai[k]*outExp[k])))
+            } else {
+                varthetai <- sapply(1:nrow(sparsematrix), function(k) 1/(thetai[k]*outExp[k]))
+            }
+            withintheta <- (log(thetai) - log(thetaa))^2
+            varthetas_w <- sum(w_q*sqrt(varthetai + withintheta))^2
+            var_thetaa <- as.vector(varthetas_w)
+            UBa = exp(as.vector(log(thetaa)) + 1.96*sqrt(var_thetaa))
+            LBa = exp(as.vector(log(thetaa)) - 1.96*sqrt(var_thetaa))
+            
         } else {
-            varthetai <- sapply(1:nrow(sparsematrix), function(k) thetai[k]/outExp[k])
+            #print("No transform")
+            #no transform
+            if(!is.null(overdisp.est)){
+                varthetai <- sapply(1:nrow(sparsematrix), function(k) overdisp.est*thetai[k]/outExp[k])
+            } else {
+                varthetai <- sapply(1:nrow(sparsematrix), function(k) thetai[k]/outExp[k])
+            }
+            withintheta <- (thetai - thetaa)^2
+            varthetas_w <- sum(w_q*sqrt(varthetai + withintheta))
+            var_thetaa <- as.vector(varthetas_w)
+            UBa = as.vector(thetaa) + 1.96*sqrt(var_thetaa)
+            LBa = as.vector(thetaa) - 1.96*sqrt(var_thetaa)
         }
-        withintheta <- (thetai - thetaa)^2
-        varthetas_w <- sum(w_q*sqrt(varthetai + withintheta))
-        var_thetaa <- as.vector(varthetas_w)
-        UBa = as.vector(thetaa) + 1.96*sqrt(var_thetaa)
-        LBa = as.vector(thetaa) - 1.96*sqrt(var_thetaa)
     }
+    
     return(list(buckland.LB = LBa,
                 clusterMA = thetaa,
                 buckland.UB = UBa))
 }
 
-maw1 <- function(thetai,thetaa, w_q,sparsematrix, outExp, overdisp.est, transform=NULL) {
+maw1 <- function(thetai,thetaa, w_q,sparsematrix, outExp, overdisp.est, transform=NULL, cellrates=FALSE) {
     NT <- rowSums(sparsematrix)
     a <- 1 - ((1 - 0.05) / 2)
     z <- c(qt(a, NT) / qnorm(a))^2
-    if(!is.null(transform)){
-        #print("log-scale")
-        if(!is.null(overdisp.est)){
-            varthetai <- sapply(1:nrow(sparsematrix), function(k) overdisp.est*(1/(thetai[k]*outExp[k])))
+    if(cellrates==TRUE){
+        if(!is.null(transform)){
+            #print("log-scale")
+            if(!is.null(overdisp.est)){
+                varthetai <- sapply(1:nrow(sparsematrix), function(k) overdisp.est*(1/(thetai[k,]*outExp)))
+            } else {
+                varthetai <- sapply(1:nrow(sparsematrix), function(k) 1/(thetai[k,]*outExp))
+            }
+            withintheta <- (log(thetai) - log(thetaa))^2
+            se_thetaa <- sum(w_q*sqrt(z*varthetai+withintheta))
+            var_thetaa <- as.vector(se_thetaa)
+            UBa = as.vector(thetaa) + 1.96*(se_thetaa)
+            LBa = as.vector(thetaa) - 1.96*(se_thetaa)
         } else {
-            varthetai <- sapply(1:nrow(sparsematrix), function(k) 1/(thetai[k]*outExp[k]))
+            if(!is.null(overdisp.est)){
+                varthetai <- sapply(1:nrow(sparsematrix), function(k) overdisp.est*thetai[k,]/outExp)
+            } else {
+                varthetai <- sapply(1:nrow(sparsematrix), function(k) thetai[k,]/outExp)
+            }
+            withintheta <- (thetai - thetaa)^2
+            wtnbtn <- sapply(1:nrow(sparsematrix), function(k) z*(varthetai[,k] + withintheta[k,]))
+            #se_thetaa <- sum(w_q*sqrt(z*varthetai+withintheta))
+            var_thetaa <- as.vector(se_thetaa)
+            UBa = exp(as.vector(log(thetaa)) + 1.96*(se_thetaa))
+            LBa = exp(as.vector(log(thetaa)) - 1.96*(se_thetaa))
         }
-        withintheta <- (log(thetai) - log(thetaa))^2
-        se_thetaa <- sum(w_q*sqrt(z*varthetai+withintheta))
-        var_thetaa <- as.vector(se_thetaa)
-        UBa = as.vector(thetaa) + 1.96*(se_thetaa)
-        LBa = as.vector(thetaa) - 1.96*(se_thetaa)
+        
     } else {
-        if(!is.null(overdisp.est)){
-            varthetai <- sapply(1:nrow(sparsematrix), function(k) overdisp.est*thetai[k]/outExp[k])
+        if(!is.null(transform)){
+            #print("log-scale")
+            if(!is.null(overdisp.est)){
+                varthetai <- sapply(1:nrow(sparsematrix), function(k) overdisp.est*(1/(thetai[k]*outExp[k])))
+            } else {
+                varthetai <- sapply(1:nrow(sparsematrix), function(k) 1/(thetai[k]*outExp[k]))
+            }
+            withintheta <- (log(thetai) - log(thetaa))^2
+            se_thetaa <- sum(w_q*sqrt(z*varthetai+withintheta))
+            var_thetaa <- as.vector(se_thetaa)
+            UBa = as.vector(thetaa) + 1.96*(se_thetaa)
+            LBa = as.vector(thetaa) - 1.96*(se_thetaa)
         } else {
-            varthetai <- sapply(1:nrow(sparsematrix), function(k) thetai[k]/outExp[k])
+            if(!is.null(overdisp.est)){
+                varthetai <- sapply(1:nrow(sparsematrix), function(k) overdisp.est*thetai[k]/outExp[k])
+            } else {
+                varthetai <- sapply(1:nrow(sparsematrix), function(k) thetai[k]/outExp[k])
+            }
+            withintheta <- (thetai - thetaa)^2
+            se_thetaa <- sum(w_q*sqrt(z*varthetai+withintheta))
+            var_thetaa <- as.vector(se_thetaa)
+            UBa = exp(as.vector(log(thetaa)) + 1.96*(se_thetaa))
+            LBa = exp(as.vector(log(thetaa)) - 1.96*(se_thetaa))
         }
-        withintheta <- (thetai - thetaa)^2
-        se_thetaa <- sum(w_q*sqrt(z*varthetai+withintheta))
-        var_thetaa <- as.vector(se_thetaa)
-        UBa = exp(as.vector(log(thetaa)) + 1.96*(se_thetaa))
-        LBa = exp(as.vector(log(thetaa)) - 1.96*(se_thetaa))
     }
+    
     return(list(maw1.LB = LBa,
                 clusterMA = thetaa,
                 maw1.UB = UBa))
@@ -959,6 +1010,9 @@ mata_tailareazscore <- function(thetaii, thetaaa, se.thetaii, w_q, alpha){
 
 matabounds <- function(thetai,thetaa, w_q,sparsematrix, outExp, overdisp.est,transform=c("none","log", "sqrt")) {
     #NT <- rowSums(sparsematrix)
+    if(is.null(transform)){
+        none = matabounds_none(thetai,thetaa, w_q,sparsematrix, overdisp.est, outExp)
+    }
     switch(transform,
            none = matabounds_none(thetai,thetaa, w_q,sparsematrix, overdisp.est, outExp),
            log = matabounds_log(thetai,thetaa, w_q,sparsematrix, overdisp.est, outExp),

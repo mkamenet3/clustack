@@ -269,4 +269,4 @@ for(risk in risks){
     
 }
 write.csv(masterout, file="masterout_nsim50_theta.csv")
-
+rm(list=ls())
