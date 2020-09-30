@@ -45,7 +45,7 @@ cent <- 150
 risks <- c(1.1,1.5,2)
 ecounts <- c(5,10,50,100,250,500,1000)#5#10#50#100#250#500#1000
 overdisp.est <- NULL
-nsim <-50#100
+nsim <- 25#50#100
 tim <- 1:5
 masterout <- NULL
 
@@ -124,7 +124,7 @@ for(risk in risks){
             ##################################################
             wslarge <- lapply(1:nsim, function(i) sim_superclust_pc_large[[i]]$wtMAT[,sim_superclust_pc_large[[i]]$selection.bic_forceid])
             clusterRR_ilarge <- lapply(1:nsim, function(i) sim_superclust_pc_large[[i]]$Lambda_dense) #lapply(1:nsim, function(i)aa)
-            
+            cluster_thetaa <- lapply(1:nsim, function(i) sim_superclust_pc_large[[i]]$wLambda[sim_superclust_pc_large[[i]]$selection.bic_forceid,])
             #test <- wslarge[[1]]%*%clusterRR_uniqlarge[[1]]
             # clusterRR_uniqlarge <- lapply(1:nsim, function(i) sapply(1:nrow(sim_superclust_pc_large[[i]]$Lambda_dense), 
             #                                                          function(k) unique(sim_superclust_pc_large[[i]]$Lambda_dense[k,]))) 
@@ -186,14 +186,14 @@ for(risk in risks){
             #                                               function(i) bucklandbounds(thetai=clusterRR_ilarge[[i]], thetaa =cluster_thetaa[[i]], 
             #                                                                          w_q=wslarge[[i]], sparsematrix=t(sparseMAT), outExp[[i]],
             #                                                                          overdisp.est = NULL)))
-            # outbuck
+            str(outbuck)
             ##########################
             #Log-scale
             outbuckTlog.time <- system.time(outbuckTlog <- lapply(1:nsim, 
                                                                   function(i) bucklandbounds(thetai=clusterRR_ilarge[[i]], thetaa =cluster_thetaa[[i]], 
-                                                                                             w_q=wslarge[[i]], sparsematrix=t(sparseMAT), outExp[[i]],
+                                                                                             w_q=wslarge[[i]], sparsematrix=t(sparseMAT), Ex[[i]],
                                                                                              overdisp.est = NULL, transform=TRUE, cellrates = TRUE)))
-            outbuckTlog
+            str(outbuckTlog)
             
             ##################################################
             ##################################################
@@ -203,17 +203,23 @@ for(risk in risks){
             
             
             outmaw1.time <- system.time(outmaw1 <- lapply(1:nsim, 
-                                                          function(i) maw1(thetai=clusterRR_ilarge[[i]], thetaa = cluster_thetaa[[i]], 
-                                                                           w_q=wslarge[[i]], sparsematrix=t(sparseMAT), outExp[[i]], overdisp.est = NULL)))
-            outmaw1
+                                                          function(i) maw1(thetai=clusterRR_ilarge[[i]], 
+                                                                           thetaa = cluster_thetaa[[i]], 
+                                                                           w_q=wslarge[[i]], sparsematrix=t(sparseMAT), 
+                                                                           Ex[[i]], overdisp.est = NULL,
+                                                                           cellrates = TRUE)))
+            str(outmaw1)
             
             ##########################
             #Log-scale
             outmaw1Tlog.time <- system.time(outmaw1Tlog <- lapply(1:nsim, 
-                                                                  function(i) maw1(thetai=clusterRR_ilarge[[i]], thetaa = cluster_thetaa[[i]], 
-                                                                                   w_q=wslarge[[i]], sparsematrix=t(sparseMAT), outExp[[i]], overdisp.est = NULL,
-                                                                                   transform=TRUE)))
-            outmaw1Tlog
+                                                                  function(i) maw1(thetai=clusterRR_ilarge[[i]], 
+                                                                                   thetaa = cluster_thetaa[[i]], 
+                                                                                   w_q=wslarge[[i]], 
+                                                                                   sparsematrix=t(sparseMAT), 
+                                                                                   Ex[[i]], overdisp.est = NULL,
+                                                                                   transform=TRUE, cellrates = TRUE)))
+            str(outmaw1Tlog)
             
             
             
@@ -223,17 +229,25 @@ for(risk in risks){
             ##################################################
             ##################################################
             
-            outmaw2.time <- system.time(outmaw2 <- lapply(1:nsim, function(i) maw1(thetai=clusterRR_ilarge[[i]], thetaa = cluster_thetaa[[i]], 
-                                                                                   w_q=wslarge[[i]], sparsematrix=t(sparseMAT), outExp[[i]], overdisp.est = NULL)))
-            outmaw2
+            outmaw2.time <- system.time(outmaw2 <- lapply(1:nsim, function(i) maw1(thetai=clusterRR_ilarge[[i]], 
+                                                                                   thetaa = cluster_thetaa[[i]], 
+                                                                                   w_q=wslarge[[i]], 
+                                                                                   sparsematrix=t(sparseMAT), 
+                                                                                   Ex[[i]], overdisp.est = NULL,
+                                                                                   cellrates = TRUE)))
+            str(outmaw2)
             
             ##########################
             #Log-scale
-            outmaw2Tlog.time <- system.time(outmaw2Tlog  <- lapply(1:nsim, function(i) maw1(thetai=clusterRR_ilarge[[i]], thetaa = cluster_thetaa[[i]], 
-                                                                                            w_q=wslarge[[i]], sparsematrix=t(sparseMAT), outExp[[i]], 
+            outmaw2Tlog.time <- system.time(outmaw2Tlog  <- lapply(1:nsim, function(i) maw1(thetai=clusterRR_ilarge[[i]],
+                                                                                            thetaa = cluster_thetaa[[i]], 
+                                                                                            w_q=wslarge[[i]], 
+                                                                                            sparsematrix=t(sparseMAT), 
+                                                                                            Ex[[i]], 
                                                                                             overdisp.est = NULL,
-                                                                                            transform=TRUE)))
-            outmaw2Tlog
+                                                                                            transform=TRUE,
+                                                                                            cellrates = TRUE)))
+            str(outmaw2Tlog)
             
             ##################################################
             ##################################################
@@ -243,9 +257,12 @@ for(risk in risks){
             
             outmata.time <- system.time(outmata <- lapply(1:nsim, function(i) matabounds(thetai=clusterRR_ilarge[[i]], 
                                                                                          thetaa = cluster_thetaa[[i]], 
-                                                                                         w_q=wslarge[[i]], sparsematrix=t(sparseMAT), outExp = outExp[[i]],
-                                                                                         overdisp.est = NULL, transform="none")))
-            outmata
+                                                                                         w_q=wslarge[[i]], sparsematrix=t(sparseMAT),
+                                                                                         outExp = Ex[[i]],
+                                                                                         overdisp.est = NULL, 
+                                                                                         transform="none",
+                                                                                         cellrates=TRUE)))
+            str(outmata)
             ##################################################
             ##################################################
             #Turek-Fletcher MATA Bounds: SQRT TRANSFORMED
@@ -254,9 +271,13 @@ for(risk in risks){
             
             outmataTsqrt.time <- system.time(outmataTsqrt <- lapply(1:nsim, function(i) matabounds(thetai=clusterRR_ilarge[[i]], 
                                                                                                    thetaa = cluster_thetaa[[i]], 
-                                                                                                   w_q=wslarge[[i]], sparsematrix=t(sparseMAT), outExp = outExp[[i]],
-                                                                                                   overdisp.est = NULL, transform="sqrt")))
-            outmataTsqrt
+                                                                                                   w_q=wslarge[[i]], 
+                                                                                                   sparsematrix=t(sparseMAT), 
+                                                                                                   outExp = Ex[[i]],
+                                                                                                   overdisp.est = NULL, 
+                                                                                                   transform="sqrt",
+                                                                                                   cellrates = TRUE)))
+            str(outmataTsqrt)
             
             ##################################################
             ##################################################
@@ -266,9 +287,13 @@ for(risk in risks){
             
             outmataTlog.time <- system.time(outmataTlog <- lapply(1:nsim, function(i) matabounds(thetai=clusterRR_ilarge[[i]], 
                                                                                                  thetaa = cluster_thetaa[[i]], 
-                                                                                                 w_q=wslarge[[i]], sparsematrix=t(sparseMAT), outExp = outExp[[i]],
-                                                                                                 overdisp.est = NULL, transform="log")))
-            outmataTlog
+                                                                                                 w_q=wslarge[[i]], 
+                                                                                                 sparsematrix=t(sparseMAT), 
+                                                                                                 outExp = Ex[[i]],
+                                                                                                 overdisp.est = NULL, 
+                                                                                                 transform="log",
+                                                                                                 cellrates=TRUE)))
+            str(outmataTlog)
             
             ##################################################
             ##################################################
@@ -329,5 +354,5 @@ for(risk in risks){
     }
     
 }
-write.csv(masterout, file="masterout_nsim50_cellrisk.csv")
+write.csv(masterout, file="masterout_nsim25_cellrisk.csv")
 rm(list=ls())
