@@ -1,5 +1,9 @@
+# r <- function() {
+#     assign('.Last',  function() {system('R')}, envir = globalenv())
+#     quit(save = 'no')
+# }
+# r()
 rm(list=ls())
-
 library(clusso)
 library(Matrix)
 
@@ -79,7 +83,7 @@ for(risk in risks){
                                                                                  numCenters, Time, maxclust,
                                                                                  bylocation = FALSE, model="poisson",
                                                                                  overdisp.est = overdisp.est))
-            
+            print("finished stacking")
             ##################################################
             ##################################################
             #NON-MA VARIANCE
@@ -115,7 +119,7 @@ for(risk in risks){
             #                                                       function(i) cbind(lbasymp=clusterRRlarge[[i]]-1.96*se_clusterRRlarge_asymp[[i]], 
             #                                                                         clusterMA = clusterRRlarge[[i]],
             #                                                                         ubasymp=clusterRRlarge[[i]]+1.96*se_clusterRRlarge_asymp[[i]])))
-            
+            print("nonma finished")
             
             ##################################################
             ##################################################
@@ -177,10 +181,10 @@ for(risk in risks){
             #                 buckland.UB = UBa))
             # }
             
-            outbuck <- lapply(1:nsim, 
+            outbuck.time <- system.time(outbuck <- lapply(1:nsim, 
                               function(i) bucklandbounds(thetai=clusterRR_ilarge[[i]], thetaa =cluster_thetaa[[i]], 
                                                          w_q=wslarge[[i]], sparsematrix=t(sparseMAT), Ex[[i]],
-                                                         overdisp.est = NULL, cellrates = TRUE))
+                                                         overdisp.est = NULL, cellrates = TRUE)))
             
             # outbuck.time <- system.time(outbuck <- lapply(1:nsim, 
             #                                               function(i) bucklandbounds(thetai=clusterRR_ilarge[[i]], thetaa =cluster_thetaa[[i]], 
@@ -194,33 +198,33 @@ for(risk in risks){
                                                                                              w_q=wslarge[[i]], sparsematrix=t(sparseMAT), Ex[[i]],
                                                                                              overdisp.est = NULL, transform=TRUE, cellrates = TRUE)))
             str(outbuckTlog)
-            
-            ##################################################
-            ##################################################
-            #(adjusted) MAW1 (B&A pg. 164)
-            ##################################################
-            ##################################################
-            
-            
-            outmaw1.time <- system.time(outmaw1 <- lapply(1:nsim, 
-                                                          function(i) maw1(thetai=clusterRR_ilarge[[i]], 
-                                                                           thetaa = cluster_thetaa[[i]], 
-                                                                           w_q=wslarge[[i]], sparsematrix=t(sparseMAT), 
-                                                                           Ex[[i]], overdisp.est = NULL,
-                                                                           cellrates = TRUE)))
-            str(outmaw1)
-            
-            ##########################
-            #Log-scale
-            outmaw1Tlog.time <- system.time(outmaw1Tlog <- lapply(1:nsim, 
-                                                                  function(i) maw1(thetai=clusterRR_ilarge[[i]], 
-                                                                                   thetaa = cluster_thetaa[[i]], 
-                                                                                   w_q=wslarge[[i]], 
-                                                                                   sparsematrix=t(sparseMAT), 
-                                                                                   Ex[[i]], overdisp.est = NULL,
-                                                                                   transform=TRUE, cellrates = TRUE)))
-            str(outmaw1Tlog)
-            
+            print("buckland finished")
+            # ##################################################
+            # ##################################################
+            # #(adjusted) MAW1 (B&A pg. 164)
+            # ##################################################
+            # ##################################################
+            # 
+            # 
+            # outmaw1.time <- system.time(outmaw1 <- lapply(1:nsim, 
+            #                                               function(i) maw1(thetai=clusterRR_ilarge[[i]], 
+            #                                                                thetaa = cluster_thetaa[[i]], 
+            #                                                                w_q=wslarge[[i]], sparsematrix=t(sparseMAT), 
+            #                                                                Ex[[i]], overdisp.est = NULL,
+            #                                                                cellrates = TRUE)))
+            # str(outmaw1)
+            # 
+            # ##########################
+            # #Log-scale
+            # outmaw1Tlog.time <- system.time(outmaw1Tlog <- lapply(1:nsim, 
+            #                                                       function(i) maw1(thetai=clusterRR_ilarge[[i]], 
+            #                                                                        thetaa = cluster_thetaa[[i]], 
+            #                                                                        w_q=wslarge[[i]], 
+            #                                                                        sparsematrix=t(sparseMAT), 
+            #                                                                        Ex[[i]], overdisp.est = NULL,
+            #                                                                        transform=TRUE, cellrates = TRUE)))
+            # str(outmaw1Tlog)
+            # 
             
             
             ##################################################
@@ -229,26 +233,26 @@ for(risk in risks){
             ##################################################
             ##################################################
             
-            outmaw2.time <- system.time(outmaw2 <- lapply(1:nsim, function(i) maw1(thetai=clusterRR_ilarge[[i]], 
+            outmaw2.time <- system.time(outmaw2 <- lapply(1:nsim, function(i) maw2(thetai=clusterRR_ilarge[[i]], 
                                                                                    thetaa = cluster_thetaa[[i]], 
                                                                                    w_q=wslarge[[i]], 
                                                                                    sparsematrix=t(sparseMAT), 
-                                                                                   Ex[[i]], overdisp.est = NULL,
+                                                                                   outExp = Ex[[i]], overdisp.est = NULL,
                                                                                    cellrates = TRUE)))
             str(outmaw2)
             
             ##########################
             #Log-scale
-            outmaw2Tlog.time <- system.time(outmaw2Tlog  <- lapply(1:nsim, function(i) maw1(thetai=clusterRR_ilarge[[i]],
+            outmaw2Tlog.time <- system.time(outmaw2Tlog  <- lapply(1:nsim, function(i) maw2(thetai=clusterRR_ilarge[[i]],
                                                                                             thetaa = cluster_thetaa[[i]], 
                                                                                             w_q=wslarge[[i]], 
                                                                                             sparsematrix=t(sparseMAT), 
-                                                                                            Ex[[i]], 
+                                                                                            outExp = Ex[[i]], 
                                                                                             overdisp.est = NULL,
                                                                                             transform=TRUE,
                                                                                             cellrates = TRUE)))
             str(outmaw2Tlog)
-            
+            print("maw2 finished")
             ##################################################
             ##################################################
             #Turek-Fletcher MATA Bounds (for non-normal data)
@@ -263,6 +267,7 @@ for(risk in risks){
                                                                                          transform="none",
                                                                                          cellrates=TRUE)))
             str(outmata)
+            print("outmata finished")
             ##################################################
             ##################################################
             #Turek-Fletcher MATA Bounds: SQRT TRANSFORMED
@@ -278,7 +283,7 @@ for(risk in risks){
                                                                                                    transform="sqrt",
                                                                                                    cellrates = TRUE)))
             str(outmataTsqrt)
-            
+            print("outmatasqrt finished")
             ##################################################
             ##################################################
             #Turek-Fletcher MATA Bounds: LOG TRANSFORMED
@@ -294,24 +299,24 @@ for(risk in risks){
                                                                                                  transform="log",
                                                                                                  cellrates=TRUE)))
             str(outmataTlog)
-            
+            print("outmatalog finished")
             ##################################################
             ##################################################
             #Create Master for Output
             ##################################################
             ##################################################
             
-            master <- cbind.data.frame(matrix(unlist(nonma), byrow=TRUE, ncol=3),
-                                       matrix(unlist(nonma_asymp), byrow=TRUE, ncol=3),
-                                       matrix(unlist(outbuck), byrow=TRUE, ncol=3),
-                                       matrix(unlist(outbuckTlog), byrow=TRUE, ncol=3),
-                                       matrix(unlist(outmaw1), byrow=TRUE, ncol=3),
-                                       matrix(unlist(outmaw1Tlog), byrow=TRUE, ncol=3),
-                                       matrix(unlist(outmaw2), byrow=TRUE, ncol=3),
-                                       matrix(unlist(outmaw2Tlog), byrow=TRUE, ncol=3),
-                                       matrix(unlist(outmata), byrow=TRUE, ncol=3),
-                                       matrix(unlist(outmataTsqrt), byrow=TRUE, ncol=3),
-                                       matrix(unlist(outmataTlog), byrow=TRUE, ncol=3))
+            master <- cbind.data.frame(matrix(unlist(nonma), byrow=FALSE, ncol=3),
+                                       matrix(unlist(nonma_asymp), byrow=FALSE, ncol=3),
+                                       matrix(unlist(outbuck), byrow=FALSE, ncol=3),
+                                       matrix(unlist(outbuckTlog), byrow=FALSE, ncol=3),
+                                       # matrix(unlist(outmaw1), byrow=FALSE, ncol=3),
+                                       # matrix(unlist(outmaw1Tlog), byrow=FALSE, ncol=3),
+                                       matrix(unlist(outmaw2), byrow=FALSE, ncol=3),
+                                       matrix(unlist(outmaw2Tlog), byrow=FALSE, ncol=3),
+                                       matrix(unlist(outmata), byrow=FALSE, ncol=3),
+                                       matrix(unlist(outmataTsqrt), byrow=FALSE, ncol=3),
+                                       matrix(unlist(outmataTlog), byrow=FALSE, ncol=3))
             
             
             master$risk <- risk
@@ -319,25 +324,23 @@ for(risk in risks){
             master$radius <- rad
             master$anyforced <- ifelse(unlist(lapply(1:nsim, function(i) sim_superclust_pc_large[[i]]$selection.bic))==0,"yes","no")
             master$simID <- 1:nrow(master)
-            master$nonma.time <- rep(nonma.time[[3]], nsim)
-            master$nonma_asymp.time <- rep(nonma_asymp.time[[3]], nsim)
-            master$outbuck.time <- rep(outbuck.time[[3]], nsim)
-            master$outbuckTlog.time <- rep(outbuckTlog.time[[3]], nsim)
-            master$outmaw1.time <- rep(outmaw1.time[[3]], nsim)
-            master$outmaw1Tlog.time <- rep(outmaw1Tlog.time[[3]], nsim)
-            master$outmaw2.time <- rep(outmaw2.time[[3]], nsim)
-            master$outmaw2Tlog.time <- rep(outmaw2Tlog.time[[3]], nsim)
-            master$outmata.time <- rep(outmata.time[[3]], nsim)
-            master$outmataTsqrt.time <- rep(outmataTsqrt.time[[3]], nsim)
-            master$outmataTlog.time <- rep(outmataTlog.time[[3]], nsim)
+            master$nonma.time <- rep(nonma.time[[3]], nsim*1040)
+            master$nonma_asymp.time <- rep(nonma_asymp.time[[3]], nsim*1040)
+            master$outbuck.time <- rep(outbuck.time[[3]], nsim*1040)
+            master$outbuckTlog.time <- rep(outbuckTlog.time[[3]], nsim*1040)
+            # master$outmaw1.time <- rep(outmaw1.time[[3]], nsim)
+            # master$outmaw1Tlog.time <- rep(outmaw1Tlog.time[[3]], nsim)
+            master$outmaw2.time <- rep(outmaw2.time[[3]], nsim*1040)
+            master$outmaw2Tlog.time <- rep(outmaw2Tlog.time[[3]], nsim*1040)
+            master$outmata.time <- rep(outmata.time[[3]], nsim*1040)
+            master$outmataTsqrt.time <- rep(outmataTsqrt.time[[3]], nsim*1040)
+            master$outmataTlog.time <- rep(outmataTlog.time[[3]], nsim*1040)
             
             
             names(master) <- c("nonma.LB", "clusterMA", "nonma.UB",
                                "nonma_asymp.LB", "clusterMA.1", "nonma_asymp.UB",
                                "buck.LB", "clusterMA.2", "buck.UB",
                                "bucklog.LB", "clusterMA.3", "bucklog.UB",
-                               "maw1.LB", "clusterMA.4", "maw1.UB",
-                               "maw1log.LB", "clusterMA.5", "maw1log.UB",
                                "maw2.LB", "clusterMA.6", "maw2.UB",
                                "maw2log.LB", "clusterMA.7", "maw2log.UB",
                                "mata.LB", "clusterMA.8", "mata.UB",
@@ -345,10 +348,11 @@ for(risk in risks){
                                "matalog.LB", "clusterMA.10", "matalog.UB", 
                                "risk", "ecount", "rad", "anyforced","simID", 
                                "nonma.time", "nonma_asymp.time", "outbuck.time",
-                               "outbucklog.time","outmaw1.time","outmaw1log.time",
+                               "outbucklog.time",
                                "outmaw2.time","outmaw2log.time", "outmata.time",
                                "outmataTsqrt.time","outmataTlog.time")
             masterout <- rbind(masterout, master)
+            print(paste0(c(risk,ecount,rad), " finished"))
             
         }
     }

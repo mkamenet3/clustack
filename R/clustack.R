@@ -920,9 +920,9 @@ maw2 <- function(thetai,thetaa, w_q,sparsematrix, outExp, overdisp.est, transfor
             LBa = exp(as.vector(log(thetaa)) - 1.96*sqrt(var_thetaa))
         } else{
             if(!is.null(overdisp.est)){
-                varthetai <- sapply(1:nrow(sparsematrix), function(k) overdisp.est*thetai[k,]/outExp[k])
+                varthetai <- sapply(1:nrow(sparsematrix), function(k) overdisp.est*thetai[k,]/outExp)
             } else {
-                varthetai <- sapply(1:nrow(sparsematrix), function(k) thetai[k,]/Ex)
+                varthetai <- sapply(1:nrow(sparsematrix), function(k) thetai[k,]/outExp)
             }
             withintheta <- (thetai - thetaa)^2
             wtnbtn <- sapply(1:nrow(sparsematrix), function(k) (varthetai[,k] + withintheta[k,]))
@@ -941,7 +941,7 @@ maw2 <- function(thetai,thetaa, w_q,sparsematrix, outExp, overdisp.est, transfor
             }
             withintheta <- (log(thetai) - log(thetaa))^2
             var_thetaa <- sum(w_q*(varthetai + withintheta))
-            var_thetaa <- as.vector(varthetaa)
+            var_thetaa <- as.vector(var_thetaa)
             UBa = exp(as.vector(log(thetaa)) + 1.96*sqrt(var_thetaa))
             LBa = exp(as.vector(log(thetaa)) - 1.96*sqrt(var_thetaa))
         } else{
@@ -952,7 +952,7 @@ maw2 <- function(thetai,thetaa, w_q,sparsematrix, outExp, overdisp.est, transfor
             }
             withintheta <- (thetai - thetaa)^2
             var_thetaa <- sum(w_q*(varthetai + withintheta))
-            var_thetaa <- as.vector(varthetaa)
+            var_thetaa <- as.vector(var_thetaa)
             UBa = as.vector(thetaa) + 1.96*sqrt(var_thetaa)
             LBa = as.vector(thetaa) - 1.96*sqrt(var_thetaa)
         }
@@ -967,6 +967,8 @@ mata_tailareazscore <- function(thetaii, thetaaa, se.thetaii, w_q, alpha){
     thetaii <- as.vector(thetaii)
     zval <- (thetaaa - thetaii)/se.thetaii
     zpnorm <- pnorm(zval)
+   # print(str(zpnorm))
+#    print(str(w_q))
     w_zpnorm <- sum((w_q*zpnorm))-alpha
     
 }
@@ -985,6 +987,7 @@ matabounds <- function(thetai,thetaa, w_q,sparsematrix, outExp, overdisp.est,tra
 
 matabounds_none <- function(thetai,thetaa, w_q,sparsematrix, overdisp.est, outExp, cellrates) {
     if(cellrates==TRUE){
+        #browser()
         if(!is.null(overdisp.est)){
             varthetai <- sapply(1:nrow(sparsematrix), function(k) overdisp.est*thetai[k,]/outExp)
         } else {
@@ -1024,18 +1027,27 @@ matabounds_none <- function(thetai,thetaa, w_q,sparsematrix, overdisp.est, outEx
 }
 
 matabounds_sqrt <- function(thetai,thetaa, w_q,sparsematrix, overdisp.est, outExp, cellrates) {
+   # print("sqrt version")
     if(cellrates==TRUE){
-        Tvarthetai <- sapply(1:nrow(sparsematrix), function(k) 1/(4*outExp))
+    #    print("cellrates true")
+        #print(str(outExp))
+        #browser()
+        Tvarthetai <-  1/(4*outExp)
+        # test <- sapply(1:5, 
+        #                function(k) uniroot(f=mata_tailareazscore, interval=c(-10, 10),
+        #                                    thetaii= sqrt(thetai[,k]),
+        #                                    se.thetaii=sqrt(Tvarthetai[k]),
+        #                                    w_q=w_q, alpha=0.025, tol=1e-8)$root)
         mataLB <- sapply(1:ncol(sparsematrix), 
                          function(k) uniroot(f=mata_tailareazscore, interval=c(-10, 10),
                           thetaii= sqrt(thetai[,k]),
-                          se.thetaii=sqrt(Tvarthetai[k,]),
+                          se.thetaii=sqrt(Tvarthetai[k]),
                           w_q=w_q, alpha=0.025, tol=1e-8)$root)
         
-        mataUB <- sapply(1:nrow(sparsematrix),
+        mataUB <- sapply(1:ncol(sparsematrix),
                          function(k) uniroot(f=mata_tailareazscore, interval=c(-10, 10),
                           thetaii= sqrt(thetai[,k]),
-                          se.thetaii=sqrt(Tvarthetai[k,]),
+                          se.thetaii=sqrt(Tvarthetai[k]),
                           w_q=w_q, alpha=1-0.025, tol=1e-8)$root)
     } else{
         Tvarthetai <- sapply(1:nrow(sparsematrix), function(k) 1/(4*outExp[k]))
