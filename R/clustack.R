@@ -993,14 +993,14 @@ matabounds_none <- function(thetai,thetaa, w_q,sparsematrix, overdisp.est, outEx
         } else {
             varthetai <- sapply(1:nrow(sparsematrix), function(k) thetai[k,]/outExp)
         }
-        mataLB <- sapply(1:ncol(sparsematrix), 
-                         function(k) uniroot(f=mata_tailareazscore, interval=c(-1, 3),
+        mataLB <- sapply(1:ncol(thetai), 
+                         function(k) uniroot(f=mata_tailareazscore, interval=c(-10, 10),
                           thetaii= thetai[,k],
                           se.thetaii=sqrt(varthetai[k,]),
                           w_q=w_q, alpha=0.025, tol=1e-8)$root)    
         
-        mataUB <- sapply(1:ncol(sparsematrix),
-                         function(k) uniroot(f=mata_tailareazscore, interval=c(-1, 3),
+        mataUB <- sapply(1:ncol(thetai),
+                         function(k) uniroot(f=mata_tailareazscore, interval=c(-10, 10),
                           thetaii= thetai[,k],
                           se.thetaii=sqrt(varthetai[k,]),
                           w_q=w_q, alpha=1-0.025, tol=1e-8)$root) 
@@ -1010,12 +1010,12 @@ matabounds_none <- function(thetai,thetaa, w_q,sparsematrix, overdisp.est, outEx
         } else {
             varthetai <- sapply(1:nrow(sparsematrix), function(k) thetai[k]/outExp[k])
         }
-        mataLB <- uniroot(f=mata_tailareazscore, interval=c(-1, 3),
+        mataLB <- uniroot(f=mata_tailareazscore, interval=c(-10, 10),
                           thetaii= thetai,
                           se.thetaii=sqrt(varthetai),
                           w_q=w_q, alpha=0.025, tol=1e-8)$root    
         
-        mataUB <- uniroot(f=mata_tailareazscore, interval=c(-1, 3),
+        mataUB <- uniroot(f=mata_tailareazscore, interval=c(-10, 10),
                           thetaii= thetai,
                           se.thetaii=sqrt(varthetai),
                           w_q=w_q, alpha=1-0.025, tol=1e-8)$root 
@@ -1038,13 +1038,15 @@ matabounds_sqrt <- function(thetai,thetaa, w_q,sparsematrix, overdisp.est, outEx
         #                                    thetaii= sqrt(thetai[,k]),
         #                                    se.thetaii=sqrt(Tvarthetai[k]),
         #                                    w_q=w_q, alpha=0.025, tol=1e-8)$root)
-        mataLB <- sapply(1:ncol(sparsematrix), 
+        
+        #TODO: fix herel it should be thetai[,k] where k corresponds to the kth cell of cellsix, not 1:5
+        mataLB <- sapply(1:ncol(thetai), 
                          function(k) uniroot(f=mata_tailareazscore, interval=c(-10, 10),
                           thetaii= sqrt(thetai[,k]),
                           se.thetaii=sqrt(Tvarthetai[k]),
                           w_q=w_q, alpha=0.025, tol=1e-8)$root)
         
-        mataUB <- sapply(1:ncol(sparsematrix),
+        mataUB <- sapply(1:ncol(thetai),
                          function(k) uniroot(f=mata_tailareazscore, interval=c(-10, 10),
                           thetaii= sqrt(thetai[,k]),
                           se.thetaii=sqrt(Tvarthetai[k]),
@@ -1069,13 +1071,13 @@ matabounds_sqrt <- function(thetai,thetaa, w_q,sparsematrix, overdisp.est, outEx
 matabounds_log <- function(thetai,thetaa, w_q,sparsematrix, overdisp.est, outExp, cellrates) {
     if(cellrates==TRUE){
         logTvarthetai <- sapply(1:nrow(sparsematrix), function(k) 1/(thetai[k,]*outExp))
-        mataLB <- sapply(1:ncol(sparsematrix),
+        mataLB <- sapply(1:ncol(thetai),
                          function(k) uniroot(f=mata_tailareazscore, interval=c(-10, 10),
                           thetaii= log(thetai[,k]),
                           se.thetaii=sqrt(logTvarthetai[k,]),
                           w_q=w_q, alpha=0.025, tol=1e-8)$root)
         
-        mataUB <- sapply(1:ncol(sparsematrix),
+        mataUB <- sapply(1:ncol(thetai),
                          function(k) uniroot(f=mata_tailareazscore, interval=c(-10, 10),
                           thetaii= log(thetai[,k]),
                           se.thetaii=sqrt(logTvarthetai[k,]),

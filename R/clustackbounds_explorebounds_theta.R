@@ -12,11 +12,26 @@ set.seed(20200914)
 source("clustack.R")
 
 
+
+cleanlist <- function(outlist, nsim,bounds=FALSE){
+    if(bounds==TRUE){
+        list1  <- lapply(1:nsim, function(x) matrix(unlist(outlist[[x]]), ncol=3))
+        listcombine <-  do.call(rbind,lapply(list1,matrix,ncol=3,byrow=FALSE))
+    } else {
+        list1 <- lapply(1:nsim, function(x) matrix(as.vector(outlist[[x]]), ncol=3))
+        listcombine <-  do.call(rbind,lapply(list1,matrix,ncol=3,byrow=FALSE))   
+    }
+    return(listcombine)
+}
+
 ###########################################################
 #LOAD DATA
 ###########################################################
 #0) Setup
 load("../data/japanbreastcancer.RData")
+#select period 3 only for space only (period 7938)
+japanbreastcancerp3 <- droplevels(subset(japanbreastcancer, period=="7938"))
+
 #load("../scripts/clustack/data/japanbreastcancer.RData")
 cases <- japanbreastcancer$death
 expected <- japanbreastcancer$expdeath
@@ -30,7 +45,7 @@ japan.prefect2 <- dframe.prefect2[,2:5]
 
 #set global
 rMax <- 20 
-Time <- 5
+Time <- 1
 maxclust <-12
 #maxclust <- 10
 locLambdas <- vector("list", maxclust)
@@ -49,8 +64,8 @@ cent <- 150
 risks <- c(1.1,1.5,2)
 ecounts <- c(5,10,50,100,250,500,1000)#5#10#50#100#250#500#1000
 overdisp.est <- NULL
-nsim <- 25#50#100
-tim <- 1:5
+nsim <- 50#25#50#100
+tim <- 1#:5
 masterout <- NULL
 
 #put the cluster in
@@ -70,7 +85,7 @@ for(risk in risks){
             rr = matrix(1, nrow=n, ncol=Time)
             rr[cluster$last, tim[1]:tail(tim, n=1)] <- risk
             
-            E0 <- rep(ecount, 1040)
+            E0 <- rep(ecount, 208)
             E1 <- rr*E0
             YSIM <- lapply(1:nsim, function(i) rpois(length(E1), lambda = E1))
             Ex <- lapply(1:nsim, function(i) E0)
@@ -214,16 +229,27 @@ for(risk in risks){
             #Create Master for Output
             ##################################################
             ##################################################
-    
-            master <- cbind.data.frame(matrix(unlist(nonma), byrow=TRUE, ncol=3),
-                                       matrix(unlist(nonma_asymp), byrow=TRUE, ncol=3),
-                                       matrix(unlist(outbuck), byrow=TRUE, ncol=3),
-                                       matrix(unlist(outbuckTlog), byrow=TRUE, ncol=3),
-                                       matrix(unlist(outmaw2), byrow=TRUE, ncol=3),
-                                       matrix(unlist(outmaw2Tlog), byrow=TRUE, ncol=3),
-                                       matrix(unlist(outmata), byrow=TRUE, ncol=3),
-                                       matrix(unlist(outmataTsqrt), byrow=TRUE, ncol=3),
-                                       matrix(unlist(outmataTlog), byrow=TRUE, ncol=3))
+            
+            master <- cbind.data.frame(cleanlist(nonma,nsim, bounds = FALSE),
+                                       cleanlist(nonma_asymp,nsim, bounds = FALSE),
+                                       cleanlist(outbuck,nsim, bounds = TRUE),
+                                       cleanlist(outbuckTlog,nsim, bounds = TRUE),
+                                       cleanlist(outmaw2,nsim, bounds = TRUE),
+                                       cleanlist(outmaw2Tlog,nsim, bounds = TRUE),
+                                       cleanlist(outmata,nsim, bounds = TRUE),
+                                       cleanlist(outmataTsqrt,nsim, bounds = TRUE),
+                                       cleanlist(outmataTlog,nsim, bounds = TRUE))
+            
+            # 
+            # master <- cbind.data.frame(matrix(unlist(nonma), byrow=TRUE, ncol=3),
+            #                            matrix(unlist(nonma_asymp), byrow=TRUE, ncol=3),
+            #                            matrix(unlist(outbuck), byrow=TRUE, ncol=3),
+            #                            matrix(unlist(outbuckTlog), byrow=TRUE, ncol=3),
+            #                            matrix(unlist(outmaw2), byrow=TRUE, ncol=3),
+            #                            matrix(unlist(outmaw2Tlog), byrow=TRUE, ncol=3),
+            #                            matrix(unlist(outmata), byrow=TRUE, ncol=3),
+            #                            matrix(unlist(outmataTsqrt), byrow=TRUE, ncol=3),
+            #                            matrix(unlist(outmataTlog), byrow=TRUE, ncol=3))
             
             
             master$risk <- risk
@@ -266,5 +292,5 @@ for(risk in risks){
     }
     
 }
-write.csv(masterout, file="masterout_nsim25_theta.csv")
+write.csv(masterout, file="masterout_nsim50_theta.csv")
 rm(list=ls())
