@@ -1109,9 +1109,148 @@ selectuniqRR <- function(uniqRRs){
     
 }
 
+##############################################################################
+#SIMULATION HELPER FUNCTIONS
+##############################################################################
+
+#nonma
+nonma <- function(sim_superclust_loc,clusterRR_ilarge,wslarge,idix, IC){
+    #MA by maxloc
+    #cluster_thetaa_locs <- lapply(1:nsim, function(i) 1)
+    cluster_thetaa <- lapply(1:length(idix), function(i) sum(clusterRR_ilarge[[i]]*wslarge[[i]]))
+    if(IC=="aic") {
+        clusterRRlarge <- lapply(1:length(idix), function(j) unique(sim_superclust_loc[[idix[[j]]]]$Lambda_dense[,sim_superclust_loc[[idix[[j]]]]$maxlocs[sim_superclust_loc[[idix[[j]]]]$selection.aic]])[2])
+        se_clusterRRlarge <- lapply(1:length(idix), function(j)sqrt(clusterRRlarge[[j]]/outExp[[j]]@x[sim_superclust_loc[[idix[[j]]]]$maxlocs[sim_superclust_loc[[idix[[j]]]]$selection.aic]]))
+        
+    } else {
+        clusterRRlarge <- lapply(1:length(idix), function(j) unique(sim_superclust_loc[[idix[[j]]]]$Lambda_dense[,sim_superclust_loc[[idix[[j]]]]$maxlocs[sim_superclust_loc[[idix[[j]]]]$selection.bic]])[2])
+        se_clusterRRlarge <- lapply(1:length(idix), function(j)sqrt(clusterRRlarge[[j]]/outExp[[j]]@x[sim_superclust_loc[[idix[[j]]]]$maxlocs[sim_superclust_loc[[idix[[j]]]]$selection.bic]]))
+        
+    }
+    nonma.theta.time <- system.time(nonma.theta <- lapply(1:length(idix), function(i) cbind(lb=cluster_thetaa[[i]]-1.96*se_clusterRRlarge[[i]], 
+                                                                                    clusterMA = cluster_thetaa[[i]],
+                                                                                    ub=cluster_thetaa[[i]]+1.96*se_clusterRRlarge[[i]])))
+    return(list(nonma.theta.time = nonma.theta.time[[3]],
+                nonma.theta = nonma.theta))
+}
 
 
+#nonma_asymp
+nonma_asymp <- function(sim_superclust_loc,clusterRR_ilarge,wslarge,idix, IC){
+    #MA by maxloc
+    #cluster_thetaa_locs <- lapply(1:nsim, function(i) 1)
+    cluster_thetaa <- lapply(1:length(idix), function(i) sum(clusterRR_ilarge[[i]]*wslarge[[i]]))
+    if(IC=="aic") {
+        clusterRRlarge <- lapply(1:length(idix), 
+                                 function(j) unique(sim_superclust_loc[[idix[[j]]]]$Lambda_dense[,sim_superclust_loc[[idix[[j]]]]$maxlocs[sim_superclust_loc[[idix[[j]]]]$selection.aic]])[2])
+        se_clusterRRlarge_asymp <- lapply(1:length(idix), function(j) sqrt(clusterRRlarge[[j]]/outObs[[j]]@x[sim_superclust_loc[[idix[[j]]]]$maxlocs[sim_superclust_loc[[idix[[j]]]]$selection.aic]]))
+        
+    } else {
+        clusterRRlarge <- lapply(1:length(idix), 
+                                 function(j) unique(sim_superclust_loc[[idix[[j]]]]$Lambda_dense[,sim_superclust_loc[[idix[[j]]]]$maxlocs[sim_superclust_loc[[idix[[j]]]]$selection.bic_forceid]])[2])
+        se_clusterRRlarge_asymp <- lapply(1:length(idix), function(j) sqrt(clusterRRlarge[[j]]/outObs[[j]]@x[sim_superclust_loc[[idix[[j]]]]$maxlocs[sim_superclust_loc[[idix[[j]]]]$selection.bic_forceid]]))
+        
+    }
+    nonma_asymp.theta.time <- system.time(nonma_asymp.theta <- lapply(1:nsim, function(i) cbind(lbasymp=cluster_thetaa[[i]]-1.96*se_clusterRRlarge_asymp[[i]], clusterMA = cluster_thetaa[[i]],ubasymp=cluster_thetaa[[i]]+1.96*se_clusterRRlarge_asymp[[i]])))
+    return(list(nonma_asymp.theta.time = nonma_asymp.theta.time[[3]],
+                nonma_asymp.theta = nonma_asymp.theta))
+}
 
 
-
-
+calcbounds <- function(id, IC, sim_superclust){
+    #do all diagnostics
+    idix <- which(id!=0)
+    print(paste0("calculating bounds for ", IC))
+    #prep
+    if(IC=="aic"){
+        wslarge <- lapply(1:length(idix), function(j) sim_superclust[[idix[[j]]]]$wtMAT[,sim_superclust[[idix[[j]]]]$selection.aic])
+    } else {
+        wslarge <- lapply(1:length(idix), function(j) sim_superclust[[idix[[j]]]]$wtMAT[,sim_superclust[[idix[[j]]]]$selection.bic])
+    }
+    clusterRR_uniqlarge <- lapply(1:length(idix), function(j) sapply(1:nrow(sim_superclust[[idix[[j]]]]$Lambda_dense), 
+                                                                     function(k) unique(sim_superclust[[idix[[j]]]]$Lambda_dense[k,]))) 
+    clusterRR_ilarge <- lapply(1:length(idix), function(i) rep(NA, 66870))
+    clusterRR_uniq_ilarge <- lapply(1:length(idix), function(j) as.matrix(do.call(rbind, clusterRR_uniqlarge[[idix[[j]]]]), ncol=2))
+    clusterRR_ilarge <- lapply(1:length(idix), function(j) selectuniqRR(clusterRR_uniq_ilarge[[idix[[j]]]]))
+    
+    #Perform
+    outnonma.time <- system.time(outnonma <- nonma(sim_superclust, clusterRR_ilarge, wslarge, idix, IC=IC))
+    outnonma_asymp.time <- system.time(outnonma_asymp <- nonma_asymp(sim_superclust, clusterRR_ilarge, wslarge, idix, IC=IC))
+    print("nonma finished")
+    outbuck.theta.time <- system.time(outbuck.theta <- lapply(1:nsim, function(i) bucklandbounds(thetai=clusterRR_ilarge[[i]], 
+                                                                                                 thetaa = cluster_thetaa[[i]], 
+                                                                                                 w_q=wslarge[[i]], 
+                                                                                                 sparsematrix=t(sparsematrix), 
+                                                                                                 outExp[[i]],overdisp.est = NULL)))
+    outbuck.theta.time <- system.time(outbuck.theta <- lapply(1:nsim, function(i) bucklandbounds(thetai=clusterRR_ilarge[[i]],
+                                                                                                 thetaa = cluster_thetaa[[i]], 
+                                                                                                 w_q=wslarge[[i]], 
+                                                                                                 sparsematrix=t(sparsematrix), 
+                                                                                                 outExp[[i]],overdisp.est = NULL)))
+    outbuckTlog.theta.time <- system.time(outbuckTlog.theta <- lapply(1:nsim, function(i) bucklandbounds(thetai=clusterRR_ilarge[[i]],
+                                                                                                         thetaa =cluster_thetaa[[i]], 
+                                                                                                         w_q=wslarge[[i]], 
+                                                                                                         sparsematrix=t(sparsematrix),
+                                                                                                         outExp[[i]],
+                                                                                                         overdisp.est = NULL, 
+                                                                                                         transform=TRUE)))
+    print("buckland finished")
+    outmaw2.theta.time <- system.time(outmaw2.theta <- lapply(1:nsim, function(i) maw2(thetai=clusterRR_ilarge[[i]], 
+                                                                                       thetaa = cluster_thetaa[[i]], 
+                                                                                       w_q=wslarge[[i]],
+                                                                                       sparsematrix=t(sparsematrix ), 
+                                                                                       outExp[[i]],overdisp.est = NULL)))
+    
+    outmaw2Tlog.theta.time <- system.time(outmaw2Tlog.theta  <- lapply(1:nsim, function(i) maw2(thetai=clusterRR_ilarge[[i]], 
+                                                                                                thetaa = cluster_thetaa[[i]], 
+                                                                                                w_q=wslarge[[i]], 
+                                                                                                sparsematrix=t(sparsematrix), 
+                                                                                                outExp[[i]], 
+                                                                                                overdisp.est = NULL,
+                                                                                                transform=TRUE)))
+    print("maw2 finished")
+    outmata.theta.time <- system.time(outmata.theta <- lapply(1:nsim, function(i) matabounds(thetai=clusterRR_ilarge[[i]], 
+                                                                                             thetaa = cluster_thetaa[[i]], 
+                                                                                             w_q=wslarge[[i]], 
+                                                                                             sparsematrix=t(sparsematrix ), 
+                                                                                             outExp = outExp[[i]],
+                                                                                             overdisp.est = NULL,
+                                                                                             transform="none")))
+    outmataT.theta.time <- system.time(outmataT.theta <- lapply(1:nsim, function(i) matabounds(thetai=clusterRR_ilarge[[i]], 
+                                                                                               thetaa = cluster_thetaa[[i]], 
+                                                                                               w_q=wslarge[[i]], 
+                                                                                               sparsematrix=t(sparsematrix ), 
+                                                                                               outExp = outExp[[i]],
+                                                                                               overdisp.est = NULL, 
+                                                                                               transform="sqrt")))
+    outmataTlog.theta.time <- system.time(outmataTlog.theta <- lapply(1:nsim, function(i) matabounds(thetai=clusterRR_ilarge[[i]], 
+                                                                                                     thetaa = cluster_thetaa[[i]], 
+                                                                                                     w_q=wslarge[[i]], 
+                                                                                                     sparsematrix=t(sparsematrix ),
+                                                                                                     outExp = outExp[[i]], 
+                                                                                                     overdisp.est = NULL,
+                                                                                                     transform="log")))
+    print("mata finished")
+    #return
+    return(list(
+        outnonma = outnonma,
+        outnonma_asymp = outnonma_asymp,
+        outbuck.theta = outbuck.theta,
+        outbuckTlog.theta = outbuckTlog.theta,
+        outmaw2.theta = outmaw2.theta,
+        outmaw2Tlog.theta = outmaw2Tlog.theta,
+        outmata.theta = outmata.theta,
+        outmataT.theta = outmataT.theta,
+        outmataTlog.theta = outmataTlog.theta,
+        
+        outnonma.time = outnonma.time[[3]],
+        outnonma_asymp.time = outnonma_asymp.time[[3]],
+        outbuck.theta.time = outbuck.theta.time[[3]],
+        outbuckTlog.theta.time = outbuckTlog.theta.time[[3]],
+        outmaw2.theta.time = outmaw2.theta.time[[3]],
+        outmaw2Tlog.theta.time = outmaw2Tlog.theta.time[[3]],
+        outmata.theta.time = outmata.theta.time[[3]],
+        outmataT.theta.time = outmataT.theta.time[[3]],
+        outmataTlog.theta.time = outmataTlog.theta.time[[3]] ))
+    
+}
