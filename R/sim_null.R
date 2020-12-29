@@ -10,21 +10,21 @@ source("clustack.R")
 #0) Setup
 #dframe1 <- read.csv("clusso-newpenalty/clusso/clusso/data/jap.breast.F.9.10.11.csv")
 #dframe2 <- read.csv("clusso-newpenalty/clusso/clusso/data/utmJapan.csv")
-#dframe1 <- read.csv("../../../../clusso-newpenalty/clusso/data/jap.breast.F.9.10.11.csv")
-#dframe2 <- read.csv("../../../../clusso-newpenalty/clusso/data/utmJapan.csv")
-dframe1 <- read.csv("../../../../clusso_KamenetskyLeeZhuGangnon/data/JBC/jap.breast.F.9.10.11.csv")
-dframe2 <- read.csv("../../../../clusso_KamenetskyLeeZhuGangnon/data/JBC/utmJapan.csv")
+dframe1 <- read.csv("../../../../clusso-newpenalty/clusso/data/jap.breast.F.9.10.11.csv")
+dframe2 <- read.csv("../../../../clusso-newpenalty/clusso/data/utmJapan.csv")
+#dframe1 <- read.csv("../../../../clusso_KamenetskyLeeZhuGangnon/data/JBC/jap.breast.F.9.10.11.csv")
+#dframe2 <- read.csv("../../../../clusso_KamenetskyLeeZhuGangnon/data/JBC/utmJapan.csv")
 dframe3 <- aggregate(dframe1, by=list(as.factor(rep(1:(nrow(dframe1)/4),each=4))), FUN="sum")
 dframe=data.frame(id=as.factor(dframe3$id/4),period=as.factor(dframe3$year),death=dframe3$death,expdeath=dframe3$expdeath)
 levels(dframe$period) <- c("1","2","3","4","5")
 
 #dframe.poly2 <- read.csv("clusso-newpenalty/clusso/clusso/data/japan_poly2.csv")
-#dframe.poly2 <- read.csv("../../../../clusso-newpenalty/clusso/data/japan_poly2.csv")
-dframe.poly2 <- read.csv("../../../../clusso_KamenetskyLeeZhuGangnon/data/JBC/japan_poly2.csv")
-japan.poly2 <- dframe.poly2[,2:3]
+dframe.poly2 <- read.csv("../../../../clusso-newpenalty/clusso/data/japan_poly2.csv")
+#dframe.poly2 <- read.csv("../../../../clusso_KamenetskyLeeZhuGangnon/data/JBC/japan_poly2.csv")
+#japan.poly2 <- dframe.poly2[,2:3]
 #dframe.prefect2 <- read.csv("clusso-newpenalty/clusso/clusso/data/japan_prefect2.csv")
-#dframe.prefect2 <- read.csv("../../../../clusso-newpenalty/clusso/data/japan_prefect2.csv")
-dframe.prefect2 <- read.csv("../../../../clusso_KamenetskyLeeZhuGangnon/data/JBC/japan_prefect2.csv")
+dframe.prefect2 <- read.csv("../../../../clusso-newpenalty/clusso/data/japan_prefect2.csv")
+#dframe.prefect2 <- read.csv("../../../../clusso_KamenetskyLeeZhuGangnon/data/JBC/japan_prefect2.csv")
 japan.prefect2 <- dframe.prefect2[,2:5]
 japanbreastcancer <- dframe3
 japanbreastcancer$period <- japanbreastcancer$year
@@ -75,21 +75,29 @@ cent=1
 rad=18
 tim = c(1:5)
 risk =1
-thetas = c(Inf, 1000)
+#thetas = c(Inf, 1000)
 overdispfloor = TRUE
 nullmod <- TRUE
-# center=1
-# radius=18
-# tim = c(1:5)
-# risk.ratio =1
+maxclust <- 15
+
+center=1
+radius=18
+tim = c(1:5)
+risk.ratio =1
+nsim =2
+theta = Inf
 # thetas = c(Inf, 1000, 2)
 # overdispfloor = TRUE
 # nullmod <- TRUE
 
 #arguments passed
-theta <- as.numeric(args[1]) 
-nsim <- as.numeric(args[2])
-maxclust <- 15
+#arguments passed
+theta1 <- as.numeric(args[1])
+theta2 <- as.numeric(args[2])
+thetas <- c(theta1,theta2)
+print(thetas)
+nsim <- as.numeric(args[3])
+
 
 
 table.detection.loc.st <- NULL
@@ -107,8 +115,8 @@ table.bounds.pc.space <- NULL
 eps <- 3
 path.figures <- "../../../figures/OUTDEC2020/"
 path.tables <- "../../../results/OUTDEC2020/"
-# path.figures <- "."
-# path.tables <- "."
+# path.figures <- "./"
+# path.tables <- "./"
 
 
 #################################################################################################
@@ -199,11 +207,13 @@ for(theta in thetas){
     } else {
         print("No clusters identified: BIC")
     }
-    if(any(id.aic_loc!=0) & id.aic_loc!=id.bic_loc){
-         outaic.loc_st <- calcbounds(id.aic_loc, IC="aic", sim_superclust_loc)
-    } 
-    else if(id.bic_loc==id.aic_loc){
-        outaic.loc_st <- outbic.loc_st
+    if(any(id.aic_loc!=0)){
+ 
+         if(all(id.bic_loc==id.aic_loc)){
+             outaic.loc_st <- outbic.loc_st
+         } else {
+             outaic.loc_st <- calcbounds(id.aic_loc, IC="aic", sim_superclust_loc)
+         }
     } else {
         print("No clusters identified: AIC")
     }
@@ -214,14 +224,11 @@ for(theta in thetas){
     #####################################################################################
     
     ##################################
-    #RR maps
+    #FPR Maps
     ##################################
-    #plot mean RR across sims
-    #no identification - return 1 for all cells
-    create_plotmeanrr_stack(sim_superclust_loc, IC="bic", flav="loc", Time=Time, nsim = nsim, sim.i)
-    create_plotmeanrr_stack(sim_superclust_loc, IC="aic", flav="loc", Time=Time, nsim = nsim, sim.i)
-   
-    
+    create_plotFPR_stack(sim_superclust_loc,IC="bic", flav="loc",Time=Time, nsim=nsim, sim.i)
+    create_plotFPR_stack(sim_superclust_loc,IC="aic", flav="loc",Time=Time, nsim=nsim, sim.i)
+
     ##################################
     #Add sim results to table
     ##################################
@@ -243,6 +250,7 @@ for(theta in thetas){
     #Add clustackbounds to table
     ##################################
     if(isTRUE(all(id.bic_loc==0)) & isTRUE(all(id.aic_loc==0))){
+        print("No clusters identified")
         bounds.loc <- cbind.data.frame(matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
                                        matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
                                        matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
@@ -262,18 +270,6 @@ for(theta in thetas){
                                        matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
                                        matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
                                        
-                                       matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
-                                       matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
-                                       matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
-                                       matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
-                                       matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
-                                       matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
-                                       matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
-                                       matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
-                                       matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
-                                       matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
-                                       matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
-                                       matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
                                        matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
                                        matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
                                        matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
@@ -402,10 +398,13 @@ for(theta in thetas){
     } else {
         print("No clusters identified: BIC")
     }
-    if(any(id.aic_pc!=0) & id.aic_pc!=id.bic_pc){
-        outaic.pc_st <- calcbounds(id.aic_pc, IC="aic", sim_superclust_pc)
-    }  else if(id.bic_pc==id.aic_pc){
-        outaic.pc_st <- outbic.pc_st
+    if(any(id.aic_pc!=0)){
+        
+        if(all(id.bic_pc==id.aic_pc)){
+            outaic.pc_st <- outbic.pc_st
+        } else {
+            outaic.pc_st <- calcbounds(id.aic_pc, IC="aic", sim_superclust_pc)
+        }
     } else {
         print("No clusters identified: AIC")
     }
@@ -419,9 +418,13 @@ for(theta in thetas){
     ##################################
     #plot mean RR across sims
     #no identification - return 1 for all cells
-    create_plotmeanrr_stack(sim_superclust_pc, IC="bic", flav="pc", Time=Time, nsim = nsim, sim.i)
-    create_plotmeanrr_stack(sim_superclust_pc, IC="aic", flav="pc", Time=Time, nsim = nsim, sim.i)
-    
+    # create_plotmeanrr_stack(sim_superclust_pc, IC="bic", flav="pc", Time=Time, nsim = nsim, sim.i)
+    # create_plotmeanrr_stack(sim_superclust_pc, IC="aic", flav="pc", Time=Time, nsim = nsim, sim.i)
+    ##################################
+    #FPR Maps
+    ##################################
+    create_plotFPR_stack(sim_superclust_pc,IC="bic", flav="pc",Time=Time, nsim=nsim, sim.i)
+    create_plotFPR_stack(sim_superclust_pc,IC="aic", flav="pc",Time=Time, nsim=nsim, sim.i)
     
     ##################################
     #Add sim results to table
@@ -445,36 +448,24 @@ for(theta in thetas){
     ##################################
     if(isTRUE(all(id.bic_pc==0)) & isTRUE(all(id.aic_pc==0))){
         bounds.pc <- cbind.data.frame(matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
-                                       matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
-                                       matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
-                                       matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
-                                       matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
-                                       matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
-                                       matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
-                                       matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
-                                       matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
-                                       matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
-                                       matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
-                                       matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
-                                       matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
-                                       matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
-                                       matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
-                                       matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
-                                       matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
-                                       matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
+                                      matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
+                                      matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
+                                      matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
+                                      matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
+                                      matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
+                                      matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
+                                      matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
+                                      matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
+                                      matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
+                                      matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
+                                      matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
+                                      matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
+                                      matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
+                                      matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
+                                      matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
+                                      matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
+                                      matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
                                       
-                                      matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
-                                      matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
-                                      matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
-                                      matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
-                                      matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
-                                      matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
-                                      matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
-                                      matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
-                                      matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
-                                      matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
-                                      matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
-                                      matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
                                       matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
                                       matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
                                       matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
@@ -530,7 +521,7 @@ for(theta in thetas){
     bounds.pc$simID <- 1:nrow(bounds.pc)
     bounds.pc$method <- "PC"
     
-    names(bounds.loc) <- c("nonma.bic.LB", "clusterMA.bic", "nonma.bic.UB",
+    names(bounds.pc) <- c("nonma.bic.LB", "clusterMA.bic", "nonma.bic.UB",
                            "nonma_asymp.bic.LB", "clusterMA.bic.1", "nonma_asymp.bic.UB",
                            "buck.bic.LB", "clusterMA.bic.2", "buck.bic.UB",
                            "bucklog.bic.LB", "clusterMA.bic.3", "bucklog.bic.UB",
@@ -659,8 +650,26 @@ for(theta in thetas){
 
 
     ##################################
-    #RR maps
+    #Prob maps
     ##################################
+    ##AIC - QP
+    simindicator.aic.qp <- mapply(reval, position, ix.aic.qp)
+    probs.aic.qp <- Matrix::rowSums(simindicator.aic.qp)/nsim
+    plotmeanrr_stack(matrix(probs.aic.qp,ncol=Time), Time=Time, sim.i=sim.i, ic="AIC_QP", flav="clusso", greys=TRUE)
+    ##BIC - QP
+    simindicator.bic.qp <- mapply(reval, position, ix.bic.qp)
+    probs.bic.qp <- Matrix::rowSums(simindicator.bic.qp)/nsim
+    plotmeanrr_stack(matrix(probs.bic.qp,ncol=Time), Time=Time, sim.i=sim.i, ic="BIC_QP", flav="clusso", greys=TRUE)
+    
+    ##AIC - P
+    simindicator.aic.p <- mapply(reval, position, ix.aic.p)
+    probs.aic.p <- Matrix::rowSums(simindicator.aic.p)/nsim
+    plotmeanrr_stack(matrix(probs.aic.p,ncol=Time), Time=Time, sim.i=sim.i, ic="AIC_P", flav="clusso", greys=TRUE)
+    ##BIC - P
+    simindicator.bic.p <- mapply(reval, position, ix.bic.p)
+    probs.bic.p <- Matrix::rowSums(simindicator.bic.p)/nsim
+    plotmeanrr_stack(matrix(probs.bic.p,ncol=Time), Time=Time, sim.i=sim.i, ic="BIC_P", flav="clusso", greys=TRUE)
+    
     ##################################
     #Add sim results to table
     ##################################
@@ -748,6 +757,9 @@ for(theta in thetas){
         YSIM <- lapply(1:nsim, function(i) MASS::rnegbin(E1, theta = theta))    
     }
     Ex <- clusso::scale_sim(YSIM, init, nsim, Time)
+    outExp <- lapply(1:nsim, function(i) t(sparsematrix)%*%Ex[[i]])
+    outObs <- lapply(1:nsim, function(i) t(sparsematrix)%*%YSIM[[i]])
+    
     #####################################################################################
     #####################################################################################
     #####################################################################################
@@ -791,22 +803,25 @@ for(theta in thetas){
     } else {
         print("No clusters identified: BIC")
     }
-    if(any(id.aic_loc!=0) & id.aic_loc!=id.bic_loc){
-        outaic.loc_space <- calcbounds(id.aic_loc, IC="aic", sim_superclust_loc)
-    }  else if(id.bic_loc==id.aic_loc){
-        outaic.loc_space <- outbic.loc_space
+    if(any(id.aic_loc!=0)){
+        
+        if(all(id.bic_loc==id.aic_loc)){
+            outaic.loc_space <- outbic.loc_space
+        } else {
+            outaic.loc_space <- calcbounds(id.aic_loc, IC="aic", sim_superclust_loc)
+        }
     } else {
         print("No clusters identified: AIC")
     }
-    
     #####################################################################################        
     outfp.bic_loc <- sum(ifelse(unlist(id.bic_loc)!=0,1,0))/nsim
     outfp.aic_loc <- sum(ifelse(unlist(id.aic_loc)!=0,1,0))/nsim
     #####################################################################################
-    create_plotmeanrr_stack(sim_superclust_loc, IC="bic", flav="loc", Time=Time, nsim = nsim, sim.i)
-    create_plotmeanrr_stack(sim_superclust_loc, IC="aic", flav="loc", Time=Time, nsim = nsim, sim.i)
-    
-    
+    ##################################
+    #FPR Maps
+    ##################################
+    create_plotFPR_stack(sim_superclust_loc,IC="bic", flav="loc",Time=Time, nsim=nsim, sim.i)
+    create_plotFPR_stack(sim_superclust_loc,IC="aic", flav="loc",Time=Time, nsim=nsim, sim.i)
     
     
     ##################################
@@ -849,18 +864,6 @@ for(theta in thetas){
                                          matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
                                          matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
                                          
-                                         matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
-                                         matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
-                                         matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
-                                         matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
-                                         matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
-                                         matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
-                                         matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
-                                         matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
-                                         matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
-                                         matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
-                                         matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
-                                         matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
                                          matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
                                          matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
                                          matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
@@ -914,7 +917,7 @@ for(theta in thetas){
     bounds.loc$risk <- risk
     bounds.loc$radius <- rad
     bounds.loc$select_orig.bic <- unlist(lapply(1:nsim, function(i) sim_superclust_loc[[i]]$selection.bic))
-    bounds.loc$select_orig.aic <- unlist(lapply(1:nsim, function(i) sim_superclust_loc[[i]]$selection.aic_orig))
+    bounds.loc$select_orig.aic <- unlist(lapply(1:nsim, function(i) sim_superclust_loc[[i]]$selection.aic))
     bounds.loc$simID <- 1:nrow(bounds.loc)
     bounds.loc$method <- "LOC"
     
@@ -991,10 +994,13 @@ for(theta in thetas){
     } else {
         print("No clusters identified: BIC")
     }
-    if(any(id.aic_pc!=0) & id.aic_pc!=id.bic_pc){
-        outaic.pc_space <- calcbounds(id.aic_pc, IC="aic", sim_superclust_pc)
-    }  else if(id.bic_pc==id.aic_pc){
-        outaic.pc_space <- outbic.pc_space
+    if(any(id.aic_pc!=0)){
+        
+        if(all(id.bic_pc==id.aic_pc)){
+            outaic.pc_space <- outbic.pc_space
+        } else {
+            outaic.pc_space <- calcbounds(id.aic_pc, IC="aic", sim_superclust_pc)
+        }
     } else {
         print("No clusters identified: AIC")
     }
@@ -1007,9 +1013,14 @@ for(theta in thetas){
     ##################################
     #plot mean RR across sims
     #no identification - return 1 for all cells
-    create_plotmeanrr_stack(sim_superclust_pc, IC="bic", flav="pc", Time=Time, nsim = nsim, sim.i)
-    create_plotmeanrr_stack(sim_superclust_pc, IC="aic", flav="pc", Time=Time, nsim = nsim, sim.i)
+    # create_plotmeanrr_stack(sim_superclust_pc, IC="bic", flav="pc", Time=Time, nsim = nsim, sim.i)
+    # create_plotmeanrr_stack(sim_superclust_pc, IC="aic", flav="pc", Time=Time, nsim = nsim, sim.i)
     
+    ##################################
+    #FPR Maps
+    ##################################
+    create_plotFPR_stack(sim_superclust_pc,IC="bic", flav="pc",Time=Time, nsim=nsim, sim.i)
+    create_plotFPR_stack(sim_superclust_pc,IC="aic", flav="pc",Time=Time, nsim=nsim, sim.i)
     
     ##################################
     #Add sim results to table
@@ -1051,18 +1062,6 @@ for(theta in thetas){
                                       matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
                                       matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
                                       
-                                      matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
-                                      matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
-                                      matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
-                                      matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
-                                      matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
-                                      matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
-                                      matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
-                                      matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
-                                      matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
-                                      matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
-                                      matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
-                                      matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
                                       matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
                                       matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
                                       matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
@@ -1118,7 +1117,7 @@ for(theta in thetas){
     bounds.pc$simID <- 1:nrow(bounds.loc)
     bounds.pc$method <- "PC"
     
-    names(bounds.loc) <- c("nonma.bic.LB", "clusterMA.bic", "nonma.bic.UB",
+    names(bounds.pc) <- c("nonma.bic.LB", "clusterMA.bic", "nonma.bic.UB",
                            "nonma_asymp.bic.LB", "clusterMA.bic.1", "nonma_asymp.bic.UB",
                            "buck.bic.LB", "clusterMA.bic.2", "buck.bic.UB",
                            "bucklog.bic.LB", "clusterMA.bic.3", "bucklog.bic.UB",
@@ -1195,51 +1194,51 @@ for(theta in thetas){
     ##Quasi-P
     bgRate_i.bic.qp <- lapply(1:nsim, function(i)
         sapply(1:Time,
-               function(j) as.numeric(names(which.max(table(matrix(sim_clusso[[i]]$lassoresult.qp.st$E.qbic,ncol=Time)[,j]))))))
+               function(j) as.numeric(names(which.max(table(matrix(sim_clusso[[i]]$lassoresult.qp.s$E.qbic,ncol=Time)[,j]))))))
     bgRate_i.aic.qp <- lapply(1:nsim, function(i)
         sapply(1:Time,
-               function(j) as.numeric(names(which.max(table(matrix(sim_clusso[[i]]$lassoresult.qp.st$E.qaic,ncol=Time)[,j]))))))
+               function(j) as.numeric(names(which.max(table(matrix(sim_clusso[[i]]$lassoresult.qp.s$E.qaic,ncol=Time)[,j]))))))
     
     
     bgRate.bic.qp <- lapply(1:nsim, function(i) rep(bgRate_i.bic.qp[[i]], each = 208))
     bgRate.aic.qp <- lapply(1:nsim, function(i) rep(bgRate_i.aic.qp[[i]], each = 208))
     
     #detect
-    ix.bic.qp <- lapply(1:nsim, function(i) which(abs(as.vector(sim_clusso[[i]]$lassoresult.qp.st$E.qbic) - bgRate.bic.qp[[i]])>=10^-3))
-    ix.aic.qp <- lapply(1:nsim, function(i) which(abs(as.vector(sim_clusso[[i]]$lassoresult.qp.st$E.qaic) - bgRate.aic.qp[[i]])>=10^-3))
+    ix.bic.qp <- lapply(1:nsim, function(i) which(abs(as.vector(sim_clusso[[i]]$lassoresult.qp.s$E.qbic) - bgRate.bic.qp[[i]])>=10^-3))
+    ix.aic.qp <- lapply(1:nsim, function(i) which(abs(as.vector(sim_clusso[[i]]$lassoresult.qp.s$E.qaic) - bgRate.aic.qp[[i]])>=10^-3))
 
     ##Poisson
     bgRate_i.bic.p <- lapply(1:nsim, function(i)
         sapply(1:Time,
-               function(j) as.numeric(names(which.max(table(matrix(sim_clusso[[i]]$lassoresult.p.st$E.qbic,ncol=Time)[,j]))))))
+               function(j) as.numeric(names(which.max(table(matrix(sim_clusso[[i]]$lassoresult.p.s$E.qbic,ncol=Time)[,j]))))))
     bgRate_i.aic.p <- lapply(1:nsim, function(i)
         sapply(1:Time,
-               function(j) as.numeric(names(which.max(table(matrix(sim_clusso[[i]]$lassoresult.p.st$E.qaic,ncol=Time)[,j]))))))
+               function(j) as.numeric(names(which.max(table(matrix(sim_clusso[[i]]$lassoresult.p.s$E.qaic,ncol=Time)[,j]))))))
     
     bgRate.bic.p <- lapply(1:nsim, function(i) rep(bgRate_i.bic.p[[i]], each = 208))
     bgRate.aic.p <- lapply(1:nsim, function(i) rep(bgRate_i.aic.p[[i]], each = 208))
     
     #detect
-    ix.bic.p <- lapply(1:nsim, function(i) which(abs(as.vector(sim_clusso[[i]]$lassoresult.p.st$E.qbic) - bgRate.bic.p[[i]])>=10^-3))
-    ix.aic.p <- lapply(1:nsim, function(i) which(abs(as.vector(sim_clusso[[i]]$lassoresult.p.st$E.qaic) - bgRate.aic.p[[i]])>=10^-3))
+    ix.bic.p <- lapply(1:nsim, function(i) which(abs(as.vector(sim_clusso[[i]]$lassoresult.p.s$E.qbic) - bgRate.bic.p[[i]])>=10^-3))
+    ix.aic.p <- lapply(1:nsim, function(i) which(abs(as.vector(sim_clusso[[i]]$lassoresult.p.s$E.qaic) - bgRate.aic.p[[i]])>=10^-3))
 
     ##FP
-    listfp.bic.qp<- lapply(1:nsim, function(i) clusso_prob_clusteroverlap(sparsematrix,sim_clusso[[i]]$lassoresult.qp.st,
-                                                                          sim_clusso[[i]]$lassoresult.qp.st$selections$select.qbic,rr,
+    listfp.bic.qp<- lapply(1:nsim, function(i) clusso_prob_clusteroverlap(sparsematrix,sim_clusso[[i]]$lassoresult.qp.s,
+                                                                          sim_clusso[[i]]$lassoresult.qp.s$selections$select.qbic,rr,
                                                                           risk,nsim,Time, numCenters, pow=FALSE))
-    listfp.aic.qp <- lapply(1:nsim, function(i) clusso_prob_clusteroverlap(sparsematrix,sim_clusso[[i]]$lassoresult.qp.st,
-                                                                           sim_clusso[[i]]$lassoresult.qp.st$selections$select.qaic,rr,
+    listfp.aic.qp <- lapply(1:nsim, function(i) clusso_prob_clusteroverlap(sparsematrix,sim_clusso[[i]]$lassoresult.qp.s,
+                                                                           sim_clusso[[i]]$lassoresult.qp.s$selections$select.qaic,rr,
                                                                            risk,nsim,Time, numCenters, pow=FALSE))
     
     outfp.bic.qp <- sum(unlist(listfp.bic.qp))/nsim
     outfp.aic.qp <- sum(unlist(listfp.aic.qp))/nsim
     
     ###Poisson
-    listfp.bic.p<- lapply(1:nsim, function(i) clusso_prob_clusteroverlap(sparsematrix,sim_clusso[[i]]$lassoresult.p.st,
-                                                                         sim_clusso[[i]]$lassoresult.p.st$selections$select.qbic,rr,
+    listfp.bic.p<- lapply(1:nsim, function(i) clusso_prob_clusteroverlap(sparsematrix,sim_clusso[[i]]$lassoresult.p.s,
+                                                                         sim_clusso[[i]]$lassoresult.p.s$selections$select.qbic,rr,
                                                                          risk,nsim,Time, numCenters, pow=FALSE))
-    listfp.aic.p <- lapply(1:nsim, function(i) clusso_prob_clusteroverlap(sparsematrix,sim_clusso[[i]]$lassoresult.p.st,
-                                                                          sim_clusso[[i]]$lassoresult.p.st$selections$select.qaic,rr,
+    listfp.aic.p <- lapply(1:nsim, function(i) clusso_prob_clusteroverlap(sparsematrix,sim_clusso[[i]]$lassoresult.p.s,
+                                                                          sim_clusso[[i]]$lassoresult.p.s$selections$select.qaic,rr,
                                                                           risk,nsim,Time, numCenters, pow=FALSE))
     outfp.bic.p <- sum(unlist(listfp.bic.p))/nsim
     outfp.aic.p <- sum(unlist(listfp.aic.p))/nsim
