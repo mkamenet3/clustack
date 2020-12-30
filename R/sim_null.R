@@ -100,15 +100,17 @@ theta2 <- as.numeric(args[2])
 thetas <- c(theta1,theta2)
 print(thetas)
 nsim <- as.numeric(args[3])
+print(nsim)
 model <- as.character(args[4]) #space or spacetime
+print(model)
 
 
 
-table.detection.loc. <- NULL
+table.detection.loc <- NULL
 table.detection.pc <- NULL
 table.detection.clusso <- NULL
 table.detection.stepscan <- NULL
-table.detection.fstagewise <- NULL
+table.detection.fstage <- NULL
 
 table.bounds.loc <- NULL
 table.bounds.pc <- NULL
@@ -201,7 +203,7 @@ for(theta in thetas){
     }
     print(filename <- paste0(sim.i,"_superclustLOC",".RData"))
     #save .RData
-    save(sim_superclust_loc, file=filename)
+    #save(sim_superclust_loc, file=filename)
     #####################################################################################
     #####################################################################################
     #####################################################################################
@@ -256,7 +258,7 @@ for(theta in thetas){
                             type="NA",
                             time=sim_superclust_loc.time,
                             method="LOC"))
-    table.detection.loc.st <- rbind(table.detection.loc.st, tabn.loc)
+    table.detection.loc <- rbind(table.detection.loc, tabn.loc)
     
     ##################################
     #Add clustackbounds to table
@@ -391,7 +393,7 @@ for(theta in thetas){
     print("finished stacking: by PC")
     print(filename <- paste0(sim.i,"_superclustPC",".RData"))
     #save .RData
-    save(sim_superclust_pc, file=filename)
+    #save(sim_superclust_pc, file=filename)
     
     #####################################################################################
     #####################################################################################
@@ -615,9 +617,9 @@ for(theta in thetas){
                                                                                                maxclust = maxclust)))[[3]]
     }
 
-    print(filename <- paste0(sim.i,"_clusso",".RData"))
+    #print(filename <- paste0(sim.i,"_clusso",".RData"))
     #save .RData
-    save(sim_clusso, file=filename)
+    #save(sim_clusso, file=filename)
     #system(paste0("gzip ", filename))
     ##################################
     #DIAGNOSTICS: #calc power and FB rate
@@ -788,7 +790,7 @@ for(theta in thetas){
     sim_stepscan.time <- system.time(sim_stepscan <- lapply(1:nsim, function(i) stepscan(YSIM[[i]], Ex[[i]], Time=5, sparsematrix, nsim=nsimstep, maxclust=maxclust)))[[3]]
     
     simid_stepscan <- paste0(sim.i,"stepscan")
-    save(simid_stepscan, file = paste0(simid_stepscan,".RData"))
+    #save(simid_stepscan, file = paste0(simid_stepscan,".RData"))
     ########################################################################
     #STEPWISE SCAN ANALYSIS
     ########################################################################
@@ -859,7 +861,7 @@ for(theta in thetas){
     
     sim_stage.time <- system.time(sim_stage <- lapply(1:nsim, function(i) cluster_model(delta,YSIM[[i]],Ex[[i]],sd, Time)))[[3]]
     simid_stage <- paste0(sim.i,"fstagewise")
-    save(simid_stage, file = paste0(simid_stage,".RData"))
+    #save(simid_stage, file = paste0(simid_stage,".RData"))
     
     ########################################################################
     #FORWARD STAGEWISE ANALYSIS
@@ -903,7 +905,7 @@ proc.time() - ptm
 #####################################################################################
 #####################################################################################
 if(model=="space"){
-    out_space <- rbind(table.detection.loc, table.detection.pc, table.detection.clusso, table.detection.stepscan, table.detection.fstagewise)
+    out_space <- rbind(table.detection.loc, table.detection.pc, table.detection.clusso, table.detection.stepscan, table.detection.fstage)
     print(out_space)
     write.csv(out_space, file=paste0(path.tables, "null_singlecluster_space.csv"), row.names = TRUE)
     
@@ -912,7 +914,7 @@ if(model=="space"){
     write.csv(out_bounds_space, file=paste0(path.tables, "null_singlecluster_bounds_space.csv"), row.names = TRUE)
     
 }else{
-    out_st <- rbind(table.detection.loc, table.detection.pc, table.detection.clusso)
+    out_st <- rbind(table.detection.loc, table.detection.pc, table.detection.clusso, table.detection.stepscan, table.detection.fstage)
     print(out_st)
     write.csv(out_st, file=paste0(path.tables, "null_singlecluster_ST.csv"), row.names = TRUE)
     

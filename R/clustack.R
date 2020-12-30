@@ -1373,7 +1373,7 @@ unlist2 <- function(x, recursive=TRUE, use.names=TRUE, what.names="inherited")
     names(ans) <- unlist(make.name.tree(x, recursive, what.names), recursive, FALSE)
     ans
 }
-dpoisson <- function(x, lambda, log = FALSE) {
+dpoisson_fstage <- function(x, lambda, log = FALSE) {
     if(log == FALSE) 
         return(lambda^x * exp(-lambda)/factorial(x))
     else
@@ -1446,7 +1446,7 @@ cluster_model <- function(delta,Y,E0,sd, Time) {
     K <- sapply(1:max.ndelta, function(i) length(unique(j.path[1:i]))) 
     K <- c(0,K)
     
-    loglike <- sapply(1:(max.ndelta+1),function(i) sum(dpoisson(Y,E.path[,i],log=T)))    #this sets the log-likelihood as a function of (i) across max.ndelta+1, and uses the poisson distrib specified above
+    loglike <- sapply(1:(max.ndelta+1),function(i) sum(dpoisson_fstage(Y,E.path[,i],log=T)))    #this sets the log-likelihood as a function of (i) across max.ndelta+1, and uses the poisson distrib specified above
     nsize = sum(Y)
     PLL.bic  <- -2*(loglike) + ((K)*log(nsize))
     #PLL.bic=loglike-log(n*Time)/2*K #calculautes best BIC
