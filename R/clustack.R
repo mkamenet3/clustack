@@ -918,7 +918,7 @@ bucklandbounds <- function(thetai,thetaa, w_q,sparsematrix, outExp,overdisp.est,
             withintheta <- (log(thetai) - log(thetaa))^2
             wtnbtn <- sapply(1:nrow(sparsematrix), function(k) sqrt(varthetai[,k] + withintheta[k,]))
             varthetas_w <- matrix(w_q, nrow = 1)%*%t(wtnbtn)
-            var_thetaa <- as.vector(varthetas_w)
+            var_thetaa <- (as.vector(varthetas_w))^2
             UBa = exp(as.vector(log(thetaa)) + 1.96*sqrt(var_thetaa))
             LBa = exp(as.vector(log(thetaa)) - 1.96*sqrt(var_thetaa))
             
@@ -931,7 +931,7 @@ bucklandbounds <- function(thetai,thetaa, w_q,sparsematrix, outExp,overdisp.est,
             withintheta <- (thetai - thetaa)^2
             wtnbtn <- sapply(1:nrow(sparsematrix), function(k) sqrt(varthetai[,k] + withintheta[k,]))
             varthetas_w <- matrix(w_q, nrow = 1)%*%t(wtnbtn)
-            var_thetaa <- as.vector(varthetas_w)
+            var_thetaa <- (as.vector(varthetas_w))^2
             UBa = as.vector(thetaa) + 1.96*sqrt(var_thetaa)
             LBa = as.vector(thetaa) - 1.96*sqrt(var_thetaa)
         }
@@ -946,7 +946,7 @@ bucklandbounds <- function(thetai,thetaa, w_q,sparsematrix, outExp,overdisp.est,
             }
             withintheta <- (log(thetai) - log(thetaa))^2
             varthetas_w <- sum(w_q*sqrt(varthetai + withintheta))^2
-            var_thetaa <- as.vector(varthetas_w)
+            var_thetaa <- (as.vector(varthetas_w))^2
             UBa = exp(as.vector(log(thetaa)) + 1.96*sqrt(var_thetaa))
             LBa = exp(as.vector(log(thetaa)) - 1.96*sqrt(var_thetaa))
             
@@ -960,7 +960,7 @@ bucklandbounds <- function(thetai,thetaa, w_q,sparsematrix, outExp,overdisp.est,
             }
             withintheta <- (thetai - thetaa)^2
             varthetas_w <- sum(w_q*sqrt(varthetai + withintheta))
-            var_thetaa <- as.vector(varthetas_w)
+            var_thetaa <- (as.vector(varthetas_w))^2
             UBa = as.vector(thetaa) + 1.96*sqrt(var_thetaa)
             LBa = as.vector(thetaa) - 1.96*sqrt(var_thetaa)
         }
