@@ -923,3 +923,4 @@ if(model=="space"){
     write.csv(out_bounds_st, file=paste0(path.tables, "null_singlecluster_bounds_ST.csv"), row.names = TRUE)
 }
 
+rm(list=ls())
