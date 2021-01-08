@@ -73,6 +73,7 @@ reval <- function(probs, ix){
 }
 #arguments passed
 maxclust <- 15
+# nsimstep <- 1000
 # theta1 <- as.numeric(args[1]) 
 # theta2 <- as.numeric(args[2]) 
 # thetas <- c(theta1, theta2)
@@ -90,12 +91,12 @@ maxclust <- 15
 #test
 cent <- 150
 rad <- 11
-risk <- 1.5
+risk.ratios <- c(1.5,2)
 tim <- c(3:5)
 theta <- Inf
 nsim <- 2
 model <- "spacetime"
-
+nsimstep <- 10
 
 
 table.detection.loc <- NULL
@@ -120,8 +121,8 @@ path.tables <- "../../../results/OUTDEC2020/"
 #################################################################################################
 # Start the clock!
 ptm <- proc.time()
-for (cent in centers){
-    for (rad in radii){
+#for (cent in centers){
+#    for (rad in radii){
         for (risk in risk.ratios){
             print(paste0("Params:", "center: ",cent,"; radius: ",
                          rad, "; Timeperiods: ", as.numeric(paste(tim, collapse = "")),
@@ -548,8 +549,8 @@ for (cent in centers){
             ##################################
             #Mean RR maps
             ##################################
-            create_plotmeanrr_stack(sim_superclust_loc, IC="bic", flav="loc", Time=Time, nsim = nsim, sim.i, greys=FALSE)
-            create_plotmeanrr_stack(sim_superclust_loc, IC="aic", flav="loc", Time=Time, nsim = nsim, sim.i, greys=FALSE)
+            create_plotmeanrr_stack(sim_superclust_pc, IC="bic", flav="pc", Time=Time, nsim = nsim, sim.i, greys=FALSE)
+            create_plotmeanrr_stack(sim_superclust_pc, IC="aic", flav="pc", Time=Time, nsim = nsim, sim.i, greys=FALSE)
             
             ##################################
             #Add sim results to table
@@ -961,7 +962,7 @@ for (cent in centers){
             numclustersid <- lapply(1:nsim, function(i) which(sim_stepscan[[i]]$pvals>0.05)-1)
             ixids <- lapply(1:nsim, function(i) step_clusterix(sparsematrix, sim_stepscan[[i]], numclustersid=numclustersid[[i]]))
             #pow/fp
-            #outpow.stepscan<- spatscanfs_prob_clusteroverlap(sim_stepscan,ixids, numclustersid ,sparsematrix, rr, risk,pow=TRUE, nsim)
+            outpow.stepscan<- spatscanfs_prob_clusteroverlap(sim_stepscan,ixids, numclustersid ,sparsematrix, rr, risk,pow=TRUE, nsim)
             outfp.stepscan <- spatscanfs_prob_clusteroverlap(sim_stepscan,ixids, numclustersid ,sparsematrix, rr, risk,pow=FALSE,nsim)
             #cell detection
             vec <- rep(0, 208*Time)
@@ -974,7 +975,7 @@ for (cent in centers){
             
             tabn.stepscan <- cbind(IC="MC",rad, risk, cent, theta,
                                    time=as.numeric(paste(tim, collapse="")),
-                                   mod=model, fp = outfp.stepscan, type="NA", time =  sim_stepscan.time ,method = "stepscan" )
+                                   mod=model,pow= outpow.stepscan, fp = outfp.stepscan, type="NA", time =  sim_stepscan.time ,method = "stepscan" )
             table.detection.stepscan <- rbind(table.detection.stepscan, tabn.stepscan)
             
             ###################################################################################
@@ -1036,6 +1037,10 @@ for (cent in centers){
             outfp.stage.bic <- outfp.stage$fp.bic
             outfp.stage.aic <- outfp.stage$fp.aic
             
+            outpow.stage <- forwardstage_prob_clusteroverlap(sim_stage,sparsematrix, rr, risk,pow=TRUE,nsim)
+            outpow.stage.bic <- outfp.stage$power.bic
+            outpow.stage.aic <- outfp.stage$power.aic
+            
             #cell detection
             vec <- rep(0, 208*Time)
             position <- list(vec)[rep(1, nsim)]
@@ -1058,8 +1063,8 @@ for (cent in centers){
             
             
         }
-    }
-}
+ #   }
+#}
 # Stop the clock
 proc.time() - ptm
 
@@ -1072,20 +1077,24 @@ proc.time() - ptm
 #####################################################################################
 #####################################################################################
 #####################################################################################
-#superclust by loc
-print(table.detection.loc.st)
-write.csv(table.detection.loc.st, 
-          file=paste0(path.tables,"theta",theta,"_singlecluster_loc_ST.csv"), row.names=TRUE)
-
-#superclust by loc
-print(table.detection.pc.st)
-write.csv(table.detection.pc.st, 
-          file=paste0(path.tables,"theta", theta,"_singlecluster_pc_ST.csv"), row.names=TRUE)
-
-#clusso
-print(table.detection.clusso.st)
-write.csv(table.detection.clusso.st, 
-          file=paste0(path.tables,"theta",theta,"_singlecluster_clusso_ST.csv"), row.names=TRUE)
+if(model=="space"){
+    out_space <- rbind(table.detection.loc, table.detection.pc, table.detection.clusso, table.detection.stepscan, table.detection.fstage)
+    print(out_space)
+    write.csv(out_space, file=paste0(path.tables,"theta",theta,"_singlecluster_space.csv"), row.names = TRUE)
+    
+    out_bounds_space <- rbind(table.bounds.loc ,table.bounds.pc)
+    print(out_bounds_space)
+    write.csv(out_bounds_space, file=paste0(path.tables,"theta",theta,"_singlecluster_bounds_space.csv"), row.names = TRUE)
+    
+}else{
+    out_st <- rbind(table.detection.loc, table.detection.pc, table.detection.clusso, table.detection.stepscan, table.detection.fstage)
+    print(out_st)
+    write.csv(out_st, file=paste0(path.tables,"theta",theta,"_singlecluster_ST.csv"), row.names = TRUE)
+    
+    out_bounds_st <- rbind(table.bounds.loc ,table.bounds.pc)
+    print(out_bounds_st)
+    write.csv(out_bounds_st, file=paste0(path.tables,"theta",theta,"_singlecluster_bounds_ST.csv"), row.names = TRUE)
+}
 
 
 
