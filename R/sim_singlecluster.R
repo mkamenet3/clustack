@@ -88,15 +88,17 @@ timeperiod <- c(3:5)
 tim <- c(3:5)
 risk.ratios <- c(1, 1.1, 1.5, 2, 0.5)
 
-# #test
-# cent <- 150
-# rad <- 11
-# risk.ratios <- c(1.5,2)
-# tim <- c(3:5)
-# theta <- Inf
-# nsim <- 2
-# model <- "spacetime"
-# nsimstep <- 10
+#test
+cent <- 150
+rad <- 9
+risk<- c(1.5)
+tim <- c(3:5)
+theta <- Inf
+nsim <- 10
+model <- "spacetime"
+nsimstep <- 10
+path.figures <- "./"
+path.tables <- "./"
 
 
 table.detection.loc <- NULL
@@ -323,6 +325,8 @@ for (theta in thetas){
                                                    matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
                                                    matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
                                                    matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
+                                                   matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
+                                                   matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
                                                    
                                                    matrix(rep(NA, nsim), byrow=TRUE, ncol=1),
                                                    matrix(rep(NA, nsim), byrow=TRUE, ncol=1),
@@ -347,7 +351,8 @@ for (theta in thetas){
                                                    matrix(rep(NA, nsim), byrow=TRUE, ncol=1))
                     
                 } else{
-                    bounds.loc <- cbind.data.frame(matrix(unlist(outbic.loc$outnonma$nonma.theta), byrow=TRUE, ncol=3),
+                    bounds.loc <- cbind.data.frame(rbind(cbind(matrix(unlist(outbic.loc$outnonma$nonma.theta), 
+                                                                                 byrow=TRUE, ncol=3),
                                                    matrix(unlist(outbic.loc$outnonmaTlog$nonma.theta), byrow=TRUE, ncol=3),
                                                    matrix(unlist(outbic.loc$outnonma_asymp$nonma_asymp.theta), byrow=TRUE, ncol=3),
                                                    matrix(unlist(outbic.loc$outnonma_asympTlog$nonma_asymp.theta), byrow=TRUE, ncol=3),
@@ -356,9 +361,11 @@ for (theta in thetas){
                                                    matrix(unlist(outbic.loc$outmaw2.theta), byrow=TRUE, ncol=3),
                                                    matrix(unlist(outbic.loc$outmaw2Tlog.theta), byrow=TRUE, ncol=3),
                                                    matrix(unlist(outbic.loc$outmata.theta), byrow=TRUE, ncol=3),
-                                                   matrix(unlist(outbic.loc$outmataTlog.theta), byrow=TRUE, ncol=3),
+                                                   matrix(unlist(outbic.loc$outmataTlog.theta), byrow=TRUE, ncol=3)),
+                                                   matrix(rep(NA,30*(nsim-length(which(id.bic_loc!=0)))),
+                                                          nrow=nsim-length(which(id.bic_loc!=0)))),
                                                    
-                                                   matrix(unlist(outaic.loc$outnonma$nonma.theta), byrow=TRUE, ncol=3),
+                                                   rbind(cbind(matrix(unlist(outaic.loc$outnonma$nonma.theta), byrow=TRUE, ncol=3),
                                                    matrix(unlist(outaic.loc$outnonmaTlog$nonma.theta), byrow=TRUE, ncol=3),
                                                    matrix(unlist(outaic.loc$outnonma_asymp$nonma_asymp.theta), byrow=TRUE, ncol=3),
                                                    matrix(unlist(outaic.loc$outnonma_asympTlog$nonma_asymp.theta), byrow=TRUE, ncol=3),
@@ -367,7 +374,9 @@ for (theta in thetas){
                                                    matrix(unlist(outaic.loc$outmaw2.theta), byrow=TRUE, ncol=3),
                                                    matrix(unlist(outaic.loc$outmaw2Tlog.theta), byrow=TRUE, ncol=3),
                                                    matrix(unlist(outaic.loc$outmata.theta), byrow=TRUE, ncol=3),
-                                                   matrix(unlist(outaic.loc$outmataTlog.theta), byrow=TRUE, ncol=3),
+                                                   matrix(unlist(outaic.loc$outmataTlog.theta), byrow=TRUE, ncol=3)),
+                                                   matrix(rep(NA,30*(nsim-length(which(id.aic_loc!=0)))),
+                                                          nrow=nsim-length(which(id.aic_loc!=0)))),
                                                    
                                                    rep(outbic.loc$outnonma.time, nsim),
                                                    rep(outbic.loc$outnonmaTlog.time, nsim),
@@ -592,6 +601,8 @@ for (theta in thetas){
                                                   matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
                                                   matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
                                                   matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
+                                                  matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
+                                                  matrix(rep(NA,3*nsim), byrow=TRUE, ncol=3),
                                                   
                                                   matrix(rep(NA, nsim), byrow=TRUE, ncol=1),
                                                   matrix(rep(NA, nsim), byrow=TRUE, ncol=1),
@@ -615,27 +626,32 @@ for (theta in thetas){
                                                   matrix(rep(NA, nsim), byrow=TRUE, ncol=1),
                                                   matrix(rep(NA, nsim), byrow=TRUE, ncol=1))
                 } else{
-                    bounds.pc <- cbind.data.frame(matrix(unlist(outbic.pc$outnonma$nonma.theta), byrow=TRUE, ncol=3),
-                                                  matrix(unlist(outbic.pc$outnonmaTlog$nonma.theta), byrow=TRUE, ncol=3),
-                                                  matrix(unlist(outbic.pc$outnonma_asymp$nonma_asymp.theta), byrow=TRUE, ncol=3),
-                                                  matrix(unlist(outbic.pc$outnonma_asympTlog$nonma_asymp.theta), byrow=TRUE, ncol=3),
-                                                  matrix(unlist(outbic.pc$outbuck.theta), byrow=TRUE, ncol=3),
-                                                  matrix(unlist(outbic.pc$outbuckTlog.theta), byrow=TRUE, ncol=3),
-                                                  matrix(unlist(outbic.pc$outmaw2.theta), byrow=TRUE, ncol=3),
-                                                  matrix(unlist(outbic.pc$outmaw2Tlog.theta), byrow=TRUE, ncol=3),
-                                                  matrix(unlist(outbic.pc$outmata.theta), byrow=TRUE, ncol=3),
-                                                  matrix(unlist(outbic.pc$outmataTlog.theta), byrow=TRUE, ncol=3),
+                    bounds.pc <- cbind.data.frame(rbind(cbind(matrix(unlist(outbic.pc$outnonma$nonma.theta), 
+                                                                     byrow=TRUE, ncol=3),
+                                                              matrix(unlist(outbic.pc$outnonmaTlog$nonma.theta), byrow=TRUE, ncol=3),
+                                                              matrix(unlist(outbic.pc$outnonma_asymp$nonma_asymp.theta), byrow=TRUE, ncol=3),
+                                                              matrix(unlist(outbic.pc$outnonma_asympTlog$nonma_asymp.theta), byrow=TRUE, ncol=3),
+                                                              matrix(unlist(outbic.pc$outbuck.theta), byrow=TRUE, ncol=3),
+                                                              matrix(unlist(outbic.pc$outbuckTlog.theta), byrow=TRUE, ncol=3),
+                                                              matrix(unlist(outbic.pc$outmaw2.theta), byrow=TRUE, ncol=3),
+                                                              matrix(unlist(outbic.pc$outmaw2Tlog.theta), byrow=TRUE, ncol=3),
+                                                              matrix(unlist(outbic.pc$outmata.theta), byrow=TRUE, ncol=3),
+                                                              matrix(unlist(outbic.pc$outmataTlog.theta), byrow=TRUE, ncol=3)),
+                                                        matrix(rep(NA,30*(nsim-length(which(id.bic_pc!=0)))),
+                                                               nrow=nsim-length(which(id.bic_pc!=0)))),
                                                   
-                                                  matrix(unlist(outaic.pc$outnonma$nonma.theta), byrow=TRUE, ncol=3),
-                                                  matrix(unlist(outaic.pc$outnonmaTlog$nonma.theta), byrow=TRUE, ncol=3),
-                                                  matrix(unlist(outaic.pc$outnonma_asymp$nonma_asymp.theta), byrow=TRUE, ncol=3),
-                                                  matrix(unlist(outaic.pc$outnonma_asympTlog$nonma_asymp.theta), byrow=TRUE, ncol=3),
-                                                  matrix(unlist(outaic.pc$outbuck.theta), byrow=TRUE, ncol=3),
-                                                  matrix(unlist(outaic.pc$outbuckTlog.theta), byrow=TRUE, ncol=3),
-                                                  matrix(unlist(outaic.pc$outmaw2.theta), byrow=TRUE, ncol=3),
-                                                  matrix(unlist(outaic.pc$outmaw2Tlog.theta), byrow=TRUE, ncol=3),
-                                                  matrix(unlist(outaic.pc$outmata.theta), byrow=TRUE, ncol=3),
-                                                  matrix(unlist(outaic.pc$outmataTlog.theta), byrow=TRUE, ncol=3),
+                                                  rbind(cbind(matrix(unlist(outaic.pc$outnonma$nonma.theta), byrow=TRUE, ncol=3),
+                                                              matrix(unlist(outaic.pc$outnonmaTlog$nonma.theta), byrow=TRUE, ncol=3),
+                                                              matrix(unlist(outaic.pc$outnonma_asymp$nonma_asymp.theta), byrow=TRUE, ncol=3),
+                                                              matrix(unlist(outaic.pc$outnonma_asympTlog$nonma_asymp.theta), byrow=TRUE, ncol=3),
+                                                              matrix(unlist(outaic.pc$outbuck.theta), byrow=TRUE, ncol=3),
+                                                              matrix(unlist(outaic.pc$outbuckTlog.theta), byrow=TRUE, ncol=3),
+                                                              matrix(unlist(outaic.pc$outmaw2.theta), byrow=TRUE, ncol=3),
+                                                              matrix(unlist(outaic.pc$outmaw2Tlog.theta), byrow=TRUE, ncol=3),
+                                                              matrix(unlist(outaic.pc$outmata.theta), byrow=TRUE, ncol=3),
+                                                              matrix(unlist(outaic.pc$outmataTlog.theta), byrow=TRUE, ncol=3)),
+                                                        matrix(rep(NA,30*(nsim-length(which(id.aic_pc!=0)))),
+                                                               nrow=nsim-length(which(id.aic_pc!=0)))),
                                                   
                                                   rep(outbic.pc$outnonma.time, nsim),
                                                   rep(outbic.pc$outnonmaTlog.time, nsim),
