@@ -88,17 +88,17 @@ timeperiod <- c(3:5)
 tim <- c(3:5)
 risk.ratios <- c(1, 1.1, 1.5, 2, 0.5)
 
-# #test
-# cent <- 150
-# rad <- 9
-# risk<- c(1.5)
-# tim <- c(3:5)
-# theta <- Inf
-# nsim <- 10
-# model <- "spacetime"
-# nsimstep <- 10
-# path.figures <- "./"
-# path.tables <- "./"
+#test
+cent <- 150
+rad <- 9
+risk<- c(1.5)
+tim <- c(3:5)
+theta <- Inf
+nsim <- 10
+model <- "spacetime"
+nsimstep <- 10
+path.figures <- "./"
+path.tables <- "./"
 
 
 table.detection.loc <- NULL
@@ -230,12 +230,6 @@ for (theta in thetas){
                 
                 ##############################
                 #what was identified in each sim by IC
-                # ident.bic <- lapply(1:nsim, function(i)
-                #     round(sim_superclust_loc[[i]]$wLambda[sim_superclust_loc[[i]]$selection.bic,],eps))
-                # ident.aic <- lapply(1:nsim, function(i)
-                #     round(sim_superclust_loc[[i]]$wLambda[sim_superclust_loc[[i]]$selection.aic,],eps))
-                # ident.aicc <- lapply(1:nsim, function(i)
-                #     round(sim_superclust_loc[[i]]$wLambda[sim_superclust_loc[[i]]$selection.aicc,],eps))
                 ident.bic <- lapply(1:nsim, function(i) sparsematrix[sim_superclust_loc[[i]]$maxid[sim_superclust_loc[[i]]$selection.bic],])
                 noid <- which(unlist(lapply(1:nsim, function(i) length(ident.bic[[i]])))==0)
                 for (i in 1:length(noid)){ ident.bic[[noid[i]]]<- as.vector(rep(0, dim(sparsematrix)[[2]]))}
@@ -250,30 +244,19 @@ for (theta in thetas){
                 #start here
                 incluster.bic <- lapply(1:nsim, function(i)  mat.bic[[i]]%*%matrix(rrbin_inside, ncol=1))
                 incluster.aic <- lapply(1:nsim, function(i)  mat.aic[[i]]%*%matrix(rrbin_inside, ncol=1))
-                
-                # incluster.bic <- lapply(1:nsim, function(i) rrbin_inside%*%matrix(ident.bic[[i]]))
-                # incluster.aic <- lapply(1:nsim, function(i) rrbin_inside%*%matrix(ident.aic[[i]]))
-                #incluster.bic <- lapply(1:nsim, function(i) rrbin_inside%*%matrix(ifelse(ident.bic[[i]]==1,0,1),ncol=1))
-                #incluster.aic <- lapply(1:nsim, function(i) rrbin_inside%*%matrix(ifelse(ident.aic[[i]]==1,0,1),ncol=1))
-                #incluster.aicc <- lapply(1:nsim, function(i) rrbin_inside%*%matrix(ifelse(ident.aicc[[i]]==1,0,1),ncol=1))
+
                 #calc power
                 outpow.bic <- sum(ifelse(unlist(incluster.bic)!=0,1,0))/nsim
                 outpow.aic <- sum(ifelse(unlist(incluster.aic)!=0,1,0))/nsim
-                #outpow.aicc <-sum(ifelse(unlist(incluster.aicc)!=0,1,0))/nsim
                 #2) Did it find anything OUTSIDE the cluster?
                 rrbin_outside <- ifelse(sparsematrix%*%t(clusteroverlap)==0,1,0)
                 #this should be everything that doesn't touch the cluster
-                #outcluster.bic <- lapply(1:nsim, function(i) rrbin_outside%*%matrix(ifelse(ident.bic[[i]]==1,0,1),ncol=1))
-                #outcluster.bic <- lapply(1:nsim, function(i)rrbin_outside%*%matrix(ident.bic[[i]]))
                 outcluster.bic <- lapply(1:nsim, function(i) mat.bic[[i]]%*%matrix(rrbin_outside, ncol=1))
                 outcluster.aic <- lapply(1:nsim, function(i) mat.aic[[i]]%*%matrix(rrbin_outside, ncol=1))
                 
-                #outcluster.aic <- lapply(1:nsim, function(i) rrbin_outside%*%matrix(ident.aic[[i]]))
-                #outcluster.aicc <- lapply(1:nsim, function(i) rrbin_outside%*%matrix(ifelse(ident.aicc[[i]]==1,0,1),ncol=1))
                 #calc FP rate
                 outfp.bic <- sum(ifelse(unlist(outcluster.bic)!=0,1,0))/nsim
                 outfp.aic <- sum(ifelse(unlist(outcluster.aic)!=0,1,0))/nsim
-                #outfp.aicc <- sum(ifelse(unlist(outcluster.aicc)!=0,1,0))/nsim
                 ##################################
                 #plot probability maps
                 ##################################
@@ -281,53 +264,18 @@ for (theta in thetas){
                 vec <- rep(0, 208 * Time)
                 position.bic <- list(vec)[rep(1, nsim)]
                 position.aic <- list(vec)[rep(1, nsim)]
-                #position.aicc <- list(vec)[rep(1, nsim)]
                 #recode identified cells as 1's, all other zeros
-                #ix.bic <- lapply(1:nsim, function(i) which(ifelse((length(ident.bic[[i]]!=0) & ident.bic[[i]]==1),0,1)==1))
-                #ix.bic <- lapply(1:nsim, function(i) which(ifelse((length(ident.bic[[i]]!=0) & ident.bic[[i]]==1),1,0)==1))
-                #ix.bic <- lapply(1:nsim, function(i) which(ifelse((length(mat.bic[[i]]!=0) & mat.bic[[i]]!=0),1,0)==1))
-                #ix.aic <- lapply(1:nsim, function(i) which(ifelse((length(mat.aic[[i]]!=0) & mat.aic[[i]]!=0),1,0)==1))
-                
-                
-                
                 ix.bic <- lapply(1:nsim, function(i) ifelse((length(mat.bic[[i]]!=0) & mat.bic[[i]]!=0),1,0)==1)
                 ix.aic <- lapply(1:nsim, function(i) ifelse((length(mat.aic[[i]]!=0) & mat.aic[[i]]!=0),1,0)==1)
-                #ix.bic <- lapply(1:nsim, function(i) sim_superclust_loc[[i]]$maxid[sim_superclust_loc[[i]]$selection.bic])
-                #ix.aic <- lapply(1:nsim, function(i) sim_superclust_loc[[i]]$maxid[sim_superclust_loc[[i]]$selection.aic])
-                
-                
-                #a <- which(ident.bic[[1]]!=0)
-                
-                #ix.bic <- lapply(7:9, function(i)  matrix(ident.bic[[i]]!=0, nrow=1)%*%t(sparsematrix))
-                    
-                #ix.aic <- lapply(1:nsim, function(i) matrix(ident.aic[[i]], nrow=1)%*%t(sparsematrix))
-                
-                #ix.aic <- lapply(1:nsim, function(i) which(ifelse((length(ident.aic[[i]]!=0) & ident.aic[[i]]==1),1,0)==1))
-                
-                
-                #ifelse((length(ident.bic[[7]]!=0) & ident.bic[[7]]==1),1,0)
-                
-                ##############################################################################
-                #table(sparsematrix[,sim_superclust_loc[[9]]$maxid[sim_superclust_loc[[9]]$selection.bic]])
-                #ident.bic <- lapply(1:nsim, function(i) sparsematrix[,sim_superclust_loc[[i]]$maxid[sim_superclust_loc[[i]]$selection.bic]])
-                
-                
-                ##############################################################################
-                # 
-                # 
-                # 
-                # 
-                # 
-                # ix.aic <- lapply(1:nsim, function(i) which(ifelse((length(ident.aic[[i]]!=0) & ident.aic[[i]]==1),0,1)==1))
-                # ix.aicc <- lapply(1:nsim, function(i) which(ifelse((length(ident.aicc[[i]]!=0) & ident.aicc[[i]]==1),0,1) ==1))
+            
+               
                 #creatematrix by location (rows) and sim (cols) with 1's indicating selection by superlearner
                 simindicator.bic <- mapply(reval, position.bic, ix.bic)
                 simindicator.aic <- mapply(reval, position.aic, ix.aic)
-                #simindicator.aicc <- mapply(reval, position.aicc, ix.aicc)
                 #find probability of detection for each location in time
                 probs.bic <- Matrix::rowSums(simindicator.bic)/nsim
                 probs.aic <- Matrix::rowSums(simindicator.aic)/nsim
-                #probs.aicc <- Matrix::rowSums(simindicator.aicc)/nsim
+                probs.aicc <- probs.aic #need to fix colormapping to allow for optional
                 #map probability detections by IC to grey scale
                 colprob <- colormapping(list(probs.bic,
                                              probs.aic,
@@ -569,29 +517,31 @@ for (theta in thetas){
                 ##############################
                 # #Which PCs overlap true cluster?
                 #what was identified in each sim by IC
-                ident.bic <- lapply(1:nsim, function(i)
-                    round(sim_superclust_pc[[i]]$wLambda[sim_superclust_pc[[i]]$selection.bic,],eps))
-                ident.aic <- lapply(1:nsim, function(i)
-                    round(sim_superclust_pc[[i]]$wLambda[sim_superclust_pc[[i]]$selection.aic,],eps))
-                ident.aicc <- lapply(1:nsim, function(i)
-                    round(sim_superclust_pc[[i]]$wLambda[sim_superclust_pc[[i]]$selection.aicc,],eps))
+                ident.bic <-  lapply(1:nsim, function(i) sparsematrix[,sim_superclust_pc[[i]]$maxid[sim_superclust_pc[[i]]$selection.bic]])
+                noid <- which(unlist(lapply(1:nsim, function(i) length(ident.bic[[i]])))==0)
+                for (i in 1:length(noid)){ ident.bic[[noid[i]]]<- as.vector(rep(0, dim(sparsematrix)[[1]]))}
+                
+                ident.aic <-  lapply(1:nsim, function(i) sparsematrix[,sim_superclust_pc[[i]]$maxid[sim_superclust_pc[[i]]$selection.aic]])
+                noid <- which(unlist(lapply(1:nsim, function(i) length(ident.aic[[i]])))==0)
+                for (i in 1:length(noid)){ ident.aic[[noid[i]]]<- as.vector(rep(0, dim(sparsematrix)[[1]]))}
+                
                 #1) Did it find anything INSIDE the cluster?
-                incluster.bic <- lapply(1:nsim, function(i) rrbin_inside%*%matrix(ifelse(ident.bic[[i]]==1,0,1),ncol=1))
-                incluster.aic <- lapply(1:nsim, function(i) rrbin_inside%*%matrix(ifelse(ident.aic[[i]]==1,0,1),ncol=1))
-                incluster.aicc <- lapply(1:nsim, function(i) rrbin_inside%*%matrix(ifelse(ident.aicc[[i]]==1,0,1),ncol=1))
+                incluster.bic <- lapply(1:nsim, function(i) matrix(rrbin_inside,nrow=1)%*%matrix(ident.bic[[i]],ncol=1))
+                incluster.aic <- lapply(1:nsim, function(i) matrix(rrbin_inside,nrow=1)%*%matrix(ident.aic[[i]],ncol=1))
+                
                 #calc power
                 outpow.bic <- sum(ifelse(unlist(incluster.bic)!=0,1,0))/nsim
                 outpow.aic <- sum(ifelse(unlist(incluster.aic)!=0,1,0))/nsim
-                outpow.aicc <-sum(ifelse(unlist(incluster.aicc)!=0,1,0))/nsim
+                
                 #2) Did it find anything OUTSIDE the cluster?
                 #this should be everything that doesn't touch the cluster
-                outcluster.bic <- lapply(1:nsim, function(i) rrbin_outside%*%matrix(ifelse(ident.bic[[i]]==1,0,1),ncol=1))
-                outcluster.aic <- lapply(1:nsim, function(i) rrbin_outside%*%matrix(ifelse(ident.aic[[i]]==1,0,1),ncol=1))
-                outcluster.aicc <- lapply(1:nsim, function(i) rrbin_outside%*%matrix(ifelse(ident.aicc[[i]]==1,0,1),ncol=1))
+                outcluster.bic <-  lapply(1:nsim, function(i) matrix(rrbin_outside,nrow=1)%*%matrix(ident.bic[[i]],ncol=1))
+                outcluster.aic <-  lapply(1:nsim, function(i) matrix(rrbin_outside,nrow=1)%*%matrix(ident.aic[[i]],ncol=1))
+                
                 #calc FP rate
                 outfp.bic <- sum(ifelse(unlist(outcluster.bic)!=0,1,0))/nsim
                 outfp.aic <- sum(ifelse(unlist(outcluster.aic)!=0,1,0))/nsim
-                outfp.aicc <- sum(ifelse(unlist(outcluster.aicc)!=0,1,0))/nsim
+                
                 ##################################
                 #plot probability maps
                 ##################################
@@ -599,19 +549,20 @@ for (theta in thetas){
                 vec <- rep(0, 208 * Time)
                 position.bic <- list(vec)[rep(1, nsim)]
                 position.aic <- list(vec)[rep(1, nsim)]
-                position.aicc <- list(vec)[rep(1, nsim)]
+
                 #recode identified cells as 1's, all other zeros
-                ix.bic <- lapply(1:nsim, function(i) which(ifelse((length(ident.bic[[i]]!=0) & ident.bic[[i]]==1),0,1)==1))
-                ix.aic <- lapply(1:nsim, function(i) which(ifelse((length(ident.aic[[i]]!=0) & ident.aic[[i]]==1),0,1) ==1))
-                ix.aicc <- lapply(1:nsim, function(i) which(ifelse((length(ident.aicc[[i]]!=0) & ident.aicc[[i]]==1),0,1) ==1))
+                ix.bic <- lapply(1:nsim, function(i) which(ifelse((length(ident.bic[[i]]!=0) & ident.bic[[i]]!=0),1,0)==1))
+                ix.aic <- lapply(1:nsim, function(i) which(ifelse((length(ident.aic[[i]]!=0) & ident.aic[[i]]!=0),1,0)==1))
+                
                 #creatematrix by location (rows) and sim (cols) with 1's indicating selection by superlearner
                 simindicator.bic <- mapply(reval, position.bic, ix.bic)
                 simindicator.aic <- mapply(reval, position.aic, ix.aic)
-                simindicator.aicc <- mapply(reval, position.aicc, ix.aicc)
+
                 #find probability of detection for each location in time
                 probs.bic <- Matrix::rowSums(simindicator.bic)/nsim
                 probs.aic <- Matrix::rowSums(simindicator.aic)/nsim
-                probs.aicc <- Matrix::rowSums(simindicator.aicc)/nsim
+                probs.aicc <- probs.aic #need to fix colormapping to allow for optional
+                #probs.aicc <- Matrix::rowSums(simindicator.aicc)/nsim
                 #map probability detections by IC to grey scale
                 colprob <- colormapping(list(probs.bic,
                                              probs.aic,
