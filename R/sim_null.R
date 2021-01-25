@@ -124,7 +124,7 @@ path.tables <- "../../../results/OUTDEC2020/"
 
 #################################################################################################
 #################################################################################################
-#SPACETIME
+#SIM
 #################################################################################################
 #################################################################################################
 # Start the clock!
@@ -811,7 +811,7 @@ for(theta in thetas){
     print("Finished stepwise scan")
     
     tabn.stepscan <- cbind(IC="MC",rad, risk, cent, theta,
-          time="345",
+          time=as.numeric(paste(tim, collapse="")),
           mod=model, fp = outfp.stepscan, type="NA", time =  sim_stepscan.time ,method = "stepscan" )
     table.detection.stepscan <- rbind(table.detection.stepscan, tabn.stepscan)
     
@@ -886,10 +886,10 @@ for(theta in thetas){
     
     
     tabn.fstagewise <- rbind(cbind(IC="BIC",rad, risk, cent, theta,
-                           time="345",
+                           time=as.numeric(paste(tim, collapse="")),
                            mod=model, fp = outfp.stage.bic, type="NA", time = sim_stage.time  ,method = "fstagewise" ),
                            cbind(IC="AIC",rad, risk, cent, theta,
-                                 time="345",
+                                 time=as.numeric(paste(tim, collapse="")),
                                  mod=model, fp = outfp.stage.aic, type="NA", time =  sim_stage.time ,method = "fstagewise" ))
     table.detection.fstage <- rbind(table.detection.fstage, tabn.fstagewise )
     print("Finished forward stagewise")
@@ -923,3 +923,4 @@ if(model=="space"){
     write.csv(out_bounds_st, file=paste0(path.tables, "null_singlecluster_bounds_ST.csv"), row.names = TRUE)
 }
 
+rm(list=ls())
