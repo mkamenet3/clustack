@@ -1192,36 +1192,36 @@ nonma <- function(cluster_thetaa,res, clusterRR_ilarge,wslarge,idix, IC, transfo
         if(transform=="log"){
             if(IC=="aic") {
                 #clusterRRlarge <- lapply(1:length(idix), function(j) unique(res[[idix[[j]]]]$Lambda_dense[,res[[idix[[j]]]]$maxid[res[[idix[[j]]]]$selection.aic]])[2])
-                clusterRRlarge <- lapply(1:length(idix), function(j) unique(res[[idix[[j]]]]$Lambda_dense[res[[idix[[j]]]]$maxid[res[[idix[[j]]]]$selection.aic],])[2])
-                se_clusterRRlarge <- lapply(1:length(idix), function(j)sqrt(1/(clusterRRlarge[[j]]*outExp[[j]]@x[res[[idix[[j]]]]$maxid[res[[idix[[j]]]]$selection.aic]])))
+                clusterRRlarge <- unique(res$Lambda_dense[res$maxid[res$selection.aic],])[2]
+                se_clusterRRlarge <- sqrt(1/(clusterRRlarge*outExp@x[res$maxid[res$selection.aic]]))
                 
             } else {
                 # clusterRRlarge <- lapply(1:length(idix), function(j) unique(res[[idix[[j]]]]$Lambda_dense[,res[[idix[[j]]]]$maxid[res[[idix[[j]]]]$selection.bic]])[2])
                 # se_clusterRRlarge <- lapply(1:length(idix), function(j)sqrt(1/(clusterRRlarge[[j]]*outExp[[j]]@x[res[[idix[[j]]]]$maxid[res[[idix[[j]]]]$selection.bic]])))
-                clusterRRlarge <- lapply(1:length(idix), function(j) unique(res[[idix[[j]]]]$Lambda_dense[res[[idix[[j]]]]$maxid[res[[idix[[j]]]]$selection.bic],])[2])
-                se_clusterRRlarge <- lapply(1:length(idix), function(j)sqrt(clusterRRlarge[[j]]/outExp[[j]]@x[res[[idix[[j]]]]$maxid[res[[idix[[j]]]]$selection.bic]]))
+                clusterRRlarge <- unique(res$Lambda_dense[res$maxid[res$selection.bic],])[2]
+                se_clusterRRlarge <- sqrt(clusterRRlarge/outExp@x[res$maxid[res$selection.bic]])
                 
             }
-            nonma.theta.time <- system.time(nonma.theta <- lapply(1:length(idix), function(i) cbind(lb=exp(log(cluster_thetaa[[i]])-1.96*se_clusterRRlarge[[i]]), 
-                                                                                                    clusterMA = cluster_thetaa[[i]],
-                                                                                                    ub=exp(log(cluster_thetaa[[i]])+1.96*se_clusterRRlarge[[i]]))))
+            nonma.theta.time <- system.time(nonma.theta <- cbind(lb=exp(log(cluster_thetaa)-1.96*se_clusterRRlarge), 
+                                                                                                    clusterMA = cluster_thetaa,
+                                                                                                    ub=exp(log(cluster_thetaa)+1.96*se_clusterRRlarge)))
         } else {
             if(IC=="aic") {
                 #clusterRRlarge <- lapply(1:length(idix), function(j) unique(res[[idix[[j]]]]$Lambda_dense[,res[[idix[[j]]]]$maxid[res[[idix[[j]]]]$selection.aic]])[2])
-                clusterRRlarge <- lapply(1:length(idix), function(j) unique(res[[idix[[j]]]]$Lambda_dense[res[[idix[[j]]]]$maxid[res[[idix[[j]]]]$selection.aic],])[2])
-                se_clusterRRlarge <- lapply(1:length(idix), function(j)sqrt(clusterRRlarge[[j]]/outExp[[j]]@x[res[[idix[[j]]]]$maxid[res[[idix[[j]]]]$selection.aic]]))
+                clusterRRlarge <- unique(res$Lambda_dense[res$maxid[res$selection.aic],])[2]
+                se_clusterRRlarge <- sqrt(clusterRRlarge/outExp@x[res$maxid[res$selection.aic]])
                 
             } else {
                 #browser()
                 #clusterRRlarge <- lapply(1:length(idix), function(j) unique(res[[idix[[j]]]]$Lambda_dense[,res[[idix[[j]]]]$maxid[res[[idix[[j]]]]$selection.bic]])[2])
-                clusterRRlarge <- lapply(1:length(idix), function(j) unique(res[[idix[[j]]]]$Lambda_dense[res[[idix[[j]]]]$maxid[res[[idix[[j]]]]$selection.bic],])[2])
-                se_clusterRRlarge <- lapply(1:length(idix), function(j)sqrt(clusterRRlarge[[j]]/outExp[[j]]@x[res[[idix[[j]]]]$maxid[res[[idix[[j]]]]$selection.bic]]))
+                clusterRRlarge <- unique(res$Lambda_dense[res$maxid[res$selection.bic],])[2]
+                se_clusterRRlarge <- sqrt(clusterRRlarge/outExp@x[res$maxid[res$selection.bic]])
                 
                 
             }
-            nonma.theta.time <- system.time(nonma.theta <- lapply(1:length(idix), function(i) cbind(lb=cluster_thetaa[[i]]-1.96*se_clusterRRlarge[[i]], 
-                                                                                                    clusterMA = cluster_thetaa[[i]],
-                                                                                                    ub=cluster_thetaa[[i]]+1.96*se_clusterRRlarge[[i]])))
+            nonma.theta.time <- system.time(nonma.theta <- cbind(lb=cluster_thetaa-1.96*se_clusterRRlarge, 
+                                                                 clusterMA = cluster_thetaa,
+                                                                 ub=cluster_thetaa+1.96*se_clusterRRlarge))
             
         }
     } else {
@@ -1229,31 +1229,31 @@ nonma <- function(cluster_thetaa,res, clusterRR_ilarge,wslarge,idix, IC, transfo
         # browser()
         if(transform=="log"){
             if(IC=="aic") {
-                clusterRRlarge <- lapply(1:length(idix), function(j) unique(res[[idix[[j]]]]$Lambda_dense[,res[[idix[[j]]]]$maxid[res[[idix[[j]]]]$selection.aic]])[2])
-                se_clusterRRlarge <- lapply(1:length(idix), function(j)sqrt(1/(clusterRRlarge[[j]]*outExp[[j]]@x[res[[idix[[j]]]]$maxid[res[[idix[[j]]]]$selection.aic]])))
+                clusterRRlarge <- unique(res$Lambda_dense[,res$maxid[res$selection.aic]])[2]
+                se_clusterRRlarge <- sqrt(1/(clusterRRlarge*outExp@x[res$maxid[res$selection.aic]]))
                 
             } else {
-                clusterRRlarge <- lapply(1:length(idix), function(j) unique(res[[idix[[j]]]]$Lambda_dense[,res[[idix[[j]]]]$maxid[res[[idix[[j]]]]$selection.bic]])[2])
-                se_clusterRRlarge <- lapply(1:length(idix), function(j)sqrt(1/(clusterRRlarge[[j]]*outExp[[j]]@x[res[[idix[[j]]]]$maxid[res[[idix[[j]]]]$selection.bic]])))
+                clusterRRlarge <- unique(res$Lambda_dense[,res$maxid[res$selection.bic]])[2]
+                se_clusterRRlarge <- sqrt(1/(clusterRRlarge*outExp@x[res$maxid[res$selection.bic]]))
                 
             }
-            nonma.theta.time <- system.time(nonma.theta <- lapply(1:length(idix), function(i) cbind(lb=exp(log(cluster_thetaa[[i]])-1.96*se_clusterRRlarge[[i]]), 
-                                                                                                    clusterMA = cluster_thetaa[[i]],
-                                                                                                    ub=exp(log(cluster_thetaa[[i]])+1.96*se_clusterRRlarge[[i]]))))
+            nonma.theta.time <-system.time(nonma.theta <-  cbind(lb=exp(log(cluster_thetaa)-1.96*se_clusterRRlarge), 
+                                                                 clusterMA = cluster_thetaa,
+                                                                 ub=exp(log(cluster_thetaa)+1.96*se_clusterRRlarge)))
         } else {
             if(IC=="aic") {
-                clusterRRlarge <- lapply(1:length(idix), function(j) unique(res[[idix[[j]]]]$Lambda_dense[,res[[idix[[j]]]]$maxid[res[[idix[[j]]]]$selection.aic]])[2])
-                se_clusterRRlarge <- lapply(1:length(idix), function(j)sqrt(clusterRRlarge[[j]]/outExp[[j]]@x[res[[idix[[j]]]]$maxid[res[[idix[[j]]]]$selection.aic]]))
+                clusterRRlarge <-unique(res$Lambda_dense[,res$maxid[res$selection.aic]])[2]
+                se_clusterRRlarge <- sqrt(clusterRRlarge/outExp@x[res$maxid[res$selection.aic]])
                 
             } else {
                 #browser()
-                clusterRRlarge <- lapply(1:length(idix), function(j) unique(res[[idix[[j]]]]$Lambda_dense[,res[[idix[[j]]]]$maxid[res[[idix[[j]]]]$selection.bic]])[2])
-                se_clusterRRlarge <- lapply(1:length(idix), function(j)sqrt(clusterRRlarge[[j]]/outExp[[j]]@x[res[[idix[[j]]]]$maxid[res[[idix[[j]]]]$selection.bic]]))
+                clusterRRlarge <- unique(res$Lambda_dense[,res$maxid[res$selection.bic]])[2]
+                se_clusterRRlarge <- sqrt(clusterRRlarge/outExp@x[res$maxid[res$selection.bic]])
                 
             }
-            nonma.theta.time <- system.time(nonma.theta <- lapply(1:length(idix), function(i) cbind(lb=cluster_thetaa[[i]]-1.96*se_clusterRRlarge[[i]], 
-                                                                                                    clusterMA = cluster_thetaa[[i]],
-                                                                                                    ub=cluster_thetaa[[i]]+1.96*se_clusterRRlarge[[i]])))
+            nonma.theta.time <- system.time(nonma.theta <- cbind(lb=cluster_thetaa-1.96*se_clusterRRlarge, 
+                                                                 clusterMA = cluster_thetaa,
+                                                                 ub=cluster_thetaa+1.96*se_clusterRRlarge))
             
         }
     }
@@ -1270,73 +1270,65 @@ nonma_asymp <- function(cluster_thetaa,res,clusterRR_ilarge,wslarge,idix, IC, tr
             if(IC=="aic") {
                 # clusterRRlarge <- lapply(1:length(idix), 
                 #                          function(j) unique(res[[idix[[j]]]]$Lambda_dense[,res[[idix[[j]]]]$maxid[res[[idix[[j]]]]$selection.aic]])[2])
-                clusterRRlarge <- lapply(1:length(idix), 
-                                         function(j) unique(res[[idix[[j]]]]$Lambda_dense[res[[idix[[j]]]]$maxid[res[[idix[[j]]]]$selection.aic],])[2])
-                se_clusterRRlarge_asymp <- lapply(1:length(idix), function(j) sqrt(1/(clusterRRlarge[[j]]*outObs[[j]]@x[res[[idix[[j]]]]$maxid[res[[idix[[j]]]]$selection.aic]])))
+                clusterRRlarge <- unique(res$Lambda_dense[res$maxid[res$selection.aic],])[2]
+                se_clusterRRlarge_asymp <- sqrt(1/(clusterRRlarge*outObs@x[res$maxid[res$selection.aic]]))
                 
             } else {
                 # clusterRRlarge <- lapply(1:length(idix), 
                 #                          function(j) unique(res[[idix[[j]]]]$Lambda_dense[,res[[idix[[j]]]]$maxid[res[[idix[[j]]]]$selection.bic]])[2])
-                clusterRRlarge <- lapply(1:length(idix), 
-                                         function(j) unique(res[[idix[[j]]]]$Lambda_dense[res[[idix[[j]]]]$maxid[res[[idix[[j]]]]$selection.bic],])[2])
-                se_clusterRRlarge_asymp <- lapply(1:length(idix), function(j) sqrt(1/(clusterRRlarge[[j]]*outObs[[j]]@x[res[[idix[[j]]]]$maxid[res[[idix[[j]]]]$selection.bic]])))
+                clusterRRlarge <- unique(res$Lambda_dense[res$maxid[res$selection.bic],])[2]
+                se_clusterRRlarge_asymp <- sqrt(1/(clusterRRlarge*outObs@x[res$maxid[res$selection.bic]]))
                 
             }
-            nonma_asymp.theta.time <- system.time(nonma_asymp.theta <- lapply(1:length(idix), function(i) cbind(lbasymp=exp(log(cluster_thetaa[[i]])-1.96*se_clusterRRlarge_asymp[[i]]), 
-                                                                                                                clusterMA = cluster_thetaa[[i]],
-                                                                                                                ubasymp=exp(log(cluster_thetaa[[i]])+1.96*se_clusterRRlarge_asymp[[i]]))))
+            nonma_asymp.theta.time <- system.time(nonma_asymp.theta <- cbind(lbasymp=exp(log(cluster_thetaa)-1.96*se_clusterRRlarge_asymp), 
+                                                                             clusterMA = cluster_thetaa,
+                                                                             ubasymp=exp(log(cluster_thetaa)+1.96*se_clusterRRlarge_asymp)))
         } else{
             if(IC=="aic") {
                 # clusterRRlarge <- lapply(1:length(idix), 
                 #                          function(j) unique(res[[idix[[j]]]]$Lambda_dense[,res[[idix[[j]]]]$maxid[res[[idix[[j]]]]$selection.aic]])[2])
-                clusterRRlarge <- lapply(1:length(idix), 
-                                         function(j) unique(res[[idix[[j]]]]$Lambda_dense[res[[idix[[j]]]]$maxid[res[[idix[[j]]]]$selection.aic],])[2])
-                se_clusterRRlarge_asymp <- lapply(1:length(idix), function(j) sqrt(clusterRRlarge[[j]]/outObs[[j]]@x[res[[idix[[j]]]]$maxid[res[[idix[[j]]]]$selection.aic]]))
+                clusterRRlarge <- unique(res$Lambda_dense[res$maxid[res$selection.aic],])[2]
+                se_clusterRRlarge_asymp <- sqrt(clusterRRlarge/outObs@x[res$maxid[res$selection.aic]])
                 
             } else {
                 # clusterRRlarge <- lapply(1:length(idix), 
                 #                          function(j) unique(res[[idix[[j]]]]$Lambda_dense[,res[[idix[[j]]]]$maxid[res[[idix[[j]]]]$selection.bic]])[2])
-                clusterRRlarge <- lapply(1:length(idix), 
-                                         function(j) unique(res[[idix[[j]]]]$Lambda_dense[res[[idix[[j]]]]$maxid[res[[idix[[j]]]]$selection.bic],])[2])
-                se_clusterRRlarge_asymp <- lapply(1:length(idix), function(j) sqrt(clusterRRlarge[[j]]/outObs[[j]]@x[res[[idix[[j]]]]$maxid[res[[idix[[j]]]]$selection.bic]]))
+                clusterRRlarge <-  unique(res$Lambda_dense[res$maxid[res$selection.bic],])[2]
+                se_clusterRRlarge_asymp <- sqrt(clusterRRlarge/outObs@x[res$maxid[res$selection.bic]])
                 
             }
-            nonma_asymp.theta.time <- system.time(nonma_asymp.theta <- lapply(1:length(idix), function(i) cbind(lbasymp=cluster_thetaa[[i]]-1.96*se_clusterRRlarge_asymp[[i]], 
-                                                                                                                clusterMA = cluster_thetaa[[i]],
-                                                                                                                ubasymp=cluster_thetaa[[i]]+1.96*se_clusterRRlarge_asymp[[i]])))
+            nonma_asymp.theta.time <- system.time(nonma_asymp.theta <- cbind(lbasymp=cluster_thetaa-1.96*se_clusterRRlarge_asymp, 
+                                                                             clusterMA = cluster_thetaa,
+                                                                             ubasymp=cluster_thetaa+1.96*se_clusterRRlarge_asymp))
         }
         
     } else {
         if(transform=="log"){
             if(IC=="aic") {
-                clusterRRlarge <- lapply(1:length(idix), 
-                                         function(j) unique(res[[idix[[j]]]]$Lambda_dense[,res[[idix[[j]]]]$maxid[res[[idix[[j]]]]$selection.aic]])[2])
-                se_clusterRRlarge_asymp <- lapply(1:length(idix), function(j) sqrt(1/(clusterRRlarge[[j]]*outObs[[j]]@x[res[[idix[[j]]]]$maxid[res[[idix[[j]]]]$selection.aic]])))
+                clusterRRlarge <- unique(res$Lambda_dense[,res$maxid[res$selection.aic]])[2]
+                se_clusterRRlarge_asymp <- sqrt(1/(clusterRRlarge*outObs@x[res$maxid[res$selection.aic]]))
                 
             } else {
-                clusterRRlarge <- lapply(1:length(idix), 
-                                         function(j) unique(res[[idix[[j]]]]$Lambda_dense[,res[[idix[[j]]]]$maxid[res[[idix[[j]]]]$selection.bic]])[2])
-                se_clusterRRlarge_asymp <- lapply(1:length(idix), function(j) sqrt(1/(clusterRRlarge[[j]]*outObs[[j]]@x[res[[idix[[j]]]]$maxid[res[[idix[[j]]]]$selection.bic]])))
+                clusterRRlarge <- unique(res$Lambda_dense[,res$maxid[res$selection.bic]])[2]
+                se_clusterRRlarge_asymp <- sqrt(1/(clusterRRlarge*outObs@x[res$maxid[res$selection.bic]]))
                 
             }
-            nonma_asymp.theta.time <- system.time(nonma_asymp.theta <- lapply(1:length(idix), function(i) cbind(lbasymp=exp(log(cluster_thetaa[[i]])-1.96*se_clusterRRlarge_asymp[[i]]), 
-                                                                                                                clusterMA = cluster_thetaa[[i]],
-                                                                                                                ubasymp=exp(log(cluster_thetaa[[i]])+1.96*se_clusterRRlarge_asymp[[i]]))))
+            nonma_asymp.theta.time <- system.time(nonma_asymp.theta <- cbind(lbasymp=exp(log(cluster_thetaa)-1.96*se_clusterRRlarge_asymp), 
+                                                                             clusterMA = cluster_thetaa,
+                                                                             ubasymp=exp(log(cluster_thetaa)+1.96*se_clusterRRlarge_asymp)))
         } else{
             if(IC=="aic") {
-                clusterRRlarge <- lapply(1:length(idix), 
-                                         function(j) unique(res[[idix[[j]]]]$Lambda_dense[,res[[idix[[j]]]]$maxid[res[[idix[[j]]]]$selection.aic]])[2])
-                se_clusterRRlarge_asymp <- lapply(1:length(idix), function(j) sqrt(clusterRRlarge[[j]]/outObs[[j]]@x[res[[idix[[j]]]]$maxid[res[[idix[[j]]]]$selection.aic]]))
+                clusterRRlarge <- unique(res$Lambda_dense[,res$maxid[res$selection.aic]])[2]
+                se_clusterRRlarge_asymp <- sqrt(clusterRRlarge/outObs@x[res$maxid[res$selection.aic]])
                 
             } else {
-                clusterRRlarge <- lapply(1:length(idix), 
-                                         function(j) unique(res[[idix[[j]]]]$Lambda_dense[,res[[idix[[j]]]]$maxid[res[[idix[[j]]]]$selection.bic]])[2])
-                se_clusterRRlarge_asymp <- lapply(1:length(idix), function(j) sqrt(clusterRRlarge[[j]]/outObs[[j]]@x[res[[idix[[j]]]]$maxid[res[[idix[[j]]]]$selection.bic]]))
+                clusterRRlarge <- unique(res$Lambda_dense[,res$maxid[res$selection.bic]])[2]
+                se_clusterRRlarge_asymp <- sqrt(clusterRRlarge/outObs@x[res$maxid[res$selection.bic]])
                 
             }
-            nonma_asymp.theta.time <- system.time(nonma_asymp.theta <- lapply(1:length(idix), function(i) cbind(lbasymp=cluster_thetaa[[i]]-1.96*se_clusterRRlarge_asymp[[i]], 
-                                                                                                                clusterMA = cluster_thetaa[[i]],
-                                                                                                                ubasymp=cluster_thetaa[[i]]+1.96*se_clusterRRlarge_asymp[[i]])))
+            nonma_asymp.theta.time <- system.time(nonma_asymp.theta <- cbind(lbasymp=cluster_thetaa-1.96*se_clusterRRlarge_asymp, 
+                                                                             clusterMA = cluster_thetaa,
+                                                                             ubasymp=cluster_thetaa+1.96*se_clusterRRlarge_asymp))
         }
     }
     
@@ -1345,24 +1337,28 @@ nonma_asymp <- function(cluster_thetaa,res,clusterRR_ilarge,wslarge,idix, IC, tr
 }
 
 
-calcbounds <- function(id, IC, res, bylocation){
+calcbounds <- function(idix, IC, res, bylocation){
     #do all diagnostics
-    idix <- which(id!=0)
+    #browser()
+    #idix <- which(id!=0)
     #print(idix)
     print(paste0("calculating bounds for ", IC))
     #prep
     if(IC=="aic"){
-        wslarge <- lapply(1:length(idix), function(j) res[[idix[[j]]]]$wtMAT[,res[[idix[[j]]]]$selection.aic])
+        #wslarge <- lapply(1:length(idix), function(j) res[[idix[[j]]]]$wtMAT[,res[[idix[[j]]]]$selection.aic])
+        wslarge <- res$wtMAT[,res$selection.aic]
     } else {
-        wslarge <- lapply(1:length(idix), function(j) res[[idix[[j]]]]$wtMAT[,res[[idix[[j]]]]$selection.bic])
+        #wslarge <- lapply(1:length(idix), function(j) res[[idix[[j]]]]$wtMAT[,res[[idix[[j]]]]$selection.bic])
+        wslarge <- res$wtMAT[,res$selection.bic]
     }
-    clusterRR_uniqlarge <- lapply(1:length(idix), function(j) sapply(1:nrow(res[[idix[[j]]]]$Lambda_dense), 
-                                                                     function(k) unique(res[[idix[[j]]]]$Lambda_dense[k,]))) 
+    # clusterRR_uniqlarge <- lapply(1:length(idix), function(j) sapply(1:nrow(res[[idix[[j]]]]$Lambda_dense), 
+    #                                                                  function(k) unique(res[[idix[[j]]]]$Lambda_dense[k,]))) 
+    clusterRR_uniqlarge <- sapply(1:nrow(res$Lambda_dense), function(k) unique(res$Lambda_dense[k,]))
     
-    clusterRR_ilarge <- lapply(1:length(idix), function(i) rep(NA, 66870))
-    clusterRR_uniq_ilarge <- lapply(1:length(idix), function(j) as.matrix(do.call(rbind, clusterRR_uniqlarge[[j]]), ncol=2))
-    clusterRR_ilarge <- lapply(1:length(idix), function(j) selectuniqRR(clusterRR_uniq_ilarge[[j]]))
-    cluster_thetaa <- lapply(1:length(idix), function(j) sum(clusterRR_ilarge[[j]]*wslarge[[j]]))
+    clusterRR_ilarge <- rep(NA, 66870)
+    clusterRR_uniq_ilarge <- as.matrix(do.call(rbind, clusterRR_uniqlarge), ncol=2)
+    clusterRR_ilarge <- selectuniqRR(clusterRR_uniq_ilarge)
+    cluster_thetaa <- sum(clusterRR_ilarge*wslarge)
     
     
     
@@ -1372,47 +1368,47 @@ calcbounds <- function(id, IC, res, bylocation){
     outnonma_asymp.time <- system.time(outnonma_asymp <- nonma_asymp(cluster_thetaa ,res, clusterRR_ilarge, wslarge, idix, IC=IC, transform="none", bylocation))
     outnonma_asympTlog.time <- system.time(outnonma_asympTlog <- nonma_asymp(cluster_thetaa ,res, clusterRR_ilarge, wslarge, idix, IC=IC, transform="log", bylocation))
     print("nonma finished")
-    outbuck.theta.time <- system.time(outbuck.theta <- lapply(1:length(idix), function(i) bucklandbounds(thetai=clusterRR_ilarge[[i]], 
-                                                                                                 thetaa = cluster_thetaa[[i]], 
-                                                                                                 w_q=wslarge[[i]], 
-                                                                                                 sparsematrix=t(sparsematrix), 
-                                                                                                 outExp[[i]],overdisp.est = NULL)))
-    outbuckTlog.theta.time <- system.time(outbuckTlog.theta <- lapply(1:length(idix), function(i) bucklandbounds(thetai=clusterRR_ilarge[[i]],
-                                                                                                         thetaa =cluster_thetaa[[i]], 
-                                                                                                         w_q=wslarge[[i]], 
-                                                                                                         sparsematrix=t(sparsematrix),
-                                                                                                         outExp[[i]],
-                                                                                                         overdisp.est = NULL, 
-                                                                                                         transform=TRUE)))
+    outbuck.theta.time <- system.time(outbuck.theta <- bucklandbounds(thetai=clusterRR_ilarge, 
+                                                                      thetaa = cluster_thetaa, 
+                                                                      w_q=wslarge, 
+                                                                      sparsematrix=t(sparsematrix), 
+                                                                      outExp,overdisp.est = NULL))
+    outbuckTlog.theta.time <- system.time(outbuckTlog.theta <- bucklandbounds(thetai=clusterRR_ilarge,
+                                                                              thetaa =cluster_thetaa, 
+                                                                              w_q=wslarge, 
+                                                                              sparsematrix=t(sparsematrix),
+                                                                              outExp,
+                                                                              overdisp.est = NULL, 
+                                                                              transform=TRUE))
     print("buckland finished")
-    outmaw2.theta.time <- system.time(outmaw2.theta <- lapply(1:length(idix), function(i) maw2(thetai=clusterRR_ilarge[[i]], 
-                                                                                       thetaa = cluster_thetaa[[i]], 
-                                                                                       w_q=wslarge[[i]],
-                                                                                       sparsematrix=t(sparsematrix ), 
-                                                                                       outExp[[i]],overdisp.est = NULL)))
+    outmaw2.theta.time <- system.time(outmaw2.theta <- maw2(thetai=clusterRR_ilarge, 
+                                                            thetaa = cluster_thetaa, 
+                                                            w_q=wslarge,
+                                                            sparsematrix=t(sparsematrix ), 
+                                                            outExp,overdisp.est = NULL))
     
-    outmaw2Tlog.theta.time <- system.time(outmaw2Tlog.theta  <- lapply(1:length(idix), function(i) maw2(thetai=clusterRR_ilarge[[i]], 
-                                                                                                thetaa = cluster_thetaa[[i]], 
-                                                                                                w_q=wslarge[[i]], 
-                                                                                                sparsematrix=t(sparsematrix), 
-                                                                                                outExp[[i]], 
-                                                                                                overdisp.est = NULL,
-                                                                                                transform=TRUE)))
+    outmaw2Tlog.theta.time <- system.time(outmaw2Tlog.theta  <- maw2(thetai=clusterRR_ilarge, 
+                                                                     thetaa = cluster_thetaa, 
+                                                                     w_q=wslarge, 
+                                                                     sparsematrix=t(sparsematrix), 
+                                                                     outExp, 
+                                                                     overdisp.est = NULL,
+                                                                     transform=TRUE))
     print("maw2 finished")
-    outmata.theta.time <- system.time(outmata.theta <- lapply(1:length(idix), function(i) matabounds(thetai=clusterRR_ilarge[[i]], 
-                                                                                             thetaa = cluster_thetaa[[i]], 
-                                                                                             w_q=wslarge[[i]], 
-                                                                                             sparsematrix=t(sparsematrix ), 
-                                                                                             outExp = outExp[[i]],
-                                                                                             overdisp.est = NULL,
-                                                                                             transform="none")))
-    outmataTlog.theta.time <- system.time(outmataTlog.theta <- lapply(1:length(idix), function(i) matabounds(thetai=clusterRR_ilarge[[i]], 
-                                                                                                     thetaa = cluster_thetaa[[i]], 
-                                                                                                     w_q=wslarge[[i]], 
-                                                                                                     sparsematrix=t(sparsematrix ),
-                                                                                                     outExp = outExp[[i]], 
-                                                                                                     overdisp.est = NULL,
-                                                                                                     transform="log")))
+    outmata.theta.time <- system.time(outmata.theta <- matabounds(thetai=clusterRR_ilarge, 
+                                                                  thetaa = cluster_thetaa, 
+                                                                  w_q=wslarge, 
+                                                                  sparsematrix=t(sparsematrix ), 
+                                                                  outExp = outExp,
+                                                                  overdisp.est = NULL,
+                                                                  transform="none"))
+    outmataTlog.theta.time <- system.time(outmataTlog.theta <- matabounds(thetai=clusterRR_ilarge, 
+                                                                          thetaa = cluster_thetaa, 
+                                                                          w_q=wslarge, 
+                                                                          sparsematrix=t(sparsematrix ),
+                                                                          outExp = outExp, 
+                                                                          overdisp.est = NULL,
+                                                                          transform="log"))
     print("mata finished")
     #return
     return(list(
@@ -1694,7 +1690,7 @@ step_clusterix <- function(sparsematrix, stepscan, numclustersid){
     
 }
 
-spatscanfs_prob_clusteroverlap <- function(res_stepsscan, ixids,numclustersid ,sparsematrix,rr,risk,pow,nsim){
+spatscanfs_prob_clusteroverlap <- function(res_stepsscan, ixids,numclustersid ,sparsematrix,rr,risk,pow){
     #DEFINE TRUTH
     if(risk==1){
         warning("Risk.ratio was set to 1")
@@ -1710,18 +1706,19 @@ spatscanfs_prob_clusteroverlap <- function(res_stepsscan, ixids,numclustersid ,s
     sparsematrix_clusteronly <- sparsematrix[,-c(ncol(sparsematrix)-Time+1:ncol(sparsematrix))]
     clusteroverlap <- t(rrmatvec) %*% sparsematrix_clusteronly
     clusteroverlap_bin <- ifelse(clusteroverlap !=0,1,0)
-    betaselect_bin_clusteronly <- lapply(1:nsim, function(i) rep(0,1040))
-    for(i in 1:nsim){
-        betaselect_bin_clusteronly[[i]][ixids[[i]]] <- 1
-    }
+    betaselect_bin_clusteronly <- rep(0,1040)
+    betaselect_bin_clusteronly[ixids] <- 1
+    # for(i in 1:nsim){
+    #     betaselect_bin_clusteronly[[i]][ixids[[i]]] <- 1
+    # }
     overlap <- ifelse(as.vector(sparsematrix_clusteronly %*% clusteroverlap_bin)!=0,1,0)
     if(pow==TRUE){
         #power
-        power <- sum(ifelse(unlist(lapply(1:nsim, function(i) betaselect_bin_clusteronly[[i]]%*%overlap))!=0,1,0))/nsim
+        power <- ifelse(unlist(betaselect_bin_clusteronly%*%overlap)!=0,1,0)
         return(idin=power)
     } else{
         overlapfp <- ifelse(overlap==1,0,1)
-        fp <- sum(ifelse(unlist(lapply(1:nsim, function(i) betaselect_bin_clusteronly[[i]]%*%overlapfp))!=0,1,0))/nsim
+        fp <- ifelse(unlist(betaselect_bin_clusteronly%*%overlapfp)!=0,1,0)
         return(idout=fp)
     }
 }
@@ -1731,7 +1728,7 @@ reval <- function(probs, ix){
     return(probs)
 }
 
-forwardstage_prob_clusteroverlap <- function(sim_stage,sparsematrix, rr, risk,pow, nsim){
+forwardstage_prob_clusteroverlap <- function(sim_stage,sparsematrix, rr, risk,pow){
     if(risk==1){
         warning("Risk.ratio was set to 1")
         rrmatvec <- rep(0,length(rr))
@@ -1739,8 +1736,8 @@ forwardstage_prob_clusteroverlap <- function(sim_stage,sparsematrix, rr, risk,po
     else{
         rrmatvec <- ifelse(as.vector(rr)==risk,1,0)    
     }
-    bkg.bic <- lapply(1:nsim, function(i) sapply(1:Time, function(t) round(as.numeric(attributes(sort(table(sim_stage[[i]]$RRbic[,t]), decreasing = TRUE)[1])[[1]]),4)))
-    bkg.aic <- lapply(1:nsim, function(i) sapply(1:Time, function(t) round(as.numeric(attributes(sort(table(sim_stage[[i]]$RRaic[,t]), decreasing = TRUE)[1])[[1]]),4)))
+    bkg.bic <-sapply(1:Time, function(t) round(as.numeric(attributes(sort(table(sim_stage$RRbic[,t]), decreasing = TRUE)[1])[[1]]),4))
+    bkg.aic <- sapply(1:Time, function(t) round(as.numeric(attributes(sort(table(sim_stage$RRaic[,t]), decreasing = TRUE)[1])[[1]]),4))
     sparsematrix_clusteronly <- sparsematrix[,-c(ncol(sparsematrix)-Time+1:ncol(sparsematrix))]
     
     clusteroverlap <- t(rrmatvec) %*% sparsematrix_clusteronly
@@ -1749,20 +1746,20 @@ forwardstage_prob_clusteroverlap <- function(sim_stage,sparsematrix, rr, risk,po
     #####################
     #Power
     #####################
-    betaselect_bin.bic <- lapply(1:nsim, function(i) as.vector(sapply(1:Time, function(t) ifelse(abs(round(sim_stage[[i]]$RRbic[,t],4) > bkg.bic[[i]][t]),1,0))))
-    betaselect_bin.aic <- lapply(1:nsim, function(i) as.vector(sapply(1:Time, function(t) ifelse(abs(round(sim_stage[[i]]$RRaic[,t],4) > bkg.aic[[i]][t]),1,0))))
+    betaselect_bin.bic <- as.vector(sapply(1:Time, function(t) ifelse(abs(round(sim_stage$RRbic[,t],4) > bkg.bic[t]),1,0)))
+    betaselect_bin.aic <- as.vector(sapply(1:Time, function(t) ifelse(abs(round(sim_stage$RRaic[,t],4) > bkg.aic[t]),1,0)))
     if(pow==TRUE){
         #power
-        power.bic <- sum(ifelse(unlist(lapply(1:nsim, function(i) betaselect_bin.bic[[i]]%*%overlap))!=0,1,0))/nsim
-        power.aic <- sum(ifelse(unlist(lapply(1:nsim, function(i) betaselect_bin.aic[[i]]%*%overlap))!=0,1,0))/nsim
+        power.bic <- ifelse(unlist(betaselect_bin.bic%*%overlap)!=0,1,0)
+        power.aic <- ifelse(unlist(betaselect_bin.aic%*%overlap)!=0,1,0)
         return(list(power.bic = power.bic, power.aic = power.aic,  
                     betaselect_bin.bic =  betaselect_bin.bic,
                     betaselect_bin.aic =  betaselect_bin.aic))
     }  else{
         #fp
         overlapfp <- ifelse(overlap==1,0,1)
-        fp.bic <- sum(ifelse(unlist(lapply(1:nsim, function(i) betaselect_bin.bic[[i]]%*%overlapfp))!=0,1,0))/nsim
-        fp.aic <- sum(ifelse(unlist(lapply(1:nsim, function(i) betaselect_bin.aic[[i]]%*%overlapfp))!=0,1,0))/nsim
+        fp.bic <- ifelse(unlist(betaselect_bin.bic%*%overlapfp)!=0,1,0)
+        fp.aic <- ifelse(unlist(betaselect_bin.aic%*%overlapfp)!=0,1,0)
         return(list(fp.bic = fp.bic, fp.aic = fp.aic,
                     betaselect_bin.bic =  betaselect_bin.bic,
                     betaselect_bin.aic =  betaselect_bin.aic))
