@@ -719,13 +719,13 @@ bycluster <-  function(Lik, Lambda_dense, sparsemat,maxclust){
 #'@param numCenters Number of centroids.
 #'@param Time Number of time periods.
 #'@param maxclust Maximum number of clusters allowed. TODO - allow this to be unknown.
-#'@param bylocation If clusters should be identified by maximum location (\code{TRUE}) or maximum potential cluster (\code{FALSE}). Default is \code{TRUE}.
+#'@param byloc If clusters should be identified by maximum location (\code{TRUE}) or maximum potential cluster (\code{FALSE}). Default is \code{TRUE}.
 #'@param model A string specifying which model to use, Poisson or binomial. For Poisson, specify \code{"poisson"} and both the Poisson and quasi-Poisson model results are returned. For binomial, specify \code{"binomial"}.
 #'@param cv option for cross-validation instead of AIC/BIC. Default is set to FALSE
 #'@param overdisp.est Overdispersion parameter estimated across all simulations (max).
 #'@return Returns list for each iteration with weighted relative risks by location inside identified cluster.
 #'@export
-detectclusters <- function(sparseMAT, Ex, Yx,numCenters,Time, maxclust,bylocation=TRUE, model=c("poisson", "binomial"),
+detectclusters <- function(sparseMAT, Ex, Yx,numCenters,Time, maxclust,byloc=TRUE, model=c("poisson", "binomial"),
                            cv=FALSE,  overdisp.est) {
     if(is.null(overdisp.est)){
         quasi <- FALSE
@@ -749,7 +749,7 @@ detectclusters <- function(sparseMAT, Ex, Yx,numCenters,Time, maxclust,bylocatio
     Lik <- out$Lik
     Lambda_dense <- out$Lambda_dense
     #locLambdas <- vector("list", maxclust)
-    if(bylocation==FALSE){
+    if(byloc==FALSE){
         print("Cluster detection by potential cluster")
         res <- bycluster(Lik, Lambda_dense, sparsemat, maxclust)
         #perform selection by IC/CV
@@ -1183,45 +1183,83 @@ selectuniqRR <- function(uniqRRs){
 ##############################################################################
 #SIMULATION HELPER FUNCTIONS
 ##############################################################################
-
+#cellsix if TRUE, then perform bounds for cluster RR. Otherwise cellsix is the index of each cell and bounds calcuated for each cell
 #nonma
-nonma <- function(cluster_thetaa,res, clusterRR_ilarge,wslarge,idix, IC, transform, bylocation=TRUE){
-    if(bylocation==FALSE){
-        print("by pc")
-        # browser()
+nonma <- function(cluster_thetaa,res, clusterRR_ilarge,wslarge,idix, IC, transform, byloc=TRUE, cellsix){
+    #browser()
+    #print(byloc)
+    if(byloc==FALSE){
+        #print("by pc")
         if(transform=="log"){
             if(IC=="aic") {
-                #clusterRRlarge <- lapply(1:length(idix), function(j) unique(res[[idix[[j]]]]$Lambda_dense[,res[[idix[[j]]]]$maxid[res[[idix[[j]]]]$selection.aic]])[2])
-                clusterRRlarge <- unique(res$Lambda_dense[res$maxid[res$selection.aic],])[2]
-                se_clusterRRlarge <- sqrt(1/(clusterRRlarge*outExp@x[res$maxid[res$selection.aic]]))
+                if(any(cellsix==TRUE)){
+                    clusterRRlarge <- unique(res$Lambda_dense[res$maxid[res$selection.aic],])[2]
+                    se_clusterRRlarge <- sqrt(1/(clusterRRlarge*outExp@x[res$maxid[res$selection.aic]]))    
+                    clusterMA <- cluster_thetaa
+                } else{
+                    clusterRRlarge <- res$Lambda_dense[res$maxid[res$selection.aic],][cellsix]
+                    se_clusterRRlarge <- sqrt(1/(clusterRRlarge*outExp@x[cellsix]))
+                    clusterMA <- clusterRRlarge
+                }
+                
                 
             } else {
-                # clusterRRlarge <- lapply(1:length(idix), function(j) unique(res[[idix[[j]]]]$Lambda_dense[,res[[idix[[j]]]]$maxid[res[[idix[[j]]]]$selection.bic]])[2])
-                # se_clusterRRlarge <- lapply(1:length(idix), function(j)sqrt(1/(clusterRRlarge[[j]]*outExp[[j]]@x[res[[idix[[j]]]]$maxid[res[[idix[[j]]]]$selection.bic]])))
-                clusterRRlarge <- unique(res$Lambda_dense[res$maxid[res$selection.bic],])[2]
-                se_clusterRRlarge <- sqrt(clusterRRlarge/outExp@x[res$maxid[res$selection.bic]])
-                
+                #print("a")
+                if(any(cellsix==TRUE)){
+                    #print("b")
+                    clusterRRlarge <- unique(res$Lambda_dense[res$maxid[res$selection.bic],])[2]
+                    se_clusterRRlarge <- sqrt(clusterRRlarge/outExp@x[res$maxid[res$selection.bic]])
+                    clusterMA <- cluster_thetaa
+                    
+                } else {
+                   # print("c")
+                    clusterRRlarge <- res$Lambda_dense[res$maxid[res$selection.bic],][cellsix]
+                    se_clusterRRlarge <- sqrt(clusterRRlarge/outExp@x[cellsix])
+                    clusterMA <- clusterRRlarge
+                    
+                }
+                                
             }
-            nonma.theta.time <- system.time(nonma.theta <- cbind(lb=exp(log(cluster_thetaa)-1.96*se_clusterRRlarge), 
-                                                                                                    clusterMA = cluster_thetaa,
-                                                                                                    ub=exp(log(cluster_thetaa)+1.96*se_clusterRRlarge)))
+            #print(clusterMA)
+            nonma.theta.time <- system.time(nonma.theta <- cbind(lb=exp(log(clusterMA)-1.96*se_clusterRRlarge), 
+                                                                 clusterMA = clusterMA,
+                                                                 ub=exp(log(clusterMA)+1.96*se_clusterRRlarge)))
+            # nonma.theta.time <- system.time(nonma.theta <- cbind(lb=exp(log(cluster_thetaa)-1.96*se_clusterRRlarge), 
+            #                                                                                         clusterMA = cluster_thetaa,
+            #                                                                                         ub=exp(log(cluster_thetaa)+1.96*se_clusterRRlarge)))
         } else {
             if(IC=="aic") {
-                #clusterRRlarge <- lapply(1:length(idix), function(j) unique(res[[idix[[j]]]]$Lambda_dense[,res[[idix[[j]]]]$maxid[res[[idix[[j]]]]$selection.aic]])[2])
-                clusterRRlarge <- unique(res$Lambda_dense[res$maxid[res$selection.aic],])[2]
-                se_clusterRRlarge <- sqrt(clusterRRlarge/outExp@x[res$maxid[res$selection.aic]])
+                #print("a")
+                if(any(cellsix==TRUE)){
+                    clusterRRlarge <- unique(res$Lambda_dense[res$maxid[res$selection.aic],])[2]
+                    se_clusterRRlarge <- sqrt(clusterRRlarge/outExp@x[res$maxid[res$selection.aic]])    
+                    clusterMA <- cluster_thetaa
+                } else{
+                    #print("c")
+                    clusterRRlarge <- res$Lambda_dense[res$maxid[res$selection.aic],][cellsix]
+                    se_clusterRRlarge <- sqrt(clusterRRlarge/outExp@x[cellsix])
+                    clusterMA <- clusterRRlarge
+                }
+                
                 
             } else {
-                #browser()
-                #clusterRRlarge <- lapply(1:length(idix), function(j) unique(res[[idix[[j]]]]$Lambda_dense[,res[[idix[[j]]]]$maxid[res[[idix[[j]]]]$selection.bic]])[2])
-                clusterRRlarge <- unique(res$Lambda_dense[res$maxid[res$selection.bic],])[2]
-                se_clusterRRlarge <- sqrt(clusterRRlarge/outExp@x[res$maxid[res$selection.bic]])
+                if(any(cellsix==TRUE)){
+                    clusterRRlarge <- unique(res$Lambda_dense[res$maxid[res$selection.bic],])[2]
+                    se_clusterRRlarge <- sqrt(clusterRRlarge/outExp@x[res$maxid[res$selection.bic]])   
+                    clusterMA <- cluster_thetaa
+                } else{
+                    clusterRRlarge <- res$Lambda_dense[res$maxid[res$selection.bic],][cellsix]
+                    se_clusterRRlarge <- sqrt(clusterRRlarge/outExp@x[cellsix])
+                    clusterMA <- clusterRRlarge
+                }
+                #print(clusterMA)
                 
                 
             }
-            nonma.theta.time <- system.time(nonma.theta <- cbind(lb=cluster_thetaa-1.96*se_clusterRRlarge, 
-                                                                 clusterMA = cluster_thetaa,
-                                                                 ub=cluster_thetaa+1.96*se_clusterRRlarge))
+            #print(clusterMA)
+            nonma.theta.time <- system.time(nonma.theta <- cbind(lb=clusterMA-1.96*se_clusterRRlarge, 
+                                                                 clusterMA = clusterMA,
+                                                                 ub=clusterMA+1.96*se_clusterRRlarge))
             
         }
     } else {
@@ -1229,31 +1267,73 @@ nonma <- function(cluster_thetaa,res, clusterRR_ilarge,wslarge,idix, IC, transfo
         # browser()
         if(transform=="log"){
             if(IC=="aic") {
-                clusterRRlarge <- unique(res$Lambda_dense[,res$maxid[res$selection.aic]])[2]
-                se_clusterRRlarge <- sqrt(1/(clusterRRlarge*outExp@x[res$maxid[res$selection.aic]]))
+                if(any(cellsix==TRUE)){
+                    
+                    #test <- sparseMAT%*%matrix(res$Lambda_dense[,res$maxid[res$selection.aic]],ncol=1)
+                    
+                    
+                    
+                    #clusterRRlarge <- unique(res$Lambda_dense[,res$maxid[res$selection.aic]])[2]
+                    #se_clusterRRlarge <- sqrt(1/(clusterRRlarge*outExp@x[res$maxid[res$selection.aic]]))    
+                    se_clusterRRlarge <- sqrt(1/(cluster_thetaa*outExp@x[res$maxid[res$selection.aic]]))    
+                    clusterMA <- cluster_thetaa
+                    
+                } else{
+                   
+                    
+                    
+                    clusterRRlarge <- res$Lambda_dense[,res$maxid[res$selection.aic]][cellsix]
+                    se_clusterRRlarge <- sqrt(1/(clusterRRlarge*outExp@x[cellsix]))
+                    clusterMA <- clusterRRlarge
+                }
+                
                 
             } else {
-                clusterRRlarge <- unique(res$Lambda_dense[,res$maxid[res$selection.bic]])[2]
-                se_clusterRRlarge <- sqrt(1/(clusterRRlarge*outExp@x[res$maxid[res$selection.bic]]))
+                if(any(cellsix==TRUE)){
+                    #clusterRRlarge <- unique(res$Lambda_dense[,res$maxid[res$selection.bic]])[2]
+                    #se_clusterRRlarge <- sqrt(1/(clusterRRlarge*outExp@x[res$maxid[res$selection.bic]]))    
+                    se_clusterRRlarge <- sqrt(1/(cluster_thetaa*outExp@x[res$maxid[res$selection.bic]]))    
+                    clusterMA <- cluster_thetaa
+                } else{
+                    clusterRRlarge <- res$Lambda_dense[cellsix]
+                    se_clusterRRlarge <- sqrt(1/(clusterRRlarge*outExp@x[cellsix]))
+                    clusterMA <- clusterRRlarge
+                }
+                
                 
             }
-            nonma.theta.time <-system.time(nonma.theta <-  cbind(lb=exp(log(cluster_thetaa)-1.96*se_clusterRRlarge), 
-                                                                 clusterMA = cluster_thetaa,
-                                                                 ub=exp(log(cluster_thetaa)+1.96*se_clusterRRlarge)))
+            nonma.theta.time <-system.time(nonma.theta <-  cbind(lb=exp(log(clusterMA)-1.96*se_clusterRRlarge), 
+                                                                 clusterMA = clusterMA,
+                                                                 ub=exp(log(clusterMA)+1.96*se_clusterRRlarge)))
         } else {
             if(IC=="aic") {
-                clusterRRlarge <-unique(res$Lambda_dense[,res$maxid[res$selection.aic]])[2]
-                se_clusterRRlarge <- sqrt(clusterRRlarge/outExp@x[res$maxid[res$selection.aic]])
-                
+                if(any(cellsix==TRUE)){
+                    #clusterRRlarge <-unique(res$Lambda_dense[,res$maxid[res$selection.aic]])[2]
+                    #se_clusterRRlarge <- sqrt(clusterRRlarge/outExp@x[res$maxid[res$selection.aic]])    
+                    se_clusterRRlarge <- sqrt(cluster_thetaa/outExp@x[res$maxid[res$selection.aic]])    
+                    clusterMA <- cluster_thetaa
+                } else{
+                    clusterRRlarge <- res$Lambda_dense[,res$maxid[res$selection.aic]][cellsix]
+                    se_clusterRRlarge <- sqrt(clusterRRlarge/outExp@x[cellsix])
+                    clusterMA <- clusterRRlarge
+                }
             } else {
-                #browser()
-                clusterRRlarge <- unique(res$Lambda_dense[,res$maxid[res$selection.bic]])[2]
-                se_clusterRRlarge <- sqrt(clusterRRlarge/outExp@x[res$maxid[res$selection.bic]])
+                if(any(cellsix==TRUE)){
+                    #clusterRRlarge <- unique(res$Lambda_dense[,res$maxid[res$selection.bic]])[2]
+                    #se_clusterRRlarge <- sqrt(clusterRRlarge/outExp@x[res$maxid[res$selection.bic]])
+                    se_clusterRRlarge <- sqrt(cluster_thetaa/outExp@x[res$maxid[res$selection.bic]])
+                    clusterMA <- cluster_thetaa
+                } else{
+                    clusterRRlarge <- res$Lambda_dense[,res$maxid[res$selection.bic]][cellsix]
+                    se_clusterRRlarge <- sqrt(clusterRRlarge/outExp@x[cellsix])
+                    clusterMA <- clusterRRlarge
+                }
+                
                 
             }
-            nonma.theta.time <- system.time(nonma.theta <- cbind(lb=cluster_thetaa-1.96*se_clusterRRlarge, 
-                                                                 clusterMA = cluster_thetaa,
-                                                                 ub=cluster_thetaa+1.96*se_clusterRRlarge))
+            nonma.theta.time <- system.time(nonma.theta <- cbind(lb=clusterMA-1.96*se_clusterRRlarge, 
+                                                                 clusterMA = clusterMA,
+                                                                 ub=clusterMA +1.96*se_clusterRRlarge))
             
         }
     }
@@ -1264,71 +1344,132 @@ nonma <- function(cluster_thetaa,res, clusterRR_ilarge,wslarge,idix, IC, transfo
 
 
 #nonma_asymp
-nonma_asymp <- function(cluster_thetaa,res,clusterRR_ilarge,wslarge,idix, IC, transform, bylocation=TRUE){
-    if(bylocation==FALSE){
+nonma_asymp <- function(cluster_thetaa,res,clusterRR_ilarge,wslarge,idix, IC, transform, byloc=TRUE, cellsix){
+    if(byloc==FALSE){
         if(transform=="log"){
             if(IC=="aic") {
-                # clusterRRlarge <- lapply(1:length(idix), 
-                #                          function(j) unique(res[[idix[[j]]]]$Lambda_dense[,res[[idix[[j]]]]$maxid[res[[idix[[j]]]]$selection.aic]])[2])
-                clusterRRlarge <- unique(res$Lambda_dense[res$maxid[res$selection.aic],])[2]
-                se_clusterRRlarge_asymp <- sqrt(1/(clusterRRlarge*outObs@x[res$maxid[res$selection.aic]]))
+                if(any(cellsix==TRUE)){
+                    clusterRRlarge <- unique(res$Lambda_dense[res$maxid[res$selection.aic],])[2]
+                    se_clusterRRlarge_asymp <- sqrt(1/(clusterRRlarge*outObs@x[res$maxid[res$selection.aic]])) 
+                    clusterMA <- cluster_thetaa
+                } else{
+                    clusterRRlarge <- res$Lambda_dense[res$maxid[res$selection.aic],][cellsix]
+                    se_clusterRRlarge_asymp <- sqrt(1/(clusterRRlarge*outObs@x[cellsix]))
+                    clusterMA <- clusterRRlarge
+                }
+                
                 
             } else {
-                # clusterRRlarge <- lapply(1:length(idix), 
-                #                          function(j) unique(res[[idix[[j]]]]$Lambda_dense[,res[[idix[[j]]]]$maxid[res[[idix[[j]]]]$selection.bic]])[2])
-                clusterRRlarge <- unique(res$Lambda_dense[res$maxid[res$selection.bic],])[2]
-                se_clusterRRlarge_asymp <- sqrt(1/(clusterRRlarge*outObs@x[res$maxid[res$selection.bic]]))
+                if(any(cellsix==TRUE)){
+                    clusterRRlarge <- unique(res$Lambda_dense[res$maxid[res$selection.bic],])[2]
+                    se_clusterRRlarge_asymp <- sqrt(1/(clusterRRlarge*outObs@x[res$maxid[res$selection.bic]]))    
+                    clusterMA <- cluster_thetaa
+                } else{
+                    clusterRRlarge <- res$Lambda_dense[res$maxid[res$selection.bic],][cellsix]
+                    se_clusterRRlarge_asymp <- sqrt(1/(clusterRRlarge*outObs@x[cellsix]))
+                    clusterMA <- clusterRRlarge
+                }
+                
                 
             }
-            nonma_asymp.theta.time <- system.time(nonma_asymp.theta <- cbind(lbasymp=exp(log(cluster_thetaa)-1.96*se_clusterRRlarge_asymp), 
-                                                                             clusterMA = cluster_thetaa,
-                                                                             ubasymp=exp(log(cluster_thetaa)+1.96*se_clusterRRlarge_asymp)))
+            nonma_asymp.theta.time <- system.time(nonma_asymp.theta <- cbind(lbasymp=exp(log(clusterMA)-1.96*se_clusterRRlarge_asymp), 
+                                                                             clusterMA = clusterMA,
+                                                                             ubasymp=exp(log(clusterMA)+1.96*se_clusterRRlarge_asymp)))
         } else{
             if(IC=="aic") {
-                # clusterRRlarge <- lapply(1:length(idix), 
-                #                          function(j) unique(res[[idix[[j]]]]$Lambda_dense[,res[[idix[[j]]]]$maxid[res[[idix[[j]]]]$selection.aic]])[2])
-                clusterRRlarge <- unique(res$Lambda_dense[res$maxid[res$selection.aic],])[2]
-                se_clusterRRlarge_asymp <- sqrt(clusterRRlarge/outObs@x[res$maxid[res$selection.aic]])
+                if(any(cellsix==TRUE)){
+                    clusterRRlarge <- unique(res$Lambda_dense[res$maxid[res$selection.aic],])[2]
+                    se_clusterRRlarge_asymp <- sqrt(clusterRRlarge/outObs@x[res$maxid[res$selection.aic]]) 
+                    clusterMA <- cluster_thetaa
+                } else{
+                    clusterRRlarge <- res$Lambda_dense[res$maxid[res$selection.aic],][cellsix]
+                    se_clusterRRlarge_asymp <- sqrt(clusterRRlarge/outObs@x[cellsix])
+                    clusterMA <- clusterRRlarge
+                }
+                
                 
             } else {
-                # clusterRRlarge <- lapply(1:length(idix), 
-                #                          function(j) unique(res[[idix[[j]]]]$Lambda_dense[,res[[idix[[j]]]]$maxid[res[[idix[[j]]]]$selection.bic]])[2])
-                clusterRRlarge <-  unique(res$Lambda_dense[res$maxid[res$selection.bic],])[2]
-                se_clusterRRlarge_asymp <- sqrt(clusterRRlarge/outObs@x[res$maxid[res$selection.bic]])
+                if(any(cellsix==TRUE)){
+                    clusterRRlarge <-  unique(res$Lambda_dense[res$maxid[res$selection.bic],])[2]
+                    se_clusterRRlarge_asymp <- sqrt(clusterRRlarge/outObs@x[res$maxid[res$selection.bic]])    
+                    clusterMA <- cluster_thetaa
+                } else {
+                    clusterRRlarge <-  res$Lambda_dense[res$maxid[res$selection.bic],][cellsix]
+                    se_clusterRRlarge_asymp <- sqrt(clusterRRlarge/outObs@x[cellsix])
+                    clusterMA <- clusterRRlarge
+                }
+
+                
                 
             }
-            nonma_asymp.theta.time <- system.time(nonma_asymp.theta <- cbind(lbasymp=cluster_thetaa-1.96*se_clusterRRlarge_asymp, 
-                                                                             clusterMA = cluster_thetaa,
-                                                                             ubasymp=cluster_thetaa+1.96*se_clusterRRlarge_asymp))
+            nonma_asymp.theta.time <- system.time(nonma_asymp.theta <- cbind(lbasymp=clusterMA-1.96*se_clusterRRlarge_asymp, 
+                                                                             clusterMA = clusterMA,
+                                                                             ubasymp=clusterMA+1.96*se_clusterRRlarge_asymp))
         }
         
     } else {
         if(transform=="log"){
             if(IC=="aic") {
-                clusterRRlarge <- unique(res$Lambda_dense[,res$maxid[res$selection.aic]])[2]
-                se_clusterRRlarge_asymp <- sqrt(1/(clusterRRlarge*outObs@x[res$maxid[res$selection.aic]]))
+                if(any(cellsix==TRUE)){
+                    #clusterRRlarge <- unique(res$Lambda_dense[,res$maxid[res$selection.aic]])[2]
+                    #se_clusterRRlarge_asymp <- sqrt(1/(clusterRRlarge*outObs@x[res$maxid[res$selection.aic]]))    
+                    se_clusterRRlarge_asymp <- sqrt(1/(cluster_thetaa*outObs@x[res$maxid[res$selection.aic]]))    
+                    clusterMA <- cluster_thetaa
+                } else{
+                    clusterRRlarge <- res$Lambda_dense[,res$maxid[res$selection.aic]][cellsix]
+                    se_clusterRRlarge_asymp <- sqrt(1/(clusterRRlarge*outObs@x[cellsix]))
+                    clusterMA <- clusterRRlarge
+                }
+                
                 
             } else {
-                clusterRRlarge <- unique(res$Lambda_dense[,res$maxid[res$selection.bic]])[2]
-                se_clusterRRlarge_asymp <- sqrt(1/(clusterRRlarge*outObs@x[res$maxid[res$selection.bic]]))
+                if(any(cellsix==TRUE)){
+                    #clusterRRlarge <- unique(res$Lambda_dense[,res$maxid[res$selection.bic]])[2]
+                    #se_clusterRRlarge_asymp <- sqrt(1/(clusterRRlarge*outObs@x[res$maxid[res$selection.bic]]))    
+                    se_clusterRRlarge_asymp <- sqrt(1/(cluster_thetaa*outObs@x[res$maxid[res$selection.bic]]))    
+                    clusterMA <- cluster_thetaa
+                } else{
+                    clusterRRlarge <- res$Lambda_dense[,res$maxid[res$selection.bic]][cellsix]
+                    se_clusterRRlarge_asymp <- sqrt(1/(clusterRRlarge*outObs@x[cellsix]))
+                    clusterMA <- clusterRRlarge
+                }
+                
                 
             }
-            nonma_asymp.theta.time <- system.time(nonma_asymp.theta <- cbind(lbasymp=exp(log(cluster_thetaa)-1.96*se_clusterRRlarge_asymp), 
-                                                                             clusterMA = cluster_thetaa,
-                                                                             ubasymp=exp(log(cluster_thetaa)+1.96*se_clusterRRlarge_asymp)))
+            nonma_asymp.theta.time <- system.time(nonma_asymp.theta <- cbind(lbasymp=exp(log(clusterMA)-1.96*se_clusterRRlarge_asymp), 
+                                                                             clusterMA = clusterMA,
+                                                                             ubasymp=exp(log(clusterMA)+1.96*se_clusterRRlarge_asymp)))
         } else{
             if(IC=="aic") {
-                clusterRRlarge <- unique(res$Lambda_dense[,res$maxid[res$selection.aic]])[2]
-                se_clusterRRlarge_asymp <- sqrt(clusterRRlarge/outObs@x[res$maxid[res$selection.aic]])
+                if(any(cellsix==TRUE)){
+                    #clusterRRlarge <- unique(res$Lambda_dense[,res$maxid[res$selection.aic]])[2]
+                    #se_clusterRRlarge_asymp <- sqrt(clusterRRlarge/outObs@x[res$maxid[res$selection.aic]]) 
+                    se_clusterRRlarge_asymp <- sqrt(cluster_thetaa/outObs@x[res$maxid[res$selection.aic]]) 
+                    clusterMA <- cluster_thetaa
+                } else{
+                    clusterRRlarge <- res$Lambda_dense[,res$maxid[res$selection.aic]][cellsix]
+                    se_clusterRRlarge_asymp <- sqrt(clusterRRlarge/outObs@x[cellsix])
+                    clusterMA <- clusterRRlarge
+                }
+                
                 
             } else {
-                clusterRRlarge <- unique(res$Lambda_dense[,res$maxid[res$selection.bic]])[2]
-                se_clusterRRlarge_asymp <- sqrt(clusterRRlarge/outObs@x[res$maxid[res$selection.bic]])
+                if(any(cellsix==TRUE)){
+                    #clusterRRlarge <- unique(res$Lambda_dense[,res$maxid[res$selection.bic]])[2]
+                    #se_clusterRRlarge_asymp <- sqrt(clusterRRlarge/outObs@x[res$maxid[res$selection.bic]])    
+                    se_clusterRRlarge_asymp <- sqrt(cluster_thetaa/outObs@x[res$maxid[res$selection.bic]])    
+                    clusterMA <- cluster_thetaa
+                } else {
+                    clusterRRlarge <- res$Lambda_dense[,res$maxid[res$selection.bic]][cellsix]
+                    se_clusterRRlarge_asymp <- sqrt(clusterRRlarge/outObs@x[cellsix])
+                    clusterMA <- clusterRRlarge
+                }
+                
                 
             }
-            nonma_asymp.theta.time <- system.time(nonma_asymp.theta <- cbind(lbasymp=cluster_thetaa-1.96*se_clusterRRlarge_asymp, 
-                                                                             clusterMA = cluster_thetaa,
-                                                                             ubasymp=cluster_thetaa+1.96*se_clusterRRlarge_asymp))
+            nonma_asymp.theta.time <- system.time(nonma_asymp.theta <- cbind(lbasymp=clusterMA-1.96*se_clusterRRlarge_asymp, 
+                                                                             clusterMA = clusterMA,
+                                                                             ubasymp=clusterMA+1.96*se_clusterRRlarge_asymp))
         }
     }
     
@@ -1337,22 +1478,21 @@ nonma_asymp <- function(cluster_thetaa,res,clusterRR_ilarge,wslarge,idix, IC, tr
 }
 
 
-calcbounds <- function(idix, IC, res, bylocation){
-    #do all diagnostics
-    #browser()
-    #idix <- which(id!=0)
-    #print(idix)
-    print(paste0("calculating bounds for ", IC))
+calcbounds <- function(idix, IC, res, byloc, cellrates=FALSE, cellsix=NULL){
+    if(is.null(cellsix)){
+        cellsix <- TRUE
+    } 
+    # 
+    # print(paste0("calculating bounds for ", IC))
+    # print(paste0("cellrates: ", cellrates))
+    # print(paste0("cellsix: ", cellsix))
+    # print(paste0("byloc: ", byloc))
     #prep
     if(IC=="aic"){
-        #wslarge <- lapply(1:length(idix), function(j) res[[idix[[j]]]]$wtMAT[,res[[idix[[j]]]]$selection.aic])
         wslarge <- res$wtMAT[,res$selection.aic]
     } else {
-        #wslarge <- lapply(1:length(idix), function(j) res[[idix[[j]]]]$wtMAT[,res[[idix[[j]]]]$selection.bic])
         wslarge <- res$wtMAT[,res$selection.bic]
     }
-    # clusterRR_uniqlarge <- lapply(1:length(idix), function(j) sapply(1:nrow(res[[idix[[j]]]]$Lambda_dense), 
-    #                                                                  function(k) unique(res[[idix[[j]]]]$Lambda_dense[k,]))) 
     clusterRR_uniqlarge <- sapply(1:nrow(res$Lambda_dense), function(k) unique(res$Lambda_dense[k,]))
     
     clusterRR_ilarge <- rep(NA, 66870)
@@ -1363,29 +1503,29 @@ calcbounds <- function(idix, IC, res, bylocation){
     
     
     #Perform
-    outnonma.time <- system.time(outnonma <- nonma(cluster_thetaa, res, clusterRR_ilarge, wslarge, idix, IC=IC, transform="none", bylocation))
-    outnonmaTlog.time <- system.time(outnonmaTlog <- nonma(cluster_thetaa, res, clusterRR_ilarge, wslarge, idix, IC=IC, transform="log", bylocation))
-    outnonma_asymp.time <- system.time(outnonma_asymp <- nonma_asymp(cluster_thetaa ,res, clusterRR_ilarge, wslarge, idix, IC=IC, transform="none", bylocation))
-    outnonma_asympTlog.time <- system.time(outnonma_asympTlog <- nonma_asymp(cluster_thetaa ,res, clusterRR_ilarge, wslarge, idix, IC=IC, transform="log", bylocation))
+    outnonma.time <- system.time(outnonma <- nonma(cluster_thetaa, res, clusterRR_ilarge, wslarge, idix, IC=IC, transform="none", byloc, cellsix))
+    outnonmaTlog.time <- system.time(outnonmaTlog <- nonma(cluster_thetaa, res, clusterRR_ilarge, wslarge, idix, IC=IC, transform="log", byloc, cellsix))
+    outnonma_asymp.time <- system.time(outnonma_asymp <- nonma_asymp(cluster_thetaa ,res, clusterRR_ilarge, wslarge, idix, IC=IC, transform="none", byloc, cellsix))
+    outnonma_asympTlog.time <- system.time(outnonma_asympTlog <- nonma_asymp(cluster_thetaa ,res, clusterRR_ilarge, wslarge, idix, IC=IC, transform="log", byloc, cellsix))
     print("nonma finished")
     outbuck.theta.time <- system.time(outbuck.theta <- bucklandbounds(thetai=clusterRR_ilarge, 
                                                                       thetaa = cluster_thetaa, 
                                                                       w_q=wslarge, 
                                                                       sparsematrix=t(sparsematrix), 
-                                                                      outExp,overdisp.est = NULL))
+                                                                      outExp,overdisp.est = NULL, cellsix=cellsix))
     outbuckTlog.theta.time <- system.time(outbuckTlog.theta <- bucklandbounds(thetai=clusterRR_ilarge,
                                                                               thetaa =cluster_thetaa, 
                                                                               w_q=wslarge, 
                                                                               sparsematrix=t(sparsematrix),
                                                                               outExp,
                                                                               overdisp.est = NULL, 
-                                                                              transform=TRUE))
+                                                                              transform=TRUE, cellsix=cellsix))
     print("buckland finished")
     outmaw2.theta.time <- system.time(outmaw2.theta <- maw2(thetai=clusterRR_ilarge, 
                                                             thetaa = cluster_thetaa, 
                                                             w_q=wslarge,
                                                             sparsematrix=t(sparsematrix ), 
-                                                            outExp,overdisp.est = NULL))
+                                                            outExp,overdisp.est = NULL, cellsix=cellsix))
     
     outmaw2Tlog.theta.time <- system.time(outmaw2Tlog.theta  <- maw2(thetai=clusterRR_ilarge, 
                                                                      thetaa = cluster_thetaa, 
@@ -1393,7 +1533,7 @@ calcbounds <- function(idix, IC, res, bylocation){
                                                                      sparsematrix=t(sparsematrix), 
                                                                      outExp, 
                                                                      overdisp.est = NULL,
-                                                                     transform=TRUE))
+                                                                     transform=TRUE,  cellsix=cellsix))
     print("maw2 finished")
     outmata.theta.time <- system.time(outmata.theta <- matabounds(thetai=clusterRR_ilarge, 
                                                                   thetaa = cluster_thetaa, 
@@ -1401,14 +1541,14 @@ calcbounds <- function(idix, IC, res, bylocation){
                                                                   sparsematrix=t(sparsematrix ), 
                                                                   outExp = outExp,
                                                                   overdisp.est = NULL,
-                                                                  transform="none"))
+                                                                  transform="none",  cellsix=cellsix))
     outmataTlog.theta.time <- system.time(outmataTlog.theta <- matabounds(thetai=clusterRR_ilarge, 
                                                                           thetaa = cluster_thetaa, 
                                                                           w_q=wslarge, 
                                                                           sparsematrix=t(sparsematrix ),
                                                                           outExp = outExp, 
                                                                           overdisp.est = NULL,
-                                                                          transform="log"))
+                                                                          transform="log",  cellsix=cellsix))
     print("mata finished")
     #return
     return(list(
