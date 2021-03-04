@@ -143,6 +143,8 @@ for(risk in risks){
                                                                                  byloc = FALSE, model="poisson",
                                                                                  overdisp.est = overdisp.est))
             
+            id.bic_pc <- lapply(1:nsim, function(i) as.vector(unlist(sim_superclust_pc[[i]]$selection.bic)))
+            id.aic_pc <- lapply(1:nsim, function(i) as.vector(unlist(sim_superclust_pc[[i]]$selection.aic)))
             
             ###############################################################################################################
             ###############################################################################################################
@@ -159,10 +161,14 @@ for(risk in risks){
             
             
             
-            id.bic_pc <- as.vector(unlist(sim_superclust_pc$selection.bic))
-            id.aic_pc <- as.vector(unlist(sim_superclust_pc$selection.aic))
+            id.bic_loc <- lapply(1:nsim, function(i) as.vector(unlist(sim_superclust_loc[[i]]$selection.bic)))
+            id.aic_loc <- lapply(1:nsim, function(i) as.vector(unlist(sim_superclust_loc$selection.aic)))
             
-            outbic.pc <- calcbounds(id.bic_loc, IC="bic", sim_superclust_pc, bylocation = FALSE, cellrates=TRUE, cellsix = cellsix)
+            #outbic.pc <- calcbounds(id.bic_loc, IC="bic", sim_superclust_pc, bylocation = FALSE, outExp, outObs,cellrates=TRUE, cellsix = cellsix)
+            test <- lapply(1:nsim, function(i) calcbounds(id.bic_loc[[i]], IC="bic", 
+                                                          sim_superclust_pc[[i]], byloc = TRUE,
+                                                          Ex[[i]], YSIM[[i]],
+                                                          cellrates=TRUE, cellsix = cellsix, sparsematrix = sparseMAT))
             
             print("finished stacking by PC")
             ##################################################

@@ -90,7 +90,7 @@ for (m in startsim:(startsim+4)){
     #####################################################################################
     #####################################################################################
     if(id.bic_loc!=0){
-        outbic.loc <- calcbounds(id.bic_loc, IC="bic", sim_superclust_loc, bylocation = TRUE)
+        outbic.loc <- calcbounds(id.bic_loc, IC="bic", sim_superclust_loc, bylocation = TRUE,outExp)
     } else {
         print("No clusters identified: BIC")
     }
@@ -99,7 +99,7 @@ for (m in startsim:(startsim+4)){
         if(id.bic_loc==id.aic_loc){
             outaic.loc <- outbic.loc
         } else {
-            outaic.loc <- calcbounds(id.aic_loc, IC="aic", sim_superclust_loc, bylocation = TRUE)
+            outaic.loc <- calcbounds(id.aic_loc, IC="aic", sim_superclust_loc, bylocation = TRUE,outExp)
         }
     } else {
         print("No clusters identified: AIC")
@@ -361,7 +361,7 @@ for (m in startsim:(startsim+4)){
     #####################################################################################
     #####################################################################################
     if(id.bic_pc!=0){
-        outbic.pc <- calcbounds(id.bic_pc, IC="bic", sim_superclust_pc, bylocation = FALSE)
+        outbic.pc <- calcbounds(id.bic_pc, IC="bic", sim_superclust_pc, bylocation = FALSE,outExp)
     } else {
         print("No clusters identified: BIC")
     }
@@ -370,7 +370,7 @@ for (m in startsim:(startsim+4)){
         if(id.bic_pc==id.aic_pc){
             outaic.pc <- outbic.pc
         } else {
-            outaic.pc <- calcbounds(id.aic_pc, IC="aic", sim_superclust_pc, bylocation = FALSE)
+            outaic.pc <- calcbounds(id.aic_pc, IC="aic", sim_superclust_pc, bylocation = FALSE,outExp)
         }
     } else {
         print("No clusters identified: AIC")
