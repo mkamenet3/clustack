@@ -2,6 +2,7 @@
 library(clusso)
 library(MASS)
 source("clustack.R")
+source("helperfuncs .R")
 
 #get arg from script
 args<- commandArgs(TRUE)
@@ -554,7 +555,9 @@ for (m in startsim:(startsim+4)){
     
     bounds.pc$iter <- m
     bounds.pc$theta <- theta
-    bounds.pc$cent <- cent
+
+    #ADD
+    bounds.pc$pop <- cent
     
     bounds.pc$select_orig.bic <- sim_superclust_pc$selection.bic
     bounds.pc$select_orig.aic <- sim_superclust_pc$selection.aic
