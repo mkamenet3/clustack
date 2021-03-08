@@ -808,7 +808,7 @@ nonma.cells <- function(cluster_thetaa,res, clusterRR_ilarge,wslarge,idix, outEx
         print(cellrisk_wt_out)
         if(transform=="log"){
             if(IC=="aic") {
-                se_clusterRRlarge <- sqrt(1/(cellrisk_wt_out*outExp_out[cellsix_out]))
+                se_clusterRRlarge <- sqrt(1/(cellrisk_wt_out*outExp_out))
                 clusterMA <- cellrisk_wt_out
             } else {
                 se_clusterRRlarge <- sqrt(1/(cellrisk_wt_out*outExp_out))
@@ -820,7 +820,7 @@ nonma.cells <- function(cluster_thetaa,res, clusterRR_ilarge,wslarge,idix, outEx
                 clusterMA <- cellrisk_wt_out
             } else {
                 se_clusterRRlarge <- sqrt(cellrisk_wt_out/outExp_out)
-                clusterMA <- cellsix_out
+                clusterMA <- cellrisk_wt_out
             }
             nonma.theta.time <- system.time(nonma.theta <- cbind(lb=clusterMA-1.96*se_clusterRRlarge, 
                                                                  clusterMA = clusterMA,
@@ -1004,7 +1004,7 @@ calcbounds.cluster <- function(idix, IC, res, byloc, Ex, Obs,wslarge, cluster_th
     print(str(sparsematrix))
     if(byloc==TRUE){
         print(paste0("byloc", byloc))
-        outExp_out <- Exp
+        outExp_out <- Ex
         outObs_out <- Obs
     }
     else if(byloc==FALSE){
@@ -1101,6 +1101,7 @@ calcbounds.cluster <- function(idix, IC, res, byloc, Ex, Obs,wslarge, cluster_th
 calcbounds.cells <- function(idix, IC, res, byloc, Ex, Obs,wslarge, cellsix, sparsematrix){
     print("calcbounds.cells")
     cellrisk_wt_out <- rep(NA, length(cellsix))
+    cellsix_out <- cellsix
     if(byloc==TRUE){
         print(paste0("byloc", byloc))
         outExp_out <- Ex[cellsix]
@@ -1117,7 +1118,6 @@ calcbounds.cells <- function(idix, IC, res, byloc, Ex, Obs,wslarge, cellsix, spa
         print(paste0("byloc: ", byloc))
         outExp <- t(sparsematrix)%*%Ex
         outObs <- t(sparsematrix)%*%Obs
-        cellsix_out <- cellsix
         print(paste0("cellsix: ", cellsix))
         outExp_out <- outExp@x[cellsix]
         #outObs_out <- outObs@x[cellsix]
