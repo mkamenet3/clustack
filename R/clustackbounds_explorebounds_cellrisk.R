@@ -25,6 +25,7 @@ library(Matrix)
 
 set.seed(20200914)
 source("clustack.R")
+source("helperfuncs.R")
 
 
 ###########################################################
@@ -147,7 +148,7 @@ for(risk in risks){
             id.aic_pc <- lapply(1:nsim, function(i) as.vector(unlist(sim_superclust_pc[[i]]$selection.aic)))
             
             
-            #TESTERS
+            #TESTERS - by PC
             test <- lapply(1:nsim, function(i) calcbounds(id.bic_pc[[i]], IC="bic", 
                                                           sim_superclust_pc[[i]], byloc = FALSE,
                                                           Ex[[i]], YSIM[[i]], target="cluster", sparsematrix = sparseMAT))
@@ -164,15 +165,7 @@ for(risk in risks){
                                                           sim_superclust_pc[[i]], byloc = FALSE,
                                                           Ex[[i]], YSIM[[i]], target="cells", cellsix = cellsix,sparsematrix = sparseMAT))
             
-            # #TODO:
-            #     - fix by LOC next
-            #     - fix nonma_asymp
-            #     - fix buckland
-            #     - fix others
-            #     - change sim to non-standardized Expected counts
-            #     - fix mat.bic in sim detection
-            # 
-            
+    
             
             ###############################################################################################################
             ###############################################################################################################
@@ -190,13 +183,38 @@ for(risk in risks){
             
             
             id.bic_loc <- lapply(1:nsim, function(i) as.vector(unlist(sim_superclust_loc[[i]]$selection.bic)))
-            id.aic_loc <- lapply(1:nsim, function(i) as.vector(unlist(sim_superclust_loc$selection.aic)))
+            id.aic_loc <- lapply(1:nsim, function(i) as.vector(unlist(sim_superclust_loc[[i]]$selection.aic)))
             
-            #outbic.pc <- calcbounds(id.bic_loc, IC="bic", sim_superclust_pc, bylocation = FALSE, outExp, outObs,cellrates=TRUE, cellsix = cellsix)
             test <- lapply(1:nsim, function(i) calcbounds(id.bic_loc[[i]], IC="bic", 
                                                           sim_superclust_loc[[i]], byloc = TRUE,
-                                                          Ex[[i]], YSIM[[i]],
-                                                          cellrates=TRUE, cellsix = cellsix, sparsematrix = sparseMAT))
+                                                          Ex[[i]], YSIM[[i]], target="cluster", sparsematrix = sparseMAT))
+            
+            test <- lapply(1:nsim, function(i) calcbounds(id.bic_loc[[i]], IC="aic", 
+                                                          sim_superclust_loc[[i]], byloc = TRUE,
+                                                          Ex[[i]], YSIM[[i]], target="cluster", sparsematrix = sparseMAT))
+            
+            test <- lapply(1:nsim, function(i) calcbounds(id.bic_loc[[i]], IC="bic", 
+                                                          sim_superclust_loc[[i]], byloc = TRUE,
+                                                          Ex[[i]], YSIM[[i]], target="cells", cellsix = cellsix,sparsematrix = sparseMAT))
+            test <- lapply(1:nsim, function(i) calcbounds(id.bic_loc[[i]], IC="aic", 
+                                                          sim_superclust_loc[[i]], byloc = TRUE,
+                                                          Ex[[i]], YSIM[[i]], target="cells", cellsix = cellsix,sparsematrix = sparseMAT))
+            
+            # #TODO:
+            #     - fix by LOC next
+            #     - fix nonma_asymp
+            #     - fix buckland
+            #     - fix others
+            #     - change sim to non-standardized Expected counts
+            #     - fix mat.bic in sim detection
+            # 
+            
+            
+            #outbic.pc <- calcbounds(id.bic_loc, IC="bic", sim_superclust_pc, bylocation = FALSE, outExp, outObs,cellrates=TRUE, cellsix = cellsix)
+            # test <- lapply(1:nsim, function(i) calcbounds(id.bic_loc[[i]], IC="bic", 
+            #                                               sim_superclust_loc[[i]], byloc = TRUE,
+            #                                               Ex[[i]], YSIM[[i]],
+            #                                               cellrates=TRUE, cellsix = cellsix, sparsematrix = sparseMAT))
             
             print("finished stacking by PC")
             ##################################################
