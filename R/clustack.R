@@ -567,58 +567,118 @@ mata_tailareazscore <- function(thetaii, thetaaa, se.thetaii, w_q, alpha){
     
 }
 
-matabounds <- function(thetai,thetaa, w_q,sparsematrix, outExp, overdisp.est,transform=c("none","log", "sqrt"), cellrates=FALSE) {
-    #print(cellrates)
-    #NT <- rowSums(sparsematrix)
+matabounds.cluster <- function(thetaa,thetai, w_q, outExp, transform=c("none","log", "sqrt"), overdisp.est) {
     if(is.null(transform)){
-        none = matabounds_none(thetai,thetaa, w_q,sparsematrix, overdisp.est, outExp, cellrates)
+        none = matabounds_none(thetaa,thetai, w_q, outExp, overdisp.est)
     }
     switch(transform,
-           none = matabounds_none(thetai,thetaa, w_q,sparsematrix, overdisp.est, outExp, cellrates),
-           log = matabounds_log(thetai,thetaa, w_q,sparsematrix, overdisp.est, outExp,cellrates),
-           sqrt = matabounds_sqrt(thetai,thetaa, w_q,sparsematrix, overdisp.est, outExp,cellrates))
+           none = matabounds_none.cluster(thetaa,thetai, w_q,  outExp, overdisp.est),
+           log = matabounds_log.cluster(thetaa, thetai,w_q, outExp, overdisp.est),
+           sqrt = matabounds_sqrt.cluster(thetaa,thetai, w_q,  outExp, overdisp.est))
 }
 
-matabounds_none <- function(thetai,thetaa, w_q,sparsematrix, overdisp.est, outExp, cellrates) {
-    if(cellrates==TRUE){
-        #browser()
-        if(!is.null(overdisp.est)){
-            varthetai <- sapply(1:nrow(sparsematrix), function(k) overdisp.est*thetai[k,]/outExp)
-        } else {
-            varthetai <- sapply(1:nrow(sparsematrix), function(k) thetai[k,]/outExp)
-        }
-        mataLB <- sapply(1:ncol(thetai), 
-                         function(k) uniroot(f=mata_tailareazscore, interval=c(-10, 10),
-                          thetaii= thetai[,k],
-                          se.thetaii=sqrt(varthetai[k,]),
-                          w_q=w_q, alpha=0.025, tol=1e-8)$root)    
-        
-        mataUB <- sapply(1:ncol(thetai),
-                         function(k) uniroot(f=mata_tailareazscore, interval=c(-10, 10),
-                          thetaii= thetai[,k],
-                          se.thetaii=sqrt(varthetai[k,]),
-                          w_q=w_q, alpha=1-0.025, tol=1e-8)$root) 
-    } else{
-        if(!is.null(overdisp.est)){
-            varthetai <- sapply(1:nrow(sparsematrix), function(k) overdisp.est*thetai[k]/outExp[k])
-        } else {
-            varthetai <- sapply(1:nrow(sparsematrix), function(k) thetai[k]/outExp[k])
-        }
-        mataLB <- uniroot(f=mata_tailareazscore, interval=c(-10, 10),
-                          thetaii= thetai,
-                          se.thetaii=sqrt(varthetai),
-                          w_q=w_q, alpha=0.025, tol=1e-8)$root    
-        
-        mataUB <- uniroot(f=mata_tailareazscore, interval=c(-10, 10),
-                          thetaii= thetai,
-                          se.thetaii=sqrt(varthetai),
-                          w_q=w_q, alpha=1-0.025, tol=1e-8)$root 
+
+matabounds.cells <- function(thetaa,res, w_q, outExp, IC, transform=c("none","log", "sqrt"),tsparsematrix,overdisp.est, cellsix_out) {
+    if(is.null(transform)){
+        none = matabounds_none.cells(thetaa, res, w_q, outExp, IC, tsparsematrix, overdisp.est, cellsix_out)
     }
+    switch(transform,
+           none = matabounds_none.cells(thetaa, res, w_q, outExp, IC, tsparsematrix, overdisp.est, cellsix_out),
+           log = matabounds_log.cells(thetaa, res, w_q, outExp, IC, tsparsematrix, overdisp.est, cellsix_out),
+           sqrt = matabounds_sqrt.cells(thetaa, res, w_q, outExp, IC, tsparsematrix, overdisp.est, cellsix_out))
+}
+
+matabounds_none.cluster <- function(thetaa,thetai, w_q, outExp, overdisp.est) {
+   # browser()
+    if(!is.null(overdisp.est)){
+        varthetai <- overdisp.est*(thetai/outExp)
+    } else {
+        varthetai <- thetai/outExp
+    }
+    mataLB <- uniroot(f=mata_tailareazscore, interval=c(-10, 10),
+                      thetaii= thetai,
+                      se.thetaii=sqrt(varthetai@x),
+                      w_q=w_q, alpha=0.025, tol=1e-8)$root    
+    
+    mataUB <- uniroot(f=mata_tailareazscore, interval=c(-10, 10),
+                      thetaii= thetai,
+                      se.thetaii=sqrt(varthetai@x),
+                      w_q=w_q, alpha=1-0.025, tol=1e-8)$root 
+    return(list(mata.LB = mataLB,
+                clusterMA = thetaa,
+                mata.UB = mataUB))
+}
+
+matabounds_none.cells <- function(thetaa, res, w_q,outExp, IC, tsparsematrix, overdisp.est,cellsix_out) {
+    #browser()
+    thetai <- res$Lambda_dens
+    if(IC=="aic"){
+        thetaa <- res$wLambda[res$selection.aic,][cellsix_out]
+    } else {
+        thetaa <- res$wLambda[res$selection.bic,][cellsix_out]
+    }
+    if(!is.null(overdisp.est)){
+        varthetai <- sapply(1:nrow(tsparsematrix), function(k) overdisp.est*(1/(thetai[k,]*outExp)))
+    } else {
+        varthetai <- sapply(1:nrow(tsparsematrix), function(k) thetai[k,]/outExp)
+    }
+    mataLB <- sapply(1:length(cellsix_out),
+                     function(k) uniroot(f=mata_tailareazscore, interval=c(-10, 10),
+                                         thetaii= thetai[,cellsix_out[k]],
+                                         se.thetaii=sqrt(varthetai[cellsix_out[k],]),
+                                         w_q=w_q, alpha=0.025, tol=1e-8)$root)
+    
+    mataUB <- sapply(1:length(cellsix_out),
+                     function(k) uniroot(f=mata_tailareazscore, interval=c(-10, 10),
+                                         thetaii= thetai[,cellsix_out[k]],
+                                         se.thetaii=sqrt(varthetai[cellsix_out[k],]),
+                                         w_q=w_q, alpha=1-0.025, tol=1e-8)$root)
     
     return(list(mata.LB = mataLB,
                 clusterMA = thetaa,
                 mata.UB = mataUB))
 }
+
+# matabounds_none <- function(thetai,thetaa, w_q,sparsematrix, overdisp.est, outExp, cellrates) {
+#     if(cellrates==TRUE){
+#         #browser()
+#         if(!is.null(overdisp.est)){
+#             varthetai <- sapply(1:nrow(sparsematrix), function(k) overdisp.est*thetai[k,]/outExp)
+#         } else {
+#             varthetai <- sapply(1:nrow(sparsematrix), function(k) thetai[k,]/outExp)
+#         }
+#         mataLB <- sapply(1:ncol(thetai), 
+#                          function(k) uniroot(f=mata_tailareazscore, interval=c(-10, 10),
+#                           thetaii= thetai[,k],
+#                           se.thetaii=sqrt(varthetai[k,]),
+#                           w_q=w_q, alpha=0.025, tol=1e-8)$root)    
+#         
+#         mataUB <- sapply(1:ncol(thetai),
+#                          function(k) uniroot(f=mata_tailareazscore, interval=c(-10, 10),
+#                           thetaii= thetai[,k],
+#                           se.thetaii=sqrt(varthetai[k,]),
+#                           w_q=w_q, alpha=1-0.025, tol=1e-8)$root) 
+#     } else{
+#         if(!is.null(overdisp.est)){
+#             varthetai <- sapply(1:nrow(sparsematrix), function(k) overdisp.est*thetai[k]/outExp[k])
+#         } else {
+#             varthetai <- sapply(1:nrow(sparsematrix), function(k) thetai[k]/outExp[k])
+#         }
+#         mataLB <- uniroot(f=mata_tailareazscore, interval=c(-10, 10),
+#                           thetaii= thetai,
+#                           se.thetaii=sqrt(varthetai),
+#                           w_q=w_q, alpha=0.025, tol=1e-8)$root    
+#         
+#         mataUB <- uniroot(f=mata_tailareazscore, interval=c(-10, 10),
+#                           thetaii= thetai,
+#                           se.thetaii=sqrt(varthetai),
+#                           w_q=w_q, alpha=1-0.025, tol=1e-8)$root 
+#     }
+#     
+#     return(list(mata.LB = mataLB,
+#                 clusterMA = thetaa,
+#                 mata.UB = mataUB))
+# }
 
 matabounds_sqrt <- function(thetai,thetaa, w_q,sparsematrix, overdisp.est, outExp, cellrates) {
    # print("sqrt version")
@@ -776,20 +836,16 @@ nonma.cluster <- function(cluster_thetaa,res, clusterRR_ilarge,wslarge,idix, out
 
 nonma.cells <- function(cluster_thetaa,res, clusterRR_ilarge,wslarge,idix, outExp_out,IC, transform, byloc=TRUE, cellrisk_wt_out=NULL, cellsix_out){
     if(byloc==FALSE){
-        print("by PC")
-        #browser()
         if(transform=="log"){
             if(IC=="aic") {
                 clusterRRlarge <- res$Lambda_dense[res$maxid[res$selection.aic],][cellsix_out]
                 se_clusterRRlarge <- sqrt(1/(clusterRRlarge*outExp_out))
                 clusterMA <- res$wLambda[res$selection.aic,][cellsix_out]
-                #clusterMA <- cluster_thetaa #clusterRRlarge
                 
             } else {
                 clusterRRlarge <- res$Lambda_dense[res$maxid[res$selection.bic],][cellsix_out]
                 se_clusterRRlarge <- sqrt(1/(clusterRRlarge*outExp_out))
                 clusterMA <- res$wLambda[res$selection.bic,][cellsix_out]
-                #clusterMA <- cluster_thetaa #clusterRRlarge
             }
             nonma.theta.time <- system.time(nonma.theta <- cbind(lb=exp(log(clusterMA)-1.96*se_clusterRRlarge), 
                                                                  clusterMA = clusterMA,
@@ -799,12 +855,10 @@ nonma.cells <- function(cluster_thetaa,res, clusterRR_ilarge,wslarge,idix, outEx
                 clusterRRlarge <- res$Lambda_dense[res$maxid[res$selection.aic],][cellsix_out]
                 se_clusterRRlarge <- sqrt(clusterRRlarge/outExp_out)
                 clusterMA <- res$wLambda[res$selection.aic,][cellsix_out]
-                #clusterMA <- cluster_thetaa #clusterRRlarge
             } else {
                 clusterRRlarge <- res$Lambda_dense[res$maxid[res$selection.bic],][cellsix_out]
                 se_clusterRRlarge <- sqrt(clusterRRlarge/outExp_out)
                 clusterMA <- res$wLambda[res$selection.bic,][cellsix_out]
-                #clusterMA <- cluster_thetaa #clusterRRlarge
             }
             nonma.theta.time <- system.time(nonma.theta <- cbind(lb=clusterMA-1.96*se_clusterRRlarge, 
                                                                  clusterMA = clusterMA,
@@ -813,8 +867,6 @@ nonma.cells <- function(cluster_thetaa,res, clusterRR_ilarge,wslarge,idix, outEx
         
 
     }else {
-        #print("by loc")
-        #print(cellrisk_wt_out)
         if(transform=="log"){
             if(IC=="aic") {
                 se_clusterRRlarge <- sqrt(1/(cellrisk_wt_out*outExp_out))
@@ -834,9 +886,7 @@ nonma.cells <- function(cluster_thetaa,res, clusterRR_ilarge,wslarge,idix, outEx
                                                                  clusterMA = cellrisk_wt_out,
                                                                  ub=cellrisk_wt_out +1.96*se_clusterRRlarge))
         }
-        
     }
-    
     return(list(nonma.theta.time = nonma.theta.time[[3]],
                 nonma.theta = nonma.theta))
 }
@@ -906,7 +956,6 @@ nonma_asymp.cluster <- function(cluster_thetaa,res, clusterRR_ilarge,wslarge,idi
 nonma_asymp.cells <-function(cluster_thetaa,res, clusterRR_ilarge,wslarge,idix, outObs_out,IC, transform, byloc=TRUE, cellrisk_wt_out, cellsix_out){
     if(byloc==FALSE){
         print("by PC")
-        #browser()
         if(transform=="log"){
             if(IC=="aic") {
                 clusterRRlarge <- res$Lambda_dense[res$maxid[res$selection.aic],][cellsix_out]
@@ -917,7 +966,6 @@ nonma_asymp.cells <-function(cluster_thetaa,res, clusterRR_ilarge,wslarge,idix, 
                 clusterRRlarge <- res$Lambda_dense[res$maxid[res$selection.bic],][cellsix_out]
                 se_clusterRRlarge <- sqrt(1/(clusterRRlarge*outObs_out))
                 clusterMA <- res$wLambda[res$selection.bic,][cellsix_out]
-                #clusterMA <- cluster_thetaa #clusterRRlarge
             }
             nonma_asymp.theta.time <- system.time(nonma_asymp.theta <- cbind(lb=exp(log(clusterMA)-1.96*se_clusterRRlarge), 
                                                                  clusterMA = clusterMA,
@@ -927,12 +975,10 @@ nonma_asymp.cells <-function(cluster_thetaa,res, clusterRR_ilarge,wslarge,idix, 
                 clusterRRlarge <- res$Lambda_dense[res$maxid[res$selection.aic],][cellsix_out]
                 se_clusterRRlarge <- sqrt(clusterRRlarge/outObs_out)
                 clusterMA <- res$wLambda[res$selection.aic,][cellsix_out]
-                #clusterMA <- cluster_thetaa #clusterRRlarge
             } else {
                 clusterRRlarge <- res$Lambda_dense[res$maxid[res$selection.bic],][cellsix_out]
                 se_clusterRRlarge <- sqrt(clusterRRlarge/outObs_out)
                 clusterMA <- res$wLambda[res$selection.bic,][cellsix_out]
-                #clusterMA <- cluster_thetaa #clusterRRlarge
             }
             nonma_asymp.theta.time <- system.time(nonma_asymp.theta <- cbind(lb=clusterMA-1.96*se_clusterRRlarge, 
                                                                  clusterMA = clusterMA,
@@ -946,10 +992,8 @@ nonma_asymp.cells <-function(cluster_thetaa,res, clusterRR_ilarge,wslarge,idix, 
         if(transform=="log"){
             if(IC=="aic") {
                 se_clusterRRlarge <- sqrt(1/(cellrisk_wt_out*outObs_out))
-                #clusterMA <- cellrisk_wt_out
             } else {
                 se_clusterRRlarge <- sqrt(1/(cellrisk_wt_out*outObs_out))
-                #clusterMA <- cellrisk_wt_out
             }
             nonma_asymp.theta.time <- system.time(nonma_asymp.theta <- cbind(lb=exp(log(cellrisk_wt_out)-1.96*se_clusterRRlarge), 
                                                                  clusterMA = cellrisk_wt_out,
@@ -957,10 +1001,8 @@ nonma_asymp.cells <-function(cluster_thetaa,res, clusterRR_ilarge,wslarge,idix, 
         } else {
             if(IC=="aic") {
                 se_clusterRRlarge <- sqrt(cellrisk_wt_out/outObs_out)
-                #clusterMA <- cellrisk_wt_out
             } else {
                 se_clusterRRlarge <- sqrt(cellrisk_wt_out/outObs_out)
-                #clusterMA <- cellrisk_wt_out
             }
             nonma_asymp.theta.time <- system.time(nonma_asymp.theta <- cbind(lb=cellrisk_wt_out-1.96*se_clusterRRlarge, 
                                                                  clusterMA = cellrisk_wt_out,
@@ -999,7 +1041,6 @@ calcbounds <- function(idix, IC, res, byloc, Ex, Obs,target=c("cluster", "cells"
            cells = calcbounds.cells(idix, IC, res, byloc, Ex, Obs,wslarge, cluster_thetaa,clusterRR_ilarge, sparsematrix, cellsix))
 }
 
-#idix, IC, res, byloc, Ex, Obs,wslarge, cluster_thetaa,clusterRR_ilarge, sparsematrix, cellsix
 
 calcbounds.cluster <- function(idix, IC, res, byloc, Ex, Obs,wslarge, cluster_thetaa,clusterRR_ilarge, sparsematrix){
     print("calcbounds.cluster")
@@ -1060,27 +1101,17 @@ calcbounds.cluster <- function(idix, IC, res, byloc, Ex, Obs,wslarge, cluster_th
                                                                     outExp,
                                                                     transform="log",
                                                                     overdisp.est))
-    # outmaw2.theta.time <- system.time(outmaw2.theta <- maw2.cluster(thetai=clusterRR_ilarge,
-    #                                                         thetaa = cluster_thetaa,
-    #                                                         w_q=wslarge,
-    #                                                         sparsematrix=t(sparsematrix),
-    #                                                         outExp,overdisp.est))
-    # 
-    # outmaw2Tlog.theta.time <- system.time(outmaw2Tlog.theta  <- maw2.cluster(thetai=clusterRR_ilarge,
-    #                                                                  thetaa = cluster_thetaa,
-    #                                                                  w_q=wslarge,
-    #                                                                  sparsematrix=t(sparsematrix),
-    #                                                                  outExp,
-    #                                                                  overdisp.est = NULL,
-    #                                                                  transform=TRUE))
-    # print("maw2 finished")
-    # outmata.theta.time <- system.time(outmata.theta <- matabounds.cluster(thetai=clusterRR_ilarge,
-    #                                                               thetaa = cluster_thetaa,
-    #                                                               w_q=wslarge,
-    #                                                               sparsematrix=t(sparsematrix ),
-    #                                                               outExp,
-    #                                                               overdisp.est = NULL,
-    #                                                               transform="none"))
+   
+     print("maw2 finished")
+    outmata.theta.time <- system.time(outmata.theta <- matabounds.cluster(cluster_thetaa,
+                                                                          clusterRR_ilarge,
+                                                                  w_q=wslarge,
+                                                                  outExp,
+                                                                  transform="none",
+                                                                  overdisp.est))
+    
+    #thetaa,thetai, w_q, outExp, overdisp.est,transform=c("none","log", "sqrt")
+    
     # outmataTlog.theta.time <- system.time(outmataTlog.theta <- matabounds.cluster(thetai=clusterRR_ilarge,
     #                                                                       thetaa = cluster_thetaa,
     #                                                                       w_q=wslarge,
@@ -1100,7 +1131,7 @@ calcbounds.cluster <- function(idix, IC, res, byloc, Ex, Obs,wslarge, cluster_th
         outbuckTlog.theta = outbuckTlog.theta,
         outmaw2.theta = outmaw2.theta,
         outmaw2Tlog.theta = outmaw2Tlog.theta,
-        # outmata.theta = outmata.theta,
+        outmata.theta = outmata.theta,
         # outmataTlog.theta = outmataTlog.theta,
         
         outnonma.time = outnonma.time[[3]],
@@ -1110,8 +1141,8 @@ calcbounds.cluster <- function(idix, IC, res, byloc, Ex, Obs,wslarge, cluster_th
         outbuck.theta.time = outbuck.theta.time[[3]],
         outbuckTlog.theta.time = outbuckTlog.theta.time[[3]],
         outmaw2.theta.time = outmaw2.theta.time[[3]],
-        outmaw2Tlog.theta.time = outmaw2Tlog.theta.time[[3]]#,
-        # outmata.theta.time = outmata.theta.time[[3]],
+        outmaw2Tlog.theta.time = outmaw2Tlog.theta.time[[3]],
+        outmata.theta.time = outmata.theta.time[[3]]#,
         # outmataTlog.theta.time = outmataTlog.theta.time[[3]]
     ))
 }
@@ -1192,13 +1223,16 @@ calcbounds.cells <- function(idix, IC, res, byloc, Ex, Obs,wslarge, cluster_thet
                                                                       cellsix_out))
 
         # print("maw2 finished")
-        # outmata.theta.time <- system.time(outmata.theta <- matabounds.cells(thetai=clusterRR_ilarge,
-        #                                                               thetaa = cluster_thetaa,
-        #                                                               w_q=wslarge,
-        #                                                               sparsematrix=t(sparsematrix ),
-        #                                                               outExp,
-        #                                                               overdisp.est = NULL,
-        #                                                               transform="none"))
+        outmata.theta.time <- system.time(outmata.theta <- matabounds.cells(cluster_thetaa,
+                                                                            res,
+                                                                      w_q=wslarge,
+                                                                      Ex,
+                                                                      IC,
+                                                                      transform="none",
+                                                                      tsparsematrix=t(sparsematrix),
+                                                                      overdisp.est,
+                                                                      cellsix_out))
+        #thetaa, res, w_q,outExp, IC, tsparsematrix, overdisp.est,cellsix_out
         # outmataTlog.theta.time <- system.time(outmataTlog.theta <- matabounds.cells(thetai=clusterRR_ilarge,
         #                                                                       thetaa = cluster_thetaa,
         #                                                                       w_q=wslarge,
@@ -1218,7 +1252,7 @@ calcbounds.cells <- function(idix, IC, res, byloc, Ex, Obs,wslarge, cluster_thet
             outbuckTlog.theta = outbuckTlog.theta,
             outmaw2.theta = outmaw2.theta,
             outmaw2Tlog.theta = outmaw2Tlog.theta,
-            # outmata.theta = outmata.theta,
+            outmata.theta = outmata.theta,
             # outmataTlog.theta = outmataTlog.theta,
             
             outnonma.time = outnonma.time[[3]],
@@ -1228,8 +1262,8 @@ calcbounds.cells <- function(idix, IC, res, byloc, Ex, Obs,wslarge, cluster_thet
             outbuck.theta.time = outbuck.theta.time[[3]],
             outbuckTlog.theta.time = outbuckTlog.theta.time[[3]],
             outmaw2.theta.time = outmaw2.theta.time[[3]],
-            outmaw2Tlog.theta.time = outmaw2Tlog.theta.time[[3]]#,
-            # outmata.theta.time = outmata.theta.time[[3]],
+            outmaw2Tlog.theta.time = outmaw2Tlog.theta.time[[3]],
+            outmata.theta.time = outmata.theta.time[[3]]#,
             # outmataTlog.theta.time = outmataTlog.theta.time[[3]]
         ))
 }
