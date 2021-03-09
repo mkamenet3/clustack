@@ -482,60 +482,75 @@ bucklandbounds.cells <- function(thetaa, res, w_q, outExp_out ,IC,transform="non
                 buckland.UB = UBa))
 }
 
-maw2 <- function(thetai,thetaa, w_q,sparsematrix, outExp, overdisp.est, transform=NULL, cellrates=FALSE) {
-    if(cellrates==TRUE){
-        if(!is.null(transform)){
-            #print("log-scale")
-            if(!is.null(overdisp.est)){
-                varthetai <- sapply(1:nrow(sparsematrix), function(k) overdisp.est*(1/(thetai[k,]*outExp)))
-            } else {
-                varthetai <- sapply(1:nrow(sparsematrix), function(k) 1/(thetai[k,]*outExp))
-            }
-            withintheta <- (log(thetai) - log(thetaa))^2
-            wtnbtn <- sapply(1:nrow(sparsematrix), function(k) (varthetai[,k] + withintheta[k,]))
-            #var_thetaa <- sum(w_q*(varthetai + withintheta))
-            var_thetaa <- as.vector(matrix(w_q, nrow=1)%*%t(wtnbtn))
-            UBa = exp(as.vector(log(thetaa)) + 1.96*sqrt(var_thetaa))
-            LBa = exp(as.vector(log(thetaa)) - 1.96*sqrt(var_thetaa))
-        } else{
-            if(!is.null(overdisp.est)){
-                varthetai <- sapply(1:nrow(sparsematrix), function(k) overdisp.est*thetai[k,]/outExp)
-            } else {
-                varthetai <- sapply(1:nrow(sparsematrix), function(k) thetai[k,]/outExp)
-            }
-            withintheta <- (thetai - thetaa)^2
-            wtnbtn <- sapply(1:nrow(sparsematrix), function(k) (varthetai[,k] + withintheta[k,]))
-            #var_thetaa <- sum(w_q*(varthetai + withintheta))
-            var_thetaa <- as.vector(matrix(w_q, nrow=1)%*%t(wtnbtn))
-            UBa = as.vector(thetaa) + 1.96*sqrt(var_thetaa)
-            LBa = as.vector(thetaa) - 1.96*sqrt(var_thetaa)
+maw2.cluster <- function(thetaa,thetai, w_q, outExp, transform,overdisp.est) {
+    if(transform=="log"){
+        #print("log-scale")
+        if(!is.null(overdisp.est)){
+            varthetai <-  overdisp.est*(1/(thetai*outExp))
+        } else {
+            varthetai <-1/(thetai*outExp)
         }
-    } else {
-        if(!is.null(transform)){
-            #print("log-scale")
-            if(!is.null(overdisp.est)){
-                varthetai <- sapply(1:nrow(sparsematrix), function(k) overdisp.est*(1/(thetai[k]*outExp[k])))
-            } else {
-                varthetai <- sapply(1:nrow(sparsematrix), function(k) 1/(thetai[k]*outExp[k]))
-            }
-            withintheta <- (log(thetai) - log(thetaa))^2
-            var_thetaa <- sum(w_q*(varthetai + withintheta))
-            var_thetaa <- as.vector(var_thetaa)
-            UBa = exp(as.vector(log(thetaa)) + 1.96*sqrt(var_thetaa))
-            LBa = exp(as.vector(log(thetaa)) - 1.96*sqrt(var_thetaa))
-        } else{
-            if(!is.null(overdisp.est)){
-                varthetai <- sapply(1:nrow(sparsematrix), function(k) overdisp.est*thetai[k]/outExp[k])
-            } else {
-                varthetai <- sapply(1:nrow(sparsematrix), function(k) thetai[k]/outExp[k])
-            }
-            withintheta <- (thetai - thetaa)^2
-            var_thetaa <- sum(w_q*(varthetai + withintheta))
-            var_thetaa <- as.vector(var_thetaa)
-            UBa = as.vector(thetaa) + 1.96*sqrt(var_thetaa)
-            LBa = as.vector(thetaa) - 1.96*sqrt(var_thetaa)
+        withintheta <- (log(thetai) - log(thetaa))^2
+        var_thetaa <- sum(w_q*(varthetai + withintheta))
+        var_thetaa <- as.vector(var_thetaa)
+        UBa = exp(as.vector(log(thetaa)) + 1.96*sqrt(var_thetaa))
+        LBa = exp(as.vector(log(thetaa)) - 1.96*sqrt(var_thetaa))
+    } else{
+        if(!is.null(overdisp.est)){
+            varthetai <- overdisp.est*(thetai/outExp)
+        } else {
+            varthetai <- thetai/outExp
         }
+        withintheta <- (thetai - thetaa)^2
+        var_thetaa <- sum(w_q*(varthetai + withintheta))
+        var_thetaa <- as.vector(var_thetaa)
+        UBa = as.vector(thetaa) + 1.96*sqrt(var_thetaa)
+        LBa = as.vector(thetaa) - 1.96*sqrt(var_thetaa)
     }
+    return(list(maw2.LB = LBa,
+                clusterMA = thetaa,
+                maw2.UB = UBa))
+}
+#cluster_thetaa,
+# clusterRR_ilarge,
+# w_q=wslarge,
+# outExp,
+# transform="none",
+# tsparsematrix=t(sparsematrix),
+# overdisp.est,
+# cellsix_out
+maw2.cells <- function(thetaa,res, w_q, outExp, IC, transform,tsparsematrix, overdisp.est, cellsix_out){
+    thetai <- res$Lambda_dense
+    if(IC=="aic"){
+        thetaa <- res$wLambda[res$selection.aic,][cellsix_out]
+    } else {
+        thetaa <- res$wLambda[res$selection.bic,][cellsix_out]
+    }
+        if(transform=="log"){
+            if(!is.null(overdisp.est)){
+                varthetai <- sapply(1:nrow(tsparsematrix), function(k) overdisp.est*(1/(thetai[k,]*outExp)))
+            } else {
+                varthetai <- sapply(1:nrow(tsparsematrix), function(k) 1/(thetai[k,]*outExp))
+            }
+            withintheta <- sapply(1:length(cellsix_out), function(j) (log(thetai[, cellsix_out][,j]) - log(thetaa[j])))^2
+            wtnbtn <- sapply(1:nrow(tsparsematrix), function(k) (varthetai[cellsix_out,k] + withintheta[k,]))
+            #var_thetaa <- sum(w_q*(varthetai + withintheta))
+            var_thetaa <- as.vector(matrix(w_q, nrow=1)%*%t(wtnbtn))
+            UBa = exp(as.vector(log(thetaa)) + 1.96*sqrt(var_thetaa))
+            LBa = exp(as.vector(log(thetaa)) - 1.96*sqrt(var_thetaa))
+        } else{
+            if(!is.null(overdisp.est)){
+                varthetai <- sapply(1:nrow(tsparsematrix), function(k) overdisp.est*thetai[k,]/outExp)
+            } else {
+                varthetai <- sapply(1:nrow(tsparsematrix), function(k) thetai[k,]/outExp)
+            }
+            withintheta <- sapply(1:length(cellsix_out), function(j) (thetai[,cellsix_out][,j] - thetaa[j]))^2
+            wtnbtn <- sapply(1:nrow(tsparsematrix), function(k) sqrt(varthetai[cellsix_out,k] + withintheta[k,]))
+            #var_thetaa <- sum(w_q*(varthetai + withintheta))
+            var_thetaa <- as.vector(matrix(w_q, nrow=1)%*%t(wtnbtn))
+            UBa = as.vector(thetaa) + 1.96*sqrt(var_thetaa)
+            LBa = as.vector(thetaa) - 1.96*sqrt(var_thetaa)
+        }
     return(list(maw2.LB = LBa,
                 clusterMA = thetaa,
                 maw2.UB = UBa))
@@ -798,15 +813,13 @@ nonma.cells <- function(cluster_thetaa,res, clusterRR_ilarge,wslarge,idix, outEx
         
 
     }else {
-        print("by loc")
-        print(cellrisk_wt_out)
+        #print("by loc")
+        #print(cellrisk_wt_out)
         if(transform=="log"){
             if(IC=="aic") {
                 se_clusterRRlarge <- sqrt(1/(cellrisk_wt_out*outExp_out))
-                #clusterMA <- cellrisk_wt_out
             } else {
                 se_clusterRRlarge <- sqrt(1/(cellrisk_wt_out*outExp_out))
-                #clusterMA <- cellrisk_wt_out
             }
             nonma.theta.time <- system.time(nonma.theta <- cbind(lb=exp(log(cellrisk_wt_out)-1.96*se_clusterRRlarge), 
                                                                  clusterMA = cellrisk_wt_out,
@@ -814,10 +827,8 @@ nonma.cells <- function(cluster_thetaa,res, clusterRR_ilarge,wslarge,idix, outEx
         } else {
             if(IC=="aic") {
                 se_clusterRRlarge <- sqrt(cellrisk_wt_out/outExp_out)
-                #clusterMA <- cellrisk_wt_out
             } else {
                 se_clusterRRlarge <- sqrt(cellrisk_wt_out/outExp_out)
-                #clusterMA <- cellrisk_wt_out
             }
             nonma.theta.time <- system.time(nonma.theta <- cbind(lb=cellrisk_wt_out-1.96*se_clusterRRlarge, 
                                                                  clusterMA = cellrisk_wt_out,
@@ -985,8 +996,10 @@ calcbounds <- function(idix, IC, res, byloc, Ex, Obs,target=c("cluster", "cells"
     }
     switch(target,
            cluster = calcbounds.cluster(idix, IC, res, byloc, Ex, Obs,wslarge, cluster_thetaa,clusterRR_ilarge, sparsematrix),
-           cells = calcbounds.cells(idix, IC, res, byloc, Ex, Obs, wslarge, cellsix, sparsematrix))
+           cells = calcbounds.cells(idix, IC, res, byloc, Ex, Obs,wslarge, cluster_thetaa,clusterRR_ilarge, sparsematrix, cellsix))
 }
+
+#idix, IC, res, byloc, Ex, Obs,wslarge, cluster_thetaa,clusterRR_ilarge, sparsematrix, cellsix
 
 calcbounds.cluster <- function(idix, IC, res, byloc, Ex, Obs,wslarge, cluster_thetaa,clusterRR_ilarge, sparsematrix){
     print("calcbounds.cluster")
@@ -1024,7 +1037,6 @@ calcbounds.cluster <- function(idix, IC, res, byloc, Ex, Obs,wslarge, cluster_th
                                                                             IC=IC,
                                                                             transform="none",
                                                                             overdisp.est))
-    #thetaa, thetai,res, w_q, outExp,IC,transform="none",overdisp.est
     outbuckTlog.theta.time  <- system.time(outbuckTlog.theta <- bucklandbounds.cluster(cluster_thetaa,
                                                                               clusterRR_ilarge,
                                                                               res,
@@ -1033,22 +1045,26 @@ calcbounds.cluster <- function(idix, IC, res, byloc, Ex, Obs,wslarge, cluster_th
                                                                               IC=IC,
                                                                               transform="log",
                                                                               overdisp.est))
-    # 
-    # outbuckTlog.theta.time <- system.time(outbuckTlog.theta <- bucklandbounds.cluster(res,
-    #                                                                           clusterRR_ilarge,
-    #                                                                           cluster_thetaa,
-    #                                                                           w_q=wslarge, 
-    #                                                                           IC=IC,
-    #                                                                           sparsematrix=t(sparsematrix),
-    #                                                                           outExp_out,
-    #                                                                           overdisp.est = NULL, 
-    #                                                                           transform=TRUE))
     print("buckland finished")
+    
+    outmaw2.theta.time <- system.time(outmaw2.theta <- maw2.cluster(cluster_thetaa,
+                                                                    clusterRR_ilarge,
+                                                                    w_q=wslarge,
+                                                                    outExp,
+                                                                    transform="none",
+                                                                    overdisp.est))
+    
+    outmaw2Tlog.theta.time <- system.time(outmaw2Tlog.theta <-maw2.cluster(cluster_thetaa,
+                                                                    clusterRR_ilarge,
+                                                                    w_q=wslarge,
+                                                                    outExp,
+                                                                    transform="log",
+                                                                    overdisp.est))
     # outmaw2.theta.time <- system.time(outmaw2.theta <- maw2.cluster(thetai=clusterRR_ilarge,
     #                                                         thetaa = cluster_thetaa,
     #                                                         w_q=wslarge,
     #                                                         sparsematrix=t(sparsematrix),
-    #                                                         outExp,overdisp.est = NULL))
+    #                                                         outExp,overdisp.est))
     # 
     # outmaw2Tlog.theta.time <- system.time(outmaw2Tlog.theta  <- maw2.cluster(thetai=clusterRR_ilarge,
     #                                                                  thetaa = cluster_thetaa,
@@ -1082,8 +1098,8 @@ calcbounds.cluster <- function(idix, IC, res, byloc, Ex, Obs,wslarge, cluster_th
         outnonma_asympTlog = outnonma_asympTlog,
         outbuck.theta = outbuck.theta,
         outbuckTlog.theta = outbuckTlog.theta,
-        # outmaw2.theta = outmaw2.theta,
-        # outmaw2Tlog.theta = outmaw2Tlog.theta,
+        outmaw2.theta = outmaw2.theta,
+        outmaw2Tlog.theta = outmaw2Tlog.theta,
         # outmata.theta = outmata.theta,
         # outmataTlog.theta = outmataTlog.theta,
         
@@ -1092,15 +1108,15 @@ calcbounds.cluster <- function(idix, IC, res, byloc, Ex, Obs,wslarge, cluster_th
         outnonma_asymp.time = outnonma_asymp.time[[3]],
         outnonma_asympTlog.time = outnonma_asympTlog.time[[3]],
         outbuck.theta.time = outbuck.theta.time[[3]],
-        outbuckTlog.theta.time = outbuckTlog.theta.time[[3]]#,
-        # outmaw2.theta.time = outmaw2.theta.time[[3]],
-        # outmaw2Tlog.theta.time = outmaw2Tlog.theta.time[[3]],
+        outbuckTlog.theta.time = outbuckTlog.theta.time[[3]],
+        outmaw2.theta.time = outmaw2.theta.time[[3]],
+        outmaw2Tlog.theta.time = outmaw2Tlog.theta.time[[3]]#,
         # outmata.theta.time = outmata.theta.time[[3]],
         # outmataTlog.theta.time = outmataTlog.theta.time[[3]]
     ))
 }
     
-calcbounds.cells <- function(idix, IC, res, byloc, Ex, Obs,wslarge, cellsix, sparsematrix){
+calcbounds.cells <- function(idix, IC, res, byloc, Ex, Obs,wslarge, cluster_thetaa,clusterRR_ilarge, sparsematrix, cellsix){
     print("calcbounds.cells")
     cellrisk_wt_out <- rep(NA, length(cellsix))
     cellsix_out <- cellsix
@@ -1147,21 +1163,6 @@ calcbounds.cells <- function(idix, IC, res, byloc, Ex, Obs,wslarge, cellsix, spa
                                                                                 transform="none",
                                                                                 tsparsematrix=t(sparsematrix),
                                                                                 overdisp.est, cellsix_out))
-        #thetaa, res, w_q, outExp,IC,transform="none",tsparsematrix,overdisp.est, cellsix_out
-        
-        # outbuck.theta.time <- system.time(outbuck.theta <- bucklandbounds.cells(res,
-        #                                                                   clusterRR_ilarge,
-        #                                                                   cluster_thetaa,
-        #                                                                   w_q=wslarge,
-        #                                                                   IC=IC,
-        #                                                                   sparsematrix=t(sparsematrix),
-        #                                                                   outExp_out,
-        #                                                                   overdisp.est))
-        # 
-        
-        
-        #res, thetai, thetaa, w_q, IC,sparsematrix, outExp,overdisp.est, transform="none", cellsix_out
-        
         outbuckTlog.theta.time <- system.time(outbuckTlog.theta <- bucklandbounds.cells(cluster_thetaa,
                                                                                         res,
                                                                                         w_q=wslarge,
@@ -1171,19 +1172,25 @@ calcbounds.cells <- function(idix, IC, res, byloc, Ex, Obs,wslarge, cellsix, spa
                                                                                         tsparsematrix=t(sparsematrix),
                                                                                         overdisp.est, cellsix_out))
         print("buckland finished")
-        # outmaw2.theta.time <- system.time(outmaw2.theta <- maw2.cells(thetai=clusterRR_ilarge,
-        #                                                         thetaa = cluster_thetaa,
-        #                                                         w_q=wslarge,
-        #                                                         sparsematrix=t(sparsematrix ),
-        #                                                         outExp,overdisp.est = NULL))
-        # 
-        # outmaw2Tlog.theta.time <- system.time(outmaw2Tlog.theta  <- maw2.cells(thetai=clusterRR_ilarge,
-        #                                                                  thetaa = cluster_thetaa,
-        #                                                                  w_q=wslarge,
-        #                                                                  sparsematrix=t(sparsematrix),
-        #                                                                  outExp,
-        #                                                                  overdisp.est = NULL,
-        #                                                                  transform=TRUE))
+        outmaw2.theta.time <- system.time(outmaw2.theta <- maw2.cells(cluster_thetaa,
+                                                                      res,
+                                                                w_q=wslarge,
+                                                                Ex,
+                                                                IC,
+                                                                transform="none",
+                                                                tsparsematrix=t(sparsematrix),
+                                                                overdisp.est,
+                                                                cellsix_out))
+        outmaw2Tlog.theta.time <- system.time(outmaw2Tlog.theta <- maw2.cells(cluster_thetaa,
+                                                                      res,
+                                                                      w_q=wslarge,
+                                                                      Ex,
+                                                                      IC,
+                                                                      transform="log",
+                                                                      tsparsematrix=t(sparsematrix),
+                                                                      overdisp.est,
+                                                                      cellsix_out))
+
         # print("maw2 finished")
         # outmata.theta.time <- system.time(outmata.theta <- matabounds.cells(thetai=clusterRR_ilarge,
         #                                                               thetaa = cluster_thetaa,
@@ -1209,8 +1216,8 @@ calcbounds.cells <- function(idix, IC, res, byloc, Ex, Obs,wslarge, cellsix, spa
             outnonma_asympTlog = outnonma_asympTlog,
             outbuck.theta = outbuck.theta,
             outbuckTlog.theta = outbuckTlog.theta,
-            # outmaw2.theta = outmaw2.theta,
-            # outmaw2Tlog.theta = outmaw2Tlog.theta,
+            outmaw2.theta = outmaw2.theta,
+            outmaw2Tlog.theta = outmaw2Tlog.theta,
             # outmata.theta = outmata.theta,
             # outmataTlog.theta = outmataTlog.theta,
             
@@ -1219,9 +1226,9 @@ calcbounds.cells <- function(idix, IC, res, byloc, Ex, Obs,wslarge, cellsix, spa
             outnonma_asymp.time = outnonma_asymp.time[[3]],
             outnonma_asympTlog.time = outnonma_asympTlog.time[[3]],
             outbuck.theta.time = outbuck.theta.time[[3]],
-            outbuckTlog.theta.time = outbuckTlog.theta.time[[3]]#,
-            # outmaw2.theta.time = outmaw2.theta.time[[3]],
-            # outmaw2Tlog.theta.time = outmaw2Tlog.theta.time[[3]],
+            outbuckTlog.theta.time = outbuckTlog.theta.time[[3]],
+            outmaw2.theta.time = outmaw2.theta.time[[3]],
+            outmaw2Tlog.theta.time = outmaw2Tlog.theta.time[[3]]#,
             # outmata.theta.time = outmata.theta.time[[3]],
             # outmataTlog.theta.time = outmataTlog.theta.time[[3]]
         ))
