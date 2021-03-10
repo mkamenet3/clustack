@@ -1162,8 +1162,9 @@ calcbounds <- function(id_ic, IC, res, byloc, Ex, Obs,target=c("cluster", "cells
 #'@param byloc Boolean. Use \code{TRUE} when stacking by location. Use \code{FALSE} when stacking by potential cluster.
 #'@param Ex Expected counts (unstandardized) for each cell.
 #'@param Obs Observed counts for each cell.
-#'@param target Whether bounds should be calculated for the cluster \code{"cluster} or specific cells \code{"cells"}.
-#'@param cellsix_out Indices of the cells to calculate bounds for. If \code{target=TRUE}, then cell indices for which to calculate bounds must be provided. \code{NULL} corresponds to \code{target="cluster"}. Default is \code{NULL}.
+#'@param w Likelihood-weights for all potential clusters.
+#'@param thetaa Stacked relative risk estimate for the cluster(s)
+#'@param thetai Individual relative risk estimates for each potential cluster.
 #'@param sparsemat Large sparsematrix where rows are potential clusters and columns are space-time locations.
 #'@return Returns large list of confidence bounds and stacked estimates in addition to timings for each of the confidence bounds methods.
 calcbounds.cluster <- function(id_ic, IC, res, byloc, Ex, Obs,w, thetaa,thetai, sparsemat){
@@ -1266,7 +1267,20 @@ calcbounds.cluster <- function(id_ic, IC, res, byloc, Ex, Obs,w, thetaa,thetai, 
     ))
 }
 
-    
+#'@title calcbounds.cells
+#'@description Helper function for \code{calcbounds()}.
+#'@param id_ic The number of clusters identified either by BIC (QBIC) or AIC (QAIC).
+#'@param IC Information criterion used. Currently available for BIC (QBIC) and AIC (QAIC). This should match \code{id_ic} argument.
+#'@param res Resultant object from \code{detectclusters()}.
+#'@param byloc Boolean. Use \code{TRUE} when stacking by location. Use \code{FALSE} when stacking by potential cluster.
+#'@param Ex Expected counts (unstandardized) for each cell.
+#'@param Obs Observed counts for each cell.
+#'@param w Likelihood-weights for all potential clusters.
+#'@param thetaa Stacked relative risk estimate for the cluster(s)
+#'@param thetai Individual relative risk estimates for each potential cluster.
+#'@param sparsemat Large sparsematrix where rows are potential clusters and columns are space-time locations.
+#'@param cellsix Indices of the cells to calculate bounds for. 
+#'@return Returns large list of confidence bounds and stacked estimates in addition to timings for each of the confidence bounds methods.    
 calcbounds.cells <- function(id_ic, IC, res, byloc, Ex, Obs,w, thetaa,thetai, sparsemat, cellsix){
     print("calcbounds.cells")
     cellrisk_wt_out <- rep(NA, length(cellsix))
