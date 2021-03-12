@@ -1116,7 +1116,7 @@ nonma_asymp.cells <-function(thetaa, thetai,res, w,id_ic, outObs_out,IC, transfo
 
 
 #' @title selectuniqRR
-#' @description Helper function for \code{calcbounds}. Identifies unique relative risks across potential clusters that are not equal to 1.
+#' @description Helper function for \code{calcbounds()}. Identifies unique relative risks across potential clusters that are not equal to 1.
 #' @param uniqRRs Matrix of unique relative risks for each potential cluster and background.
 selectuniqRR <- function(uniqRRs){
     clusterRR_i <- rep(NA, nrow(uniqRRs))
@@ -1159,6 +1159,7 @@ calcbounds <- function(id_ic, IC, res, byloc, Ex, Obs,target=c("cluster", "cells
     # if(is.null(cellsix) | target=="cluster"){
     #     message("No cell rates")
     # }
+    IC <- tolower(IC)
     if(!is.null(cellsix) & is.null(sparsemat)){
         stop("You must provide the sparsemat when calculating rates for each cell.")
     }
