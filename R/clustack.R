@@ -15,7 +15,7 @@ library(Matrix)
 likweights <- function(liki){
     wi <- liki/sum(liki)
     if(any(is.na(liki))){
-        print("There are NA likelihoods")
+        message("There are NA likelihoods")
     }
     return(wi)
 }
@@ -209,7 +209,7 @@ bycluster <-  function(Lik, Lambda_dense, sparsemat,maxclust){
 #'@param overdisp.est Overdispersion parameter estimated across all simulations (max).
 #'@return Returns list for each iteration with weighted relative risks by location inside identified cluster.
 #'@export
-detectclusters <- function(sparseMAT, Ex, Yx,numCenters,Time, maxclust,byloc=TRUE, model=c("poisson", "binomial"),overdisp.est) {
+detectclusters <- function(sparsemat, Ex, Yx,numCenters,Time, maxclust,byloc=TRUE, model=c("poisson", "binomial"),overdisp.est) {
     if(is.null(overdisp.est)){
         quasi <- FALSE
         message(paste0("Model specified: ", model))
@@ -229,9 +229,9 @@ detectclusters <- function(sparseMAT, Ex, Yx,numCenters,Time, maxclust,byloc=TRU
     Lik <- out$Lik
     Lambda_dense <- out$Lambda_dense
     if(byloc==FALSE){
-        print("Cluster detection by potential cluster")
+        message("Cluster detection by potential cluster")
         res <- bycluster(Lik, Lambda_dense, tsparsemat, maxclust)
-        selection <- clusterselect(res[[1]], Yx, Ex, model,maxclust, numCenters, Time, quasi,cv=FALSE,overdisp.est)
+        selection <- clusterselect(res[[1]], Yx, Ex, model,maxclust, numCenters, Time, quasi,overdisp.est)
         return(list(wLambda = res[[1]],
                     loglik = selection$loglik,
                     selection.bic = selection$select.bic,
@@ -246,9 +246,9 @@ detectclusters <- function(sparseMAT, Ex, Yx,numCenters,Time, maxclust,byloc=TRU
     }
     else{
         #default
-        print("Cluster detection by location")
+        message("Cluster detection by location")
         res <- bylocation(Lik, Lambda_dense, tsparsemat, maxclust)
-        selection <- clusterselect(res[[1]], Yx, Ex, model,maxclust, numCenters, Time, quasi,cv=FALSE,overdisp.est)
+        selection <- clusterselect(res[[1]], Yx, Ex, model,maxclust, numCenters, Time, quasi,overdisp.est)
         return(list(wLambda = res[[1]],
                     loglik = selection$loglik,
                     selection.bic = selection$select.bic,
@@ -282,7 +282,7 @@ clusterselect <- function(wLambda,Yx, Ex, model,maxclust, numCenters, Time,quasi
             message(paste("Overdispersion estimate:", round(overdisp.est,4)))
             if(quasi == TRUE & is.null(overdisp.est)) warning("No overdispersion for quasi-Poisson model. Please check.")
         } else {
-            print("no overdispersion being estimated")
+            message("no overdispersion being estimated")
         }
     }
     #find K clusters
@@ -389,9 +389,9 @@ bucklandbounds.cells <- function(thetaa, res, w_q, outExp_out ,IC,transform="non
     } else {
         thetaa <- res$wLambda[res$selection.bic,][cellsix_out]
     }
-    print(str(thetaa))
+    #print(str(thetaa))
     if(transform=="log"){
-        print("transform")
+        #print("transform")
         if(!is.null(overdisp.est)){
             varthetai <- sapply(1:nrow(tsparsemat), function(k) overdisp.est*(1/(thetai[k,]*outExp_out )))
         } else {
@@ -886,7 +886,7 @@ nonma.cluster <- function(thetaa,thetai, res,w,id_ic, outExp_out,IC, transform, 
 #'@return List: lower bound estimate, stacked cluster relative risk estimate, upper bound estimate
 #'@export
 #'
-nonma.cells <- function(thetaa,res, thetai,w,id_ic, outExp_out,IC, transform, byloc=TRUE, cellrisk_wt_out=NULL, cellsix_out){
+nonma.cells <- function(thetaa, thetai,res,w,id_ic, outExp_out,IC, transform, byloc=TRUE, cellrisk_wt_out=NULL, cellsix_out){
     if(byloc==FALSE){
         if(transform=="log"){
             if(IC=="aic") {
@@ -1129,9 +1129,9 @@ selectuniqRR <- function(uniqRRs){
 #'
 #'}
 calcbounds <- function(id_ic, IC, res, byloc, Ex, Obs,target=c("cluster", "cells"), cellsix=NULL, sparsemat){
-    if(is.null(cellsix) | target=="cluster"){
-        print("no cell rates")
-    }
+    # if(is.null(cellsix) | target=="cluster"){
+    #     message("No cell rates")
+    # }
     if(!is.null(cellsix) & is.null(sparsemat)){
         stop("You must provide the sparsemat when calculating rates for each cell.")
     }
@@ -1168,17 +1168,17 @@ calcbounds <- function(id_ic, IC, res, byloc, Ex, Obs,target=c("cluster", "cells
 #'@param sparsemat Large sparsematrix where rows are potential clusters and columns are space-time locations.
 #'@return Returns large list of confidence bounds and stacked estimates in addition to timings for each of the confidence bounds methods.
 calcbounds.cluster <- function(id_ic, IC, res, byloc, Ex, Obs,w, thetaa,thetai, sparsemat){
-    print("calcbounds.cluster")
-    print(str(sparsemat))
+    #print("calcbounds.cluster")
+    #print(str(sparsemat))
     if(byloc==TRUE){
-        print(paste0("byloc", byloc))
+        #print(paste0("byloc", byloc))
         outExp_out <- Ex
         outObs_out <- Obs
         outExp <- t(sparsemat)%*%Ex
         outObs <- t(sparsemat)%*%Obs
     }
     else if(byloc==FALSE){
-        print(paste0("byloc", byloc))
+        #print(paste0("byloc", byloc))
         outExp <- t(sparsemat)%*%Ex
         outObs <- t(sparsemat)%*%Obs
         outExp_out <- outExp@x
@@ -1194,7 +1194,7 @@ calcbounds.cluster <- function(id_ic, IC, res, byloc, Ex, Obs,w, thetaa,thetai, 
                                                                              outObs_out, IC=IC, transform="none", byloc))
     outnonma_asympTlog.time <- system.time(outnonma_asympTlog <- nonma_asymp.cluster(thetaa, thetai, res, w, id_ic,
                                                                                      outObs_out, IC=IC, transform="log", byloc))
-    print("nonma finished")
+    message("Non-model averaged bounds finished")
     outbuck.theta.time <- system.time(outbuck.theta <- bucklandbounds.cluster(thetaa,
                                                                               thetai,
                                                                             res,
@@ -1211,7 +1211,7 @@ calcbounds.cluster <- function(id_ic, IC, res, byloc, Ex, Obs,w, thetaa,thetai, 
                                                                               IC=IC,
                                                                               transform="log",
                                                                               overdisp.est))
-    print("buckland finished")
+    message("Buckland bounds finished")
     
     outmaw2.theta.time <- system.time(outmaw2.theta <- maw2.cluster(thetaa,
                                                                     thetai,
@@ -1227,7 +1227,7 @@ calcbounds.cluster <- function(id_ic, IC, res, byloc, Ex, Obs,w, thetaa,thetai, 
                                                                     transform="log",
                                                                     overdisp.est))
    
-    print("maw2 finished")
+    message("Burnham & Anderson bounds finished")
     outmata.theta.time <- system.time(outmata.theta <- matabounds.cluster(thetaa,
                                                                           thetai,
                                                                           w_q=w,
@@ -1241,7 +1241,7 @@ calcbounds.cluster <- function(id_ic, IC, res, byloc, Ex, Obs,w, thetaa,thetai, 
                                                                                   outExp,
                                                                                   transform="log",
                                                                                   overdisp.est))
-    print("mata finished")
+    message("MATA bounds finished")
     return(list(
         outnonma = outnonma,
         outnonmaTlog = outnonmaTlog,
@@ -1282,11 +1282,12 @@ calcbounds.cluster <- function(id_ic, IC, res, byloc, Ex, Obs,w, thetaa,thetai, 
 #'@param cellsix Indices of the cells to calculate bounds for. 
 #'@return Returns large list of confidence bounds and stacked estimates in addition to timings for each of the confidence bounds methods.    
 calcbounds.cells <- function(id_ic, IC, res, byloc, Ex, Obs,w, thetaa,thetai, sparsemat, cellsix){
-    print("calcbounds.cells")
+    #print("calcbounds.cells")
+    #browser()
     cellrisk_wt_out <- rep(NA, length(cellsix))
     cellsix_out <- cellsix
     if(byloc==TRUE){
-        print(paste0("byloc", byloc))
+        #print(paste0("byloc", byloc))
         outExp <- t(sparsemat)%*%Ex
         outObs <- t(sparsemat)%*%Obs
         outExp_out <- Ex[cellsix]
@@ -1300,10 +1301,10 @@ calcbounds.cells <- function(id_ic, IC, res, byloc, Ex, Obs,w, thetaa,thetai, sp
         }
     }
     else if (byloc==FALSE){
-        print(paste0("byloc: ", byloc))
+        #print(paste0("byloc: ", byloc))
         outExp <- t(sparsemat)%*%Ex
         outObs <- t(sparsemat)%*%Obs
-        print(paste0("cellsix: ", cellsix))
+        #print(paste0("cellsix: ", cellsix))
         outExp_out <- outExp@x[cellsix]
         outObs_out <- outObs@x[cellsix]
         cellrisk_wt_out <- NULL
@@ -1318,7 +1319,7 @@ calcbounds.cells <- function(id_ic, IC, res, byloc, Ex, Obs,w, thetaa,thetai, sp
         outnonma_asympTlog.time <- system.time(outnonma_asympTlog <- nonma_asymp.cells(thetaa, thetai, res, w, id_ic,
                                                                                        outObs_out, IC=IC, transform="log", byloc, 
                                                                                        cellrisk_wt_out, cellsix_out))
-        print("nonma finished")
+        message("Non-model averaged bounds finished")
         
         outbuck.theta.time <- system.time(outbuck.theta <- bucklandbounds.cells(thetaa,
                                                                                 res,
@@ -1336,7 +1337,7 @@ calcbounds.cells <- function(id_ic, IC, res, byloc, Ex, Obs,w, thetaa,thetai, sp
                                                                                         transform="log",
                                                                                         tsparsemat=t(sparsemat),
                                                                                         overdisp.est, cellsix_out))
-        print("buckland finished")
+        message("Buckland bounds finished")
         outmaw2.theta.time <- system.time(outmaw2.theta <- maw2.cells(thetaa,
                                                                       res,
                                                                 w_q=w,
@@ -1356,7 +1357,7 @@ calcbounds.cells <- function(id_ic, IC, res, byloc, Ex, Obs,w, thetaa,thetai, sp
                                                                       overdisp.est,
                                                                       cellsix_out))
 
-        print("maw2 finished")
+        message("Burnham & Anderson bounds finished")
         outmata.theta.time <- system.time(outmata.theta <- matabounds.cells(thetaa,
                                                                             res,
                                                                             w_q=w,
@@ -1375,7 +1376,7 @@ calcbounds.cells <- function(id_ic, IC, res, byloc, Ex, Obs,w, thetaa,thetai, sp
                                                                                     tsparsemat=t(sparsemat),
                                                                                     overdisp.est,
                                                                                     cellsix_out))
-        print("mata finished")
+        message("MATA bounds finished")
         
         
         return(list(
