@@ -67,17 +67,131 @@ sparseMAT <- spacetimeMat(potentialclusters, numCenters, Time)
 
 
 
-cleanlist <- function(outlist, nsim,bounds=FALSE){
-    if(bounds==TRUE){
-        list1  <- lapply(1:nsim, function(x) matrix(unlist(outlist[[x]]), ncol=3))
-        listcombine <-  do.call(rbind,lapply(list1,matrix,ncol=3,byrow=FALSE))
-    } else {
-        list1 <- lapply(1:nsim, function(x) matrix(as.vector(outlist[[x]]), ncol=3))
-        listcombine <-  do.call(rbind,lapply(list1,matrix,ncol=3,byrow=FALSE))   
-    }
-    return(listcombine)
+# cleanlist <- function(outlist, nsim,bounds=FALSE){
+#     if(bounds==TRUE){
+#         list1  <- lapply(1:nsim, function(x) matrix(unlist(outlist[[x]]), ncol=3))
+#         listcombine <-  do.call(rbind,lapply(list1,matrix,ncol=3,byrow=FALSE))
+#     } else {
+#         list1 <- lapply(1:nsim, function(x) matrix(as.vector(outlist[[x]]), ncol=3))
+#         listcombine <-  do.call(rbind,lapply(list1,matrix,ncol=3,byrow=FALSE))   
+#     }
+#     return(listcombine)
+# }
+
+cleanlist.clusters <- function(outlist, nsim){
+    #nonma
+    outnonma <- do.call(rbind, lapply(1:nsim, function(i) unlist((outlist[[i]]$outnonma$nonma.theta))))
+    outnonma.time <- do.call(rbind, lapply(1:nsim, function(i) unlist((outlist[[i]]$outnonma$nonma.theta.time))))
+    outnonmaTlog <- do.call(rbind, lapply(1:nsim, function(i) unlist((outlist[[i]]$outnonmaTlog$nonma.theta))))
+    outnonmaTlog.time <- do.call(rbind, lapply(1:nsim, function(i) unlist((outlist[[i]]$outnonmaTlog$nonma.theta.time))))
+    #nonma asymp
+    outnonma_asymp <- do.call(rbind, lapply(1:nsim, function(i) unlist((outlist[[i]]$outnonma_asymp$nonma_asymp.theta))))
+    outnonma_asymp.time <- do.call(rbind, lapply(1:nsim, function(i) unlist((outlist[[i]]$outnonma_asymp$nonma_asymp.theta.time))))
+    outnonmaTlog_asymp <- do.call(rbind, lapply(1:nsim, function(i) unlist((outlist[[i]]$outnonma_asympTlog$nonma_asymp.theta))))
+    outnonmaTlog_asymp.time <- do.call(rbind, lapply(1:nsim, function(i) unlist((outlist[[i]]$outnonma_asympTlog$nonma_asymp.theta.time))))
+    #Buckland
+    outbuck <- do.call(rbind, lapply(1:nsim, function(i) unlist((outlist[[i]]$outbuck.theta))))
+    outbuck.time <- do.call(rbind, lapply(1:nsim, function(i) unlist((outlist[[i]]$outbuck.theta.time))))
+    outbuckTlog <- do.call(rbind, lapply(1:nsim, function(i) unlist((outlist[[i]]$outbuckTlog.theta))))
+    outbuckTlog.time <- do.call(rbind, lapply(1:nsim, function(i) unlist((outlist[[i]]$outbuckTlog.theta.time))))
+    #Burnham & Anderson
+    outmaw2 <- do.call(rbind, lapply(1:nsim, function(i) unlist((outlist[[i]]$outmaw2.theta))))
+    outmaw2.time <- do.call(rbind, lapply(1:nsim, function(i) unlist((outlist[[i]]$outmaw2.theta.time))))
+    outmaw2Tlog <- do.call(rbind, lapply(1:nsim, function(i) unlist((outlist[[i]]$outmaw2Tlog.theta))))
+    outmaw2Tlog.time <- do.call(rbind, lapply(1:nsim, function(i) unlist((outlist[[i]]$outmaw2Tlog.theta.time))))
+    #MATA
+    outmata <- do.call(rbind, lapply(1:nsim, function(i) unlist((outlist[[i]]$outmata.theta))))
+    outmata.time <- do.call(rbind, lapply(1:nsim, function(i) unlist((outlist[[i]]$outmata.theta.time))))
+    outmataTlog <- do.call(rbind, lapply(1:nsim, function(i) unlist((outlist[[i]]$outmataTlog.theta))))
+    outmataTlog.time <- do.call(rbind, lapply(1:nsim, function(i) unlist((outlist[[i]]$outmataTlog.theta.time))))
+    
+    res <- cbind.data.frame(outnonma, outnonmaTlog,
+                 outnonma_asymp, outnonmaTlog_asymp,
+                 outbuck, outbuckTlog,
+                 outmaw2, outmaw2Tlog,
+                 outmata, outmataTlog,
+                 
+                 outnonma.time, outnonmaTlog.time,
+                 outnonma_asymp.time, outnonmaTlog_asymp.time,
+                 outbuck.time, outbuckTlog.time,
+                 outmaw2.time, outmaw2Tlog.time,
+                 outmata.time, outmataTlog.time)
+    names(res) <- c("nonma.LB", "clusterMA.1", "nonma.UB",
+                    "nonmaTlog.LB", "clusterMA.2", "nonmaTlog.UB",
+                    "nonma_asymp.LB", "clusterMA.3", "nonma_asymp.UB",
+                    "nonmaTlog_asymp.LB", "clusterMA.4", "nonmaTlog_asymp.UB",
+                    "buckland.LB", "clusterMA.5", "buckland.UB",
+                    "bucklandTlog.LB", "clusterMA.6", "bucklandTlog.UB",
+                    "maw2.LB", "clusterMA.7", "maw2.UB",
+                    "maw2Tlog.LB", "clusterMA.8", "maw2Tlog.UB",
+                    "mata.LB", "clusterMA.9", "mata.UB",
+                    "mataTlog.LB", "clusterMA.10", "mataTlog.UB",
+                    "nonma.time", "nonmaTlog.time", 
+                    "nonma_asymp.time", "nonmaTlog.time",
+                    "buckland.time", "bucklandTlog.time",
+                    "maw2.time", "maw2Tlog.time",
+                    "mata.time", "mataTlog.time")
+    return(res)
+    
 }
 
+cleanlist.cells <- function(outlist, nsim, cellsix){
+    #nonma
+    outnonma <- do.call(rbind, lapply(1:nsim, function(i) unlist((outlist[[i]]$outnonma$nonma.theta))))
+    outnonma.time <- do.call(rbind, lapply(1:nsim, function(i) unlist((outlist[[i]]$outnonma$nonma.theta.time))))
+    outnonmaTlog <- do.call(rbind, lapply(1:nsim, function(i) unlist((outlist[[i]]$outnonmaTlog$nonma.theta))))
+    outnonmaTlog.time <- do.call(rbind, lapply(1:nsim, function(i) unlist((outlist[[i]]$outnonmaTlog$nonma.theta.time))))
+    #nonma asymp
+    outnonma_asymp <- do.call(rbind, lapply(1:nsim, function(i) unlist((outlist[[i]]$outnonma_asymp$nonma_asymp.theta))))
+    outnonma_asymp.time <- do.call(rbind, lapply(1:nsim, function(i) unlist((outlist[[i]]$outnonma_asymp$nonma_asymp.theta.time))))
+    outnonmaTlog_asymp <- do.call(rbind, lapply(1:nsim, function(i) unlist((outlist[[i]]$outnonma_asympTlog$nonma_asymp.theta))))
+    outnonmaTlog_asymp.time <- do.call(rbind, lapply(1:nsim, function(i) unlist((outlist[[i]]$outnonma_asympTlog$nonma_asymp.theta.time))))
+    #Buckland
+    outbuck <- do.call(rbind, lapply(1:nsim, function(i) matrix(unlist((outlist[[i]]$outbuck.theta)), ncol=3, byrow=FALSE)))
+    outbuck.time <- do.call(rbind, lapply(1:nsim, function(i) unlist((outlist[[i]]$outbuck.theta.time))))
+    outbuckTlog <- do.call(rbind, lapply(1:nsim, function(i) matrix(unlist((outlist[[i]]$outbuckTlog.theta)), ncol=3, byrow=FALSE)))
+    outbuckTlog.time <- do.call(rbind, lapply(1:nsim, function(i) unlist((outlist[[i]]$outbuckTlog.theta.time))))
+    #Burnham & Anderson
+    outmaw2 <- do.call(rbind, lapply(1:nsim, function(i) matrix(unlist((outlist[[i]]$outmaw2.theta)), ncol=3, byrow=FALSE)))
+    outmaw2.time <- do.call(rbind, lapply(1:nsim, function(i) unlist((outlist[[i]]$outmaw2.theta.time))))
+    outmaw2Tlog <- do.call(rbind, lapply(1:nsim, function(i) matrix(unlist((outlist[[i]]$outmaw2Tlog.theta)), ncol=3, byrow = FALSE)))
+    outmaw2Tlog.time <- do.call(rbind, lapply(1:nsim, function(i) unlist((outlist[[i]]$outmaw2Tlog.theta.time))))
+    #MATA
+    outmata <- do.call(rbind, lapply(1:nsim, function(i) matrix(unlist((outlist[[i]]$outmata.theta)), ncol=3, byrow=FALSE)))
+    outmata.time <- do.call(rbind, lapply(1:nsim, function(i) unlist((outlist[[i]]$outmata.theta.time))))
+    outmataTlog <- do.call(rbind, lapply(1:nsim, function(i) matrix(unlist((outlist[[i]]$outmataTlog.theta)), ncol=3, byrow=FALSE)))
+    outmataTlog.time <- do.call(rbind, lapply(1:nsim, function(i) unlist((outlist[[i]]$outmataTlog.theta.time))))
+    
+    res <- cbind.data.frame(outnonma, outnonmaTlog,
+                            outnonma_asymp, outnonmaTlog_asymp,
+                            outbuck, outbuckTlog,
+                            outmaw2, outmaw2Tlog,
+                            outmata, outmataTlog,
+                            
+                            outnonma.time, outnonmaTlog.time,
+                            outnonma_asymp.time, outnonmaTlog_asymp.time,
+                            outbuck.time, outbuckTlog.time,
+                            outmaw2.time, outmaw2Tlog.time,
+                            outmata.time, outmataTlog.time)
+    res$cellid <- rep(cellsix, times=nsim)
+    names(res) <- c("nonma.LB", "clusterMA.1", "nonma.UB",
+                    "nonmaTlog.LB", "clusterMA.2", "nonmaTlog.UB",
+                    "nonma_asymp.LB", "clusterMA.3", "nonma_asymp.UB",
+                    "nonmaTlog_asymp.LB", "clusterMA.4", "nonmaTlog_asymp.UB",
+                    "buckland.LB", "clusterMA.5", "buckland.UB",
+                    "bucklandTlog.LB", "clusterMA.6", "bucklandTlog.UB",
+                    "maw2.LB", "clusterMA.7", "maw2.UB",
+                    "maw2Tlog.LB", "clusterMA.8", "maw2Tlog.UB",
+                    "mata.LB", "clusterMA.9", "mata.UB",
+                    "mataTlog.LB", "clusterMA.10", "mataTlog.UB",
+                    "nonma.time", "nonmaTlog.time", 
+                    "nonma_asymp.time", "nonmaTlog.time",
+                    "buckland.time", "bucklandTlog.time",
+                    "maw2.time", "maw2Tlog.time",
+                    "mata.time", "mataTlog.time", "cellid")
+    return(res)
+    
+}
 #######################################################
 #######################################################
 
@@ -148,25 +262,25 @@ for(risk in risks){
             id.aic_pc <- lapply(1:nsim, function(i) as.vector(unlist(sim_superclust_pc[[i]]$selection.aic)))
             
             
-            #TESTERS - by PC
-            test <- lapply(1:nsim, function(i) calcbounds(id.bic_pc[[i]], IC="bic", 
+            #by PC
+            ##Clusters
+            outcluster.pc.bic <- lapply(1:nsim, function(i) calcbounds(id.bic_pc[[i]], IC="bic", 
                                                           sim_superclust_pc[[i]], byloc = FALSE,
-                                                          Ex[[i]], YSIM[[i]], target="cluster", sparsematrix = sparseMAT))
-            test <- lapply(1:nsim, function(i) calcbounds(id.bic_pc[[i]], IC="aic", 
+                                                          Ex[[i]], YSIM[[i]], target="cluster", sparsemat = sparseMAT))
+            outcluster.pc.aic <- lapply(1:nsim, function(i) calcbounds(id.bic_pc[[i]], IC="aic", 
                                                           sim_superclust_pc[[i]], byloc = FALSE,
-                                                          Ex[[i]], YSIM[[i]], target="cluster", sparsematrix = sparseMAT))
-            
-            test <- lapply(1:nsim, function(i) calcbounds(id.bic_pc[[i]], IC="bic", 
+                                                          Ex[[i]], YSIM[[i]], target="cluster", sparsemat = sparseMAT))
+            ##Cells
+            outcells.pc.bic <- lapply(1:nsim, function(i) calcbounds(id.bic_pc[[i]], IC="bic", 
                                                           sim_superclust_pc[[i]], byloc = FALSE,
-                                                          Ex[[i]], YSIM[[i]], target="cells", cellsix = cellsix,sparsematrix = sparseMAT))
-                                                         # cellrates=TRUE, cellsix = cellsix, sparsematrix = sparseMAT))
-            
-            test <- lapply(1:nsim, function(i) calcbounds(id.bic_pc[[i]], IC="aic", 
+                                                          Ex[[i]], YSIM[[i]], target="cells", cellsix = cellsix,
+                                                          sparsemat = sparseMAT))
+            outcells.pc.aic <- lapply(1:nsim, function(i) calcbounds(id.bic_pc[[i]], IC="aic", 
                                                           sim_superclust_pc[[i]], byloc = FALSE,
-                                                          Ex[[i]], YSIM[[i]], target="cells", cellsix = cellsix,sparsematrix = sparseMAT))
-            
+                                                          Ex[[i]], YSIM[[i]], target="cells", cellsix = cellsix,
+                                                          sparsemat = sparseMAT))
     
-            
+            print("finished stacking & bounds by PC")
             ###############################################################################################################
             ###############################################################################################################
             ###############################################################################################################
@@ -179,204 +293,113 @@ for(risk in risks){
                                                                            byloc= TRUE, model="poisson",
                                                                            overdisp.est = overdisp.est))
             
-            
-            
-            
             id.bic_loc <- lapply(1:nsim, function(i) as.vector(unlist(sim_superclust_loc[[i]]$selection.bic)))
             id.aic_loc <- lapply(1:nsim, function(i) as.vector(unlist(sim_superclust_loc[[i]]$selection.aic)))
             
-            test <- lapply(1:nsim, function(i) calcbounds(id.bic_loc[[i]], IC="bic", 
+            outcluster.loc.bic <- lapply(1:nsim, function(i) calcbounds(id.bic_loc[[i]], IC="bic", 
                                                           sim_superclust_loc[[i]], byloc = TRUE,
-                                                          Ex[[i]], YSIM[[i]], target="cluster", sparsematrix = sparseMAT))
+                                                          Ex[[i]], YSIM[[i]], target="cluster", sparsemat = sparseMAT))
             
-            test <- lapply(1:nsim, function(i) calcbounds(id.bic_loc[[i]], IC="aic", 
+            outcluster.loc.aic <- lapply(1:nsim, function(i) calcbounds(id.bic_loc[[i]], IC="aic", 
                                                           sim_superclust_loc[[i]], byloc = TRUE,
-                                                          Ex[[i]], YSIM[[i]], target="cluster", sparsematrix = sparseMAT))
+                                                          Ex[[i]], YSIM[[i]], target="cluster", sparsemat = sparseMAT))
             
-            test <- lapply(1:nsim, function(i) calcbounds(id.bic_loc[[i]], IC="bic", 
+            outcells.loc.bic <- lapply(1:nsim, function(i) calcbounds(id.bic_loc[[i]], IC="bic", 
                                                           sim_superclust_loc[[i]], byloc = TRUE,
-                                                          Ex[[i]], YSIM[[i]], target="cells", cellsix = cellsix,sparsematrix = sparseMAT))
-            test <- lapply(1:nsim, function(i) calcbounds(id.bic_loc[[i]], IC="aic", 
+                                                          Ex[[i]], YSIM[[i]], target="cells", cellsix = cellsix,
+                                                          sparsemat = sparseMAT))
+            outcells.loc.aic <- lapply(1:nsim, function(i) calcbounds(id.bic_loc[[i]], IC="aic", 
                                                           sim_superclust_loc[[i]], byloc = TRUE,
-                                                          Ex[[i]], YSIM[[i]], target="cells", cellsix = cellsix,sparsematrix = sparseMAT))
+                                                          Ex[[i]], YSIM[[i]], target="cells", cellsix = cellsix,
+                                                          sparsemat = sparseMAT))
+         
             
-            # #TODO:
-            #     - fix by LOC next
-            #     - fix nonma_asymp
-            #     - fix buckland
-            #     - fix others
-            #     - change sim to non-standardized Expected counts
-            #     - fix mat.bic in sim detection
-            # 
-            
-            
-            #outbic.pc <- calcbounds(id.bic_loc, IC="bic", sim_superclust_pc, bylocation = FALSE, outExp, outObs,cellrates=TRUE, cellsix = cellsix)
-            # test <- lapply(1:nsim, function(i) calcbounds(id.bic_loc[[i]], IC="bic", 
-            #                                               sim_superclust_loc[[i]], byloc = TRUE,
-            #                                               Ex[[i]], YSIM[[i]],
-            #                                               cellrates=TRUE, cellsix = cellsix, sparsematrix = sparseMAT))
-            
-            print("finished stacking by PC")
-            ##################################################
-            ##################################################
-            #NON-MA VARIANCE
-            ##################################################
-            ##################################################
-            clusterRRlarge <- lapply(1:nsim, function(i) YSIM[[i]][cellsix]/Ex[[i]][cellsix])
-            se_clusterRRlarge <- lapply(1:nsim, function(i) sqrt(clusterRRlarge[[i]]/Ex[[i]][cellsix]))
-           
-            nonma.time <- system.time(nonma<- lapply(1:nsim, function(i) cbind(lb=clusterRRlarge[[i]]-1.96*se_clusterRRlarge[[i]],
-                                                     clusterMA = clusterRRlarge[[i]],
-                                                     ub = clusterRRlarge[[i]]+1.96*se_clusterRRlarge[[i]])))
-           
-            se_clusterRRlarge_asymp <- lapply(1:nsim, function(i) sqrt(clusterRRlarge[[i]]/YSIM[[i]][cellsix]))
-            nonma_asymp.time <- system.time(nonma_asymp <- lapply(1:nsim, 
-                                                                  function(i) cbind(lbasymp=clusterRRlarge[[i]]-1.96*se_clusterRRlarge_asymp[[i]], 
-                                                                                    clusterMA = clusterRRlarge[[i]],
-                                                                                    ubasymp=clusterRRlarge[[i]]+1.96*se_clusterRRlarge_asymp[[i]])))
-            
-            print("nonma finished")
-            
-            ##################################################
-            ##################################################
-            #Buckland 1997
-            ##################################################
-            ##################################################
-            wslarge <- lapply(1:nsim, function(i) sim_superclust_pc[[i]]$wtMAT[,sim_superclust_pc[[i]]$selection.bic_forceid])
-            clusterRR_ilarge <- lapply(1:nsim, function(i) sim_superclust_pc[[i]]$Lambda_dense) 
-            cluster_thetaa <- lapply(1:nsim, function(i) sim_superclust_pc[[i]]$wLambda[sim_superclust_pc[[i]]$selection.bic_forceid,])
-            
-            
-            outbuck.time <- system.time(outbuck <- lapply(1:nsim, 
-                              function(i) bucklandbounds(thetai=clusterRR_ilarge[[i]][,cellsix],
-                                                         thetaa =cluster_thetaa[[i]][cellsix], 
-                                                         w_q=wslarge[[i]], sparsematrix=t(sparseMAT), Ex[[i]][cellsix],
-                                                         overdisp.est = NULL, cellrates = TRUE)))
-            
-            #str(outbuck)
-            ##########################
-            #Log-scale
-            outbuckTlog.time <- system.time(outbuckTlog <- lapply(1:nsim, 
-                                                                  function(i) bucklandbounds(thetai=clusterRR_ilarge[[i]][,cellsix],
-                                                                                             thetaa =cluster_thetaa[[i]][cellsix], 
-                                                                                             w_q=wslarge[[i]], 
-                                                                                             sparsematrix=t(sparseMAT), Ex[[i]][cellsix],
-                                                                                             overdisp.est = NULL, transform=TRUE,
-                                                                                             cellrates = TRUE)))
-            #str(outbuckTlog)
-            print("buckland finished")
+            print("finished stacking & bounds by LOC")
            
             ##################################################
             ##################################################
-            #MAW2 (B&A pg. 345)
+            #OUTPUT: CLUSTER
             ##################################################
             ##################################################
+            #PC
+            ##################################################
+            master.bic<- cleanlist.clusters(outcluster.pc.bic, nsim=nsim)
+            master.bic$IC <- "BIC"
+            master.bic$select<-  unlist(id.bic_pc)
             
-            outmaw2.time <- system.time(outmaw2 <- lapply(1:nsim, function(i) maw2(thetai=clusterRR_ilarge[[i]][,cellsix], 
-                                                                                   thetaa = cluster_thetaa[[i]][cellsix], 
-                                                                                   w_q=wslarge[[i]], 
-                                                                                   sparsematrix=t(sparseMAT), 
-                                                                                   outExp = Ex[[i]][cellsix], overdisp.est = NULL,
-                                                                                   cellrates = TRUE)))
-            #str(outmaw2)
-            
-            ##########################
-            #Log-scale
-            outmaw2Tlog.time <- system.time(outmaw2Tlog  <- lapply(1:nsim, function(i) maw2(thetai=clusterRR_ilarge[[i]][,cellsix],
-                                                                                            thetaa = cluster_thetaa[[i]][cellsix], 
-                                                                                            w_q=wslarge[[i]], 
-                                                                                            sparsematrix=t(sparseMAT), 
-                                                                                            outExp = Ex[[i]][cellsix], 
-                                                                                            overdisp.est = NULL,
-                                                                                            transform=TRUE,
-                                                                                            cellrates = TRUE)))
-            #str(outmaw2Tlog)
-            print("maw2 finished")
-            ##################################################
-            ##################################################
-            #Turek-Fletcher MATA Bounds (for non-normal data)
-            ##################################################
-            ##################################################
-            
-            outmata.time <- system.time(outmata <- lapply(1:nsim, function(i) matabounds(thetai=clusterRR_ilarge[[i]][,cellsix], 
-                                                                                         thetaa = cluster_thetaa[[i]][cellsix], 
-                                                                                         w_q=wslarge[[i]], sparsematrix=t(sparseMAT),
-                                                                                         outExp = Ex[[i]][cellsix],
-                                                                                         overdisp.est = NULL, 
-                                                                                         transform="none",
-                                                                                         cellrates=TRUE)))
-            #str(outmata)
-            print("outmata finished")
-            
-            ##################################################
-            ##################################################
-            #Turek-Fletcher MATA Bounds: LOG TRANSFORMED
-            ##################################################
-            ##################################################
-            
-            outmataTlog.time <- system.time(outmataTlog <- lapply(1:nsim, function(i) matabounds(thetai=clusterRR_ilarge[[i]][,cellsix], 
-                                                                                                 thetaa = cluster_thetaa[[i]][cellsix], 
-                                                                                                 w_q=wslarge[[i]], 
-                                                                                                 sparsematrix=t(sparseMAT), 
-                                                                                                 outExp = Ex[[i]][cellsix],
-                                                                                                 overdisp.est = NULL, 
-                                                                                                 transform="log",
-                                                                                                 cellrates=TRUE)))
-            #str(outmataTlog)
-            print("outmatalog finished")
-            ##################################################
-            ##################################################
-            #Create Master for Output
-            ##################################################
-            ##################################################
-            master <- cbind.data.frame(cleanlist(nonma,nsim, bounds = FALSE),
-                                       cleanlist(nonma_asymp,nsim, bounds = FALSE),
-                                       cleanlist(outbuck,nsim, bounds = TRUE),
-                                       cleanlist(outbuckTlog,nsim, bounds = TRUE),
-                                       cleanlist(outmaw2,nsim, bounds = TRUE),
-                                       cleanlist(outmaw2Tlog,nsim, bounds = TRUE),
-                                       cleanlist(outmata,nsim, bounds = TRUE),
-                                       cleanlist(outmataTlog,nsim, bounds = TRUE))
+            master.aic<- cleanlist.clusters(outcluster.pc.aic, nsim=nsim)
+            master.aic$IC <- "AIC"
+            master.aic$select <-  unlist(id.aic_pc)
 
-            master$risk <- risk
-            master$exp <- ecount
-            master$radius <- rad
-            master$anyforced <- ifelse(unlist(lapply(1:nsim, function(i) sim_superclust_pc[[i]]$selection.bic))==0,"yes","no")
-            master$simID <- rep(1:nsim, each=length(cellsix))#1:nrow(master)
-            master$nonma.time <- rep(nonma.time[[3]], nsim*length(cellsix))
-            master$nonma_asymp.time <- rep(nonma_asymp.time[[3]], nsim*length(cellsix))
-            master$outbuck.time <- rep(outbuck.time[[3]], nsim*length(cellsix))
-            master$outbuckTlog.time <- rep(outbuckTlog.time[[3]], nsim*length(cellsix))
-            master$outmaw2.time <- rep(outmaw2.time[[3]], nsim*length(cellsix))
-            master$outmaw2Tlog.time <- rep(outmaw2Tlog.time[[3]], nsim*length(cellsix))
-            master$outmata.time <- rep(outmata.time[[3]], nsim*length(cellsix))
-            master$outmataTlog.time <- rep(outmataTlog.time[[3]], nsim*length(cellsix))
-            master$cellid <- rep(cellsix,nsim)
+            master.cluster.pc <- rbind.data.frame(master.bic, master.aic)
+            master.cluster.pc$method <- "PC"
+            master.cluster.pc$simID <- rep(1:nsim, times=nsim)
+            ##################################################
+            #LOC
+            ##################################################
+            master.bic<- cleanlist.clusters(outcluster.loc.bic, nsim=nsim)
+            master.bic$IC <- "BIC"
+            master.bic$select<-  unlist(id.bic_loc)
             
+            master.aic<- cleanlist.clusters(outcluster.loc.aic, nsim=nsim)
+            master.aic$IC <- "AIC"
+            master.aic$select <-  unlist(id.aic_loc)
             
-            names(master) <- c("nonma.LB", "clusterMA", "nonma.UB",
-                               "nonma_asymp.LB", "clusterMA.1", "nonma_asymp.UB",
-                               "buck.LB", "clusterMA.2", "buck.UB",
-                               "bucklog.LB", "clusterMA.3", "bucklog.UB",
-                               "maw2.LB", "clusterMA.6", "maw2.UB",
-                               "maw2log.LB", "clusterMA.7", "maw2log.UB",
-                               "mata.LB", "clusterMA.8", "mata.UB",
-                               "matalog.LB", "clusterMA.9", "matalog.UB", 
-                               "risk", "ecount", "rad", "anyforced","simID", 
-                               "nonma.time", "nonma_asymp.time", "outbuck.time",
-                               "outbucklog.time",
-                               "outmaw2.time","outmaw2log.time", "outmata.time",
-                              "outmataTlog.time", "cellid")
-            out.pc <- rbind(out.pc, master)
-            print(paste0(c(risk,ecount,rad), " finished"))
+            master.cluster.loc <- rbind.data.frame(master.bic, master.aic)
+            master.cluster.loc$method <- "LOC"
+            master.cluster.loc$simID <- rep(1:nsim, times=nsim)
+            #COMBINE
+            master.cluster <- rbind.data.frame(master.cluster.pc, master.cluster.loc)
+            master.cluster$risk <- risk
+            master.cluster$exp <- ecount
+            master.cluster$radius <- rad
+            ###########################################################################################
+            ##################################################
+            ##################################################
+            #OUTPUT: CELLS
+            ##################################################
+            ##################################################
+            #PC
+            ##################################################
+            master.bic<- cleanlist.cells(outcells.pc.bic, nsim=nsim, cellsix = cellsix)
+            master.bic$IC <- "BIC"
+            master.bic$select<-  unlist(id.bic_pc)
             
+            master.aic<- cleanlist.cells(outcells.pc.aic, nsim=nsim, cellsix = cellsix)
+            master.aic$IC <- "AIC"
+            master.aic$select <-  unlist(id.aic_pc)
+            
+            master.cells.pc <- rbind.data.frame(master.bic, master.aic)
+            master.cells.pc$method <- "PC"
+            master.cells.pc$simID <- rep(1:nsim, each=(nsim*length(cellsix)))
+            ##################################################
+            #LOC
+            ##################################################
+            master.bic<- cleanlist.cells(outcells.loc.bic, nsim=nsim, cellsix = cellsix)
+            master.bic$IC <- "BIC"
+            master.bic$select<-  unlist(id.bic_loc)
+            
+            master.aic<- cleanlist.cells(outcells.loc.aic, nsim=nsim, cellsix = cellsix)
+            master.aic$IC <- "AIC"
+            master.aic$select <-  unlist(id.aic_loc)
+            
+            master.cells.loc <- rbind.data.frame(master.bic, master.aic)
+            master.cells.loc$method <- "LOC"
+            master.cells.loc$simID <- rep(1:nsim, each=(nsim*length(cellsix)))
+            #COMBINE
+            master.cells <- rbind.data.frame(master.cells.pc, master.cells.loc)
+            master.cells$risk <- risk
+            master.cells$exp <- ecount
+            master.cells$radius <- rad
+                
         }
     }
     
 }
 #write.csv(masterout, file="masterout_nsim50_cellrisk.csv")
 
-write.csv(masterout, file="masterout_nsim100_cellrisk.csv")
+write.csv(master.cluster, file="mastercluster_nsim100.csv")
+write.csv(master.cells, file="mastercells_nsim100.csv")
 rm(list=ls())
 
 
