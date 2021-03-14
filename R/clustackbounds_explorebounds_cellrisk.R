@@ -182,6 +182,8 @@ cleanlist.cells <- function(outlist, nsim, cellsix){
 #######################################################
 #######################################################
 #######################################################
+outmaster.cluster <- NULL
+outmaster.cells <- NULL
 radii <- c(9,11,18)
 cent <- 150
 risks <- c(1.1,1.5,2)
@@ -309,33 +311,39 @@ for(risk in risks){
             master.bic<- cleanlist.clusters(outcluster.pc.bic, nsim=nsim)
             master.bic$IC <- "BIC"
             master.bic$select<-  unlist(id.bic_pc)
+            master.bic$simID <- 1:nsim
             
             master.aic<- cleanlist.clusters(outcluster.pc.aic, nsim=nsim)
             master.aic$IC <- "AIC"
             master.aic$select <-  unlist(id.aic_pc)
+            master.aic$simID <- 1:nsim
 
             master.cluster.pc <- rbind.data.frame(master.bic, master.aic)
             master.cluster.pc$method <- "PC"
-            master.cluster.pc$simID <- rep(1:nsim, times=nsim)
+            #master.cluster.pc$simID <- rep(1:nsim, times=nsim)
+            print("BY CLUSTER-BY PC FINISHED")
             ##################################################
             #LOC
             ##################################################
             master.bic<- cleanlist.clusters(outcluster.loc.bic, nsim=nsim)
             master.bic$IC <- "BIC"
             master.bic$select<-  unlist(id.bic_loc)
+            master.bic$simID <- 1:nsim
             
             master.aic<- cleanlist.clusters(outcluster.loc.aic, nsim=nsim)
             master.aic$IC <- "AIC"
             master.aic$select <-  unlist(id.aic_loc)
+            master.aic$simID <- 1:nsim
             
             master.cluster.loc <- rbind.data.frame(master.bic, master.aic)
             master.cluster.loc$method <- "LOC"
-            master.cluster.loc$simID <- rep(1:nsim, times=nsim)
+            #master.cluster.loc$simID <- rep(1:nsim, times=nsim)
             #COMBINE
             master.cluster <- rbind.data.frame(master.cluster.pc, master.cluster.loc)
             master.cluster$risk <- risk
             master.cluster$exp <- ecount
             master.cluster$radius <- rad
+            print("BY CLUSTER-BY LOC FINISHED")
             ###########################################################################################
             ##################################################
             ##################################################
@@ -347,41 +355,49 @@ for(risk in risks){
             master.bic<- cleanlist.cells(outcells.pc.bic, nsim=nsim, cellsix = cellsix)
             master.bic$IC <- "BIC"
             master.bic$select<-  unlist(id.bic_pc)
+            master.bic$simID <- rep(1:nsim, each=length(cellsix))
             
             master.aic<- cleanlist.cells(outcells.pc.aic, nsim=nsim, cellsix = cellsix)
             master.aic$IC <- "AIC"
             master.aic$select <-  unlist(id.aic_pc)
+            master.aic$simID <- rep(1:nsim, each=length(cellsix))
             
             master.cells.pc <- rbind.data.frame(master.bic, master.aic)
             master.cells.pc$method <- "PC"
-            master.cells.pc$simID <- rep(1:nsim, each=(nsim*length(cellsix)))
+            #master.cells.pc$simID <- rep(1:nsim, each=(nsim*length(cellsix)))
+            print("CELLS-BY PC FINISHED")
             ##################################################
             #LOC
             ##################################################
             master.bic<- cleanlist.cells(outcells.loc.bic, nsim=nsim, cellsix = cellsix)
             master.bic$IC <- "BIC"
             master.bic$select<-  unlist(id.bic_loc)
+            master.bic$simID <- rep(1:nsim, each=length(cellsix))
             
             master.aic<- cleanlist.cells(outcells.loc.aic, nsim=nsim, cellsix = cellsix)
             master.aic$IC <- "AIC"
             master.aic$select <-  unlist(id.aic_loc)
+            master.aic$simID <- rep(1:nsim, each=length(cellsix))
             
             master.cells.loc <- rbind.data.frame(master.bic, master.aic)
             master.cells.loc$method <- "LOC"
-            master.cells.loc$simID <- rep(1:nsim, each=(nsim*length(cellsix)))
+            #master.cells.loc$simID <- rep(1:nsim, each=(nsim*length(cellsix)))
             #COMBINE
             master.cells <- rbind.data.frame(master.cells.pc, master.cells.loc)
             master.cells$risk <- risk
             master.cells$exp <- ecount
             master.cells$radius <- rad
-                
+            print("CELLS-BY LOC FINISHED")
+            #BIND TO OUT
+            outmaster.cluster <- rbind.data.frame(outmaster.cluster, master.cluster) 
+            outmaster.cells <- rbind.data.frame(outmaster.cells, master.cells) 
         }
     }
     
 }
 
-write.csv(master.cluster, file="mastercluster_nsim100.csv")
-write.csv(master.cells, file="mastercells_nsim100.csv")
+write.csv(outmaster.cluster, file="mastercluster_nsim100.csv")
+write.csv(outmaster.cells, file="mastercells_nsim100.csv")
 rm(list=ls())
 
 
