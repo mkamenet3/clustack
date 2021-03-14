@@ -32,8 +32,8 @@ source("helperfuncs.R")
 #LOAD DATA
 ###########################################################
 #0) Setup
-#load("../data/japanbreastcancer.RData")
-load("../../../../clusso_KamenetskyLeeZhuGangnon/data/JBC/japanbreastcancer.RData")
+load("../data/japanbreastcancer.RData")
+#load("../../../../clusso_KamenetskyLeeZhuGangnon/data/JBC/japanbreastcancer.RData")
 
 #select period 3 only for space only (period 7938)
 japanbreastcancerp3 <- droplevels(subset(japanbreastcancer, period=="7938"))
@@ -64,19 +64,6 @@ n_uniq <- length(unique(potentialclusters$center))
 numCenters <- n_uniq
 #create giant sparse design matrix (single potential clusters)
 sparseMAT <- spacetimeMat(potentialclusters, numCenters, Time) 
-
-
-
-# cleanlist <- function(outlist, nsim,bounds=FALSE){
-#     if(bounds==TRUE){
-#         list1  <- lapply(1:nsim, function(x) matrix(unlist(outlist[[x]]), ncol=3))
-#         listcombine <-  do.call(rbind,lapply(list1,matrix,ncol=3,byrow=FALSE))
-#     } else {
-#         list1 <- lapply(1:nsim, function(x) matrix(as.vector(outlist[[x]]), ncol=3))
-#         listcombine <-  do.call(rbind,lapply(list1,matrix,ncol=3,byrow=FALSE))   
-#     }
-#     return(listcombine)
-# }
 
 cleanlist.clusters <- function(outlist, nsim){
     #nonma
@@ -194,18 +181,14 @@ cleanlist.cells <- function(outlist, nsim, cellsix){
 }
 #######################################################
 #######################################################
-
-
 #######################################################
 radii <- c(9,11,18)
 cent <- 150
 risks <- c(1.1,1.5,2)
-ecounts <- c(5,10,50,100,250,1000)#5#10#50#100#250#500#1000
+ecounts <- c(5,10,50,100,250,1000)
 overdisp.est <- NULL
 nsim <- 100#2#5#50#100
 tim <- 1#:5
-out.loc <- NULL
-out.pc <- NULL
 
 #put the cluster in
 for(risk in risks){
@@ -223,7 +206,6 @@ for(risk in risks){
             potentialclusters$tosample[potentialclusters$center==cent & potentialclusters$n==(maxid+1)] <- "cell4"
             
             #cell completely outside: select cell 80
-            #which(1:208 %in% potentialclusters$last[potentialclusters$center==150] == FALSE)
             potentialclusters$tosample[potentialclusters$center==80 & potentialclusters$n==1] <- "cell5"
             
             cellsix <- potentialclusters$last[!is.na(potentialclusters$tosample)]
@@ -267,6 +249,7 @@ for(risk in risks){
             outcluster.pc.bic <- lapply(1:nsim, function(i) calcbounds(id.bic_pc[[i]], IC="bic", 
                                                           sim_superclust_pc[[i]], byloc = FALSE,
                                                           Ex[[i]], YSIM[[i]], target="cluster", sparsemat = sparseMAT))
+            
             outcluster.pc.aic <- lapply(1:nsim, function(i) calcbounds(id.bic_pc[[i]], IC="aic", 
                                                           sim_superclust_pc[[i]], byloc = FALSE,
                                                           Ex[[i]], YSIM[[i]], target="cluster", sparsemat = sparseMAT))
@@ -396,7 +379,6 @@ for(risk in risks){
     }
     
 }
-#write.csv(masterout, file="masterout_nsim50_cellrisk.csv")
 
 write.csv(master.cluster, file="mastercluster_nsim100.csv")
 write.csv(master.cells, file="mastercells_nsim100.csv")

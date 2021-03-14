@@ -1197,6 +1197,7 @@ calcbounds <- function(id_ic, IC, res, byloc, Ex, Obs,target=c("cluster", "cells
 #'@param conf.level Confidence level for the interval. Default is 0.95. 
 #'@return Returns large list of confidence bounds and stacked estimates in addition to timings for each of the confidence bounds methods.
 calcbounds.cluster <- function(id_ic, IC, res, byloc, Ex, Obs,w, thetaa,thetai, sparsemat, conf.level=0.95){
+    #browser()
     #print("calcbounds.cluster")
     #print(str(sparsemat))
     if(byloc==TRUE){
@@ -1213,95 +1214,132 @@ calcbounds.cluster <- function(id_ic, IC, res, byloc, Ex, Obs,w, thetaa,thetai, 
         outExp_out <- outExp@x
         outObs_out <- outObs@x
     }
-    outnonma.time <- system.time(outnonma <- nonma.cluster(thetaa, thetai,res, w, id_ic,
-                                                   outExp_out, IC=IC, transform="none", byloc, conf.level))
-    outnonmaTlog.time <- system.time(outnonmaTlog <- nonma.cluster(thetaa, thetai,res, w, id_ic,
-                                                           outExp_out, IC=IC, transform="log", byloc, conf.level))
-    
-    
-    outnonma_asymp.time <- system.time(outnonma_asymp <- nonma_asymp.cluster(thetaa, thetai,res, w, id_ic,
-                                                                             outObs_out, IC=IC, transform="none", byloc,
-                                                                             conf.level))
-    outnonma_asympTlog.time <- system.time(outnonma_asympTlog <- nonma_asymp.cluster(thetaa, thetai, res, w, id_ic,
-                                                                                     outObs_out, IC=IC, transform="log", byloc,
-                                                                                     conf.level))
-    message("Non-model averaged bounds finished")
-    outbuck.theta.time <- system.time(outbuck.theta <- bucklandbounds.cluster(thetaa,
-                                                                              thetai,
-                                                                            res,
-                                                                            w_q=w,
-                                                                            outExp,
-                                                                            IC=IC,
-                                                                            transform="none",
-                                                                            overdisp.est,
-                                                                            conf.level))
-    outbuckTlog.theta.time  <- system.time(outbuckTlog.theta <- bucklandbounds.cluster(thetaa,
-                                                                              thetai,
-                                                                              res,
-                                                                              w_q=w,
-                                                                              outExp,
-                                                                              IC=IC,
-                                                                              transform="log",
-                                                                              overdisp.est,
-                                                                              conf.level))
-    message("Buckland bounds finished")
-    
-    outmaw2.theta.time <- system.time(outmaw2.theta <- maw2.cluster(thetaa,
-                                                                    thetai,
-                                                                    w_q=w,
-                                                                    outExp,
-                                                                    transform="none",
-                                                                    overdisp.est,
-                                                                    conf.level))
-    
-    outmaw2Tlog.theta.time <- system.time(outmaw2Tlog.theta <-maw2.cluster(thetaa,
-                                                                    thetai,
-                                                                    w_q=w,
-                                                                    outExp,
-                                                                    transform="log",
-                                                                    overdisp.est,
-                                                                    conf.level))
-   
-    message("Burnham & Anderson bounds finished")
-    outmata.theta.time <- system.time(outmata.theta <- matabounds.cluster(thetaa,
-                                                                          thetai,
-                                                                          w_q=w,
-                                                                          outExp,
-                                                                          transform="none",
-                                                                          overdisp.est,
-                                                                          conf.level))
-    
-    outmataTlog.theta.time <- system.time(outmataTlog.theta <- matabounds.cluster(thetaa,
+    if(id_ic==0){
+        emptynonma <- vector(mode = "list", length = 2)
+        emptynonma[[1]] <- 0
+        emptynonma[[2]] <- c(0,0,0)
+        outnonma <- outnonmaTlog <- outnonma_asymp <- outnonma_asympTlog <- emptynonma
+        names(outnonma) <- c("nonma.theta.time", "nonma.theta")
+        names(outnonmaTlog) <- c("nonma.theta.time", "nonma.theta")
+        names(outnonma_asymp) <- c("nonma_asymp.theta.time", "nonma_asymp.theta")
+        names(outnonma_asympTlog) <- c("nonma_asymp.theta.time", "nonma_asymp.theta")
+        return(list(
+            outnonma = outnonma,
+            outnonmaTlog = outnonmaTlog,
+            outnonma_asymp = outnonma_asymp,
+            outnonma_asympTlog = outnonma_asympTlog,
+            outbuck.theta =as.list(c(0,0,0)),
+            outbuckTlog.theta = as.list(c(0,0,0)),
+            outmaw2.theta = as.list(c(0,0,0)),
+            outmaw2Tlog.theta = as.list(c(0,0,0)),
+            outmata.theta = as.list(c(0,0,0)),
+            outmataTlog.theta = as.list(c(0,0,0)),
+            
+            outnonma.time = 000,
+            outnonmaTlog.time = 000,
+            outnonma_asymp.time = 000,
+            outnonma_asympTlog.time = 000,
+            outbuck.theta.time = 000,
+            outbuckTlog.theta.time = 000,
+            outmaw2.theta.time = 000,
+            outmaw2Tlog.theta.time = 000,
+            outmata.theta.time = 000,
+            outmataTlog.theta.time = 000
+        ))
+        
+    } else {
+        outnonma.time <- system.time(outnonma <- nonma.cluster(thetaa, thetai,res, w, id_ic,
+                                                               outExp_out, IC=IC, transform="none", byloc, conf.level))
+        outnonmaTlog.time <- system.time(outnonmaTlog <- nonma.cluster(thetaa, thetai,res, w, id_ic,
+                                                                       outExp_out, IC=IC, transform="log", byloc, conf.level))
+        
+        
+        outnonma_asymp.time <- system.time(outnonma_asymp <- nonma_asymp.cluster(thetaa, thetai,res, w, id_ic,
+                                                                                 outObs_out, IC=IC, transform="none", byloc,
+                                                                                 conf.level))
+        outnonma_asympTlog.time <- system.time(outnonma_asympTlog <- nonma_asymp.cluster(thetaa, thetai, res, w, id_ic,
+                                                                                         outObs_out, IC=IC, transform="log", byloc,
+                                                                                         conf.level))
+        message("Non-model averaged bounds finished")
+        outbuck.theta.time <- system.time(outbuck.theta <- bucklandbounds.cluster(thetaa,
                                                                                   thetai,
+                                                                                  res,
                                                                                   w_q=w,
                                                                                   outExp,
-                                                                                  transform="log",
+                                                                                  IC=IC,
+                                                                                  transform="none",
                                                                                   overdisp.est,
                                                                                   conf.level))
-    message("MATA bounds finished")
-    return(list(
-        outnonma = outnonma,
-        outnonmaTlog = outnonmaTlog,
-        outnonma_asymp = outnonma_asymp,
-        outnonma_asympTlog = outnonma_asympTlog,
-        outbuck.theta = outbuck.theta,
-        outbuckTlog.theta = outbuckTlog.theta,
-        outmaw2.theta = outmaw2.theta,
-        outmaw2Tlog.theta = outmaw2Tlog.theta,
-        outmata.theta = outmata.theta,
-        outmataTlog.theta = outmataTlog.theta,
+        outbuckTlog.theta.time  <- system.time(outbuckTlog.theta <- bucklandbounds.cluster(thetaa,
+                                                                                           thetai,
+                                                                                           res,
+                                                                                           w_q=w,
+                                                                                           outExp,
+                                                                                           IC=IC,
+                                                                                           transform="log",
+                                                                                           overdisp.est,
+                                                                                           conf.level))
+        message("Buckland bounds finished")
         
-        outnonma.time = outnonma.time[[3]],
-        outnonmaTlog.time = outnonmaTlog.time[[3]],
-        outnonma_asymp.time = outnonma_asymp.time[[3]],
-        outnonma_asympTlog.time = outnonma_asympTlog.time[[3]],
-        outbuck.theta.time = outbuck.theta.time[[3]],
-        outbuckTlog.theta.time = outbuckTlog.theta.time[[3]],
-        outmaw2.theta.time = outmaw2.theta.time[[3]],
-        outmaw2Tlog.theta.time = outmaw2Tlog.theta.time[[3]],
-        outmata.theta.time = outmata.theta.time[[3]],
-        outmataTlog.theta.time = outmataTlog.theta.time[[3]]
-    ))
+        outmaw2.theta.time <- system.time(outmaw2.theta <- maw2.cluster(thetaa,
+                                                                        thetai,
+                                                                        w_q=w,
+                                                                        outExp,
+                                                                        transform="none",
+                                                                        overdisp.est,
+                                                                        conf.level))
+        
+        outmaw2Tlog.theta.time <- system.time(outmaw2Tlog.theta <-maw2.cluster(thetaa,
+                                                                               thetai,
+                                                                               w_q=w,
+                                                                               outExp,
+                                                                               transform="log",
+                                                                               overdisp.est,
+                                                                               conf.level))
+        
+        message("Burnham & Anderson bounds finished")
+        outmata.theta.time <- system.time(outmata.theta <- matabounds.cluster(thetaa,
+                                                                              thetai,
+                                                                              w_q=w,
+                                                                              outExp,
+                                                                              transform="none",
+                                                                              overdisp.est,
+                                                                              conf.level))
+        
+        outmataTlog.theta.time <- system.time(outmataTlog.theta <- matabounds.cluster(thetaa,
+                                                                                      thetai,
+                                                                                      w_q=w,
+                                                                                      outExp,
+                                                                                      transform="log",
+                                                                                      overdisp.est,
+                                                                                      conf.level))
+        message("MATA bounds finished")
+        return(list(
+            outnonma = outnonma,
+            outnonmaTlog = outnonmaTlog,
+            outnonma_asymp = outnonma_asymp,
+            outnonma_asympTlog = outnonma_asympTlog,
+            outbuck.theta = outbuck.theta,
+            outbuckTlog.theta = outbuckTlog.theta,
+            outmaw2.theta = outmaw2.theta,
+            outmaw2Tlog.theta = outmaw2Tlog.theta,
+            outmata.theta = outmata.theta,
+            outmataTlog.theta = outmataTlog.theta,
+            
+            outnonma.time = outnonma.time[[3]],
+            outnonmaTlog.time = outnonmaTlog.time[[3]],
+            outnonma_asymp.time = outnonma_asymp.time[[3]],
+            outnonma_asympTlog.time = outnonma_asympTlog.time[[3]],
+            outbuck.theta.time = outbuck.theta.time[[3]],
+            outbuckTlog.theta.time = outbuckTlog.theta.time[[3]],
+            outmaw2.theta.time = outmaw2.theta.time[[3]],
+            outmaw2Tlog.theta.time = outmaw2Tlog.theta.time[[3]],
+            outmata.theta.time = outmata.theta.time[[3]],
+            outmataTlog.theta.time = outmataTlog.theta.time[[3]]
+        ))
+    }
+    
+
 }
 
 #'@title calcbounds.cells
@@ -1322,39 +1360,75 @@ calcbounds.cluster <- function(id_ic, IC, res, byloc, Ex, Obs,w, thetaa,thetai, 
 calcbounds.cells <- function(id_ic, IC, res, byloc, Ex, Obs,w, thetaa,thetai, sparsemat, cellsix, conf.level=0.95){
     #print("calcbounds.cells")
     #browser()
-    cellrisk_wt_out <- rep(NA, length(cellsix))
-    cellsix_out <- cellsix
-    if(byloc==TRUE){
-        #print(paste0("byloc", byloc))
-        outExp <- t(sparsemat)%*%Ex
-        outObs <- t(sparsemat)%*%Obs
-        outExp_out <- Ex[cellsix]
-        outObs_out <- Obs[cellsix]
-        for(i in 1:length(cellsix)){
-            cellsixvec <- rep(0,dim(res$wLambda)[2])
-            cellsixvec[cellsix[i]] <-1
-            overlapid <- matrix(cellsixvec, nrow=1)%*%t(res$Lambda_dense)
-            cellrisk_wt <- overlapid%*%w 
-            cellrisk_wt_out[[i]] <- cellrisk_wt
+    if(id_ic==0){
+        emptynonma <- vector(mode = "list", length = 2)
+        emptynonma[[1]] <- 0
+        emptynonma[[2]] <- matrix(rep(0, length(cellsix)*3), ncol=3)
+        outnonma <- outnonmaTlog <- outnonma_asymp <- outnonma_asympTlog <- emptynonma
+        names(outnonma) <- c("nonma.theta.time", "nonma.theta")
+        names(outnonmaTlog) <- c("nonma.theta.time", "nonma.theta")
+        names(outnonma_asymp) <- c("nonma_asymp.theta.time", "nonma_asymp.theta")
+        names(outnonma_asympTlog) <- c("nonma_asymp.theta.time", "nonma_asymp.theta")
+        return(list(
+            outnonma = outnonma,
+            outnonmaTlog = outnonmaTlog,
+            outnonma_asymp = outnonma_asymp,
+            outnonma_asympTlog = outnonma_asympTlog,
+            outbuck.theta = list(as.vector(rep(0, length(cellsix))), as.vector(rep(0, length(cellsix))), as.vector(rep(0, length(cellsix)))),
+            outbuckTlog.theta = list(as.vector(rep(0, length(cellsix))), as.vector(rep(0, length(cellsix))), as.vector(rep(0, length(cellsix)))),
+            outmaw2.theta = list(as.vector(rep(0, length(cellsix))), as.vector(rep(0, length(cellsix))), as.vector(rep(0, length(cellsix)))),
+            outmaw2Tlog.theta = list(as.vector(rep(0, length(cellsix))), as.vector(rep(0, length(cellsix))), as.vector(rep(0, length(cellsix)))),
+            outmata.theta = list(as.vector(rep(0, length(cellsix))), as.vector(rep(0, length(cellsix))), as.vector(rep(0, length(cellsix)))),
+            outmataTlog.theta = list(as.vector(rep(0, length(cellsix))), as.vector(rep(0, length(cellsix))), as.vector(rep(0, length(cellsix)))),
+            
+            outnonma.time = 000,
+            outnonmaTlog.time = 000,
+            outnonma_asymp.time = 000,
+            outnonma_asympTlog.time = 000,
+            outbuck.theta.time = 000,
+            outbuckTlog.theta.time = 000,
+            outmaw2.theta.time = 000,
+            outmaw2Tlog.theta.time = 000,
+            outmata.theta.time = 000,
+            outmataTlog.theta.time = 000
+        ))
+        
+        
+    } else {
+        cellrisk_wt_out <- rep(NA, length(cellsix))
+        cellsix_out <- cellsix
+        if(byloc==TRUE){
+            #print(paste0("byloc", byloc))
+            outExp <- t(sparsemat)%*%Ex
+            outObs <- t(sparsemat)%*%Obs
+            outExp_out <- Ex[cellsix]
+            outObs_out <- Obs[cellsix]
+            for(i in 1:length(cellsix)){
+                cellsixvec <- rep(0,dim(res$wLambda)[2])
+                cellsixvec[cellsix[i]] <-1
+                overlapid <- matrix(cellsixvec, nrow=1)%*%t(res$Lambda_dense)
+                cellrisk_wt <- overlapid%*%w 
+                cellrisk_wt_out[[i]] <- cellrisk_wt
+            }
         }
-    }
-    else if (byloc==FALSE){
-        #print(paste0("byloc: ", byloc))
-        outExp <- t(sparsemat)%*%Ex
-        outObs <- t(sparsemat)%*%Obs
-        #print(paste0("cellsix: ", cellsix))
-        outExp_out <- outExp@x[cellsix]
-        outObs_out <- outObs@x[cellsix]
-        cellrisk_wt_out <- NULL
-    }    
+        else if (byloc==FALSE){
+            #print(paste0("byloc: ", byloc))
+            outExp <- t(sparsemat)%*%Ex
+            outObs <- t(sparsemat)%*%Obs
+            #print(paste0("cellsix: ", cellsix))
+            outExp_out <- outExp@x[cellsix]
+            outObs_out <- outObs@x[cellsix]
+            cellrisk_wt_out <- NULL
+        }    
+        
         outnonma.time <- system.time(outnonma <- nonma.cells(thetaa, thetai,res, w, id_ic,
-                                                       outExp_out, IC=IC, transform="none", byloc, 
-                                                       cellrisk_wt_out, cellsix_out,
-                                                       conf.level))
+                                                             outExp_out, IC=IC, transform="none", byloc, 
+                                                             cellrisk_wt_out, cellsix_out,
+                                                             conf.level))
         outnonmaTlog.time <- system.time(outnonmaTlog <- nonma.cells(thetaa, thetai,res, w, id_ic,
-                                                                outExp_out, IC=IC, transform="log", byloc, 
-                                                                cellrisk_wt_out, cellsix_out,
-                                                                conf.level))
+                                                                     outExp_out, IC=IC, transform="log", byloc, 
+                                                                     cellrisk_wt_out, cellsix_out,
+                                                                     conf.level))
         
         outnonma_asymp.time <- system.time(outnonma_asymp <- nonma_asymp.cells(thetaa, thetai,res, w, id_ic,
                                                                                outObs_out, IC=IC, transform="none", byloc, cellrisk_wt_out, cellsix_out))
@@ -1384,25 +1458,25 @@ calcbounds.cells <- function(id_ic, IC, res, byloc, Ex, Obs,w, thetaa,thetai, sp
         message("Buckland bounds finished")
         outmaw2.theta.time <- system.time(outmaw2.theta <- maw2.cells(thetaa,
                                                                       res,
-                                                                w_q=w,
-                                                                Ex,
-                                                                IC,
-                                                                transform="none",
-                                                                tsparsemat=t(sparsemat),
-                                                                overdisp.est,
-                                                                cellsix_out,
-                                                                conf.level))
-        outmaw2Tlog.theta.time <- system.time(outmaw2Tlog.theta <- maw2.cells(thetaa,
-                                                                      res,
                                                                       w_q=w,
                                                                       Ex,
                                                                       IC,
-                                                                      transform="log",
+                                                                      transform="none",
                                                                       tsparsemat=t(sparsemat),
                                                                       overdisp.est,
                                                                       cellsix_out,
                                                                       conf.level))
-
+        outmaw2Tlog.theta.time <- system.time(outmaw2Tlog.theta <- maw2.cells(thetaa,
+                                                                              res,
+                                                                              w_q=w,
+                                                                              Ex,
+                                                                              IC,
+                                                                              transform="log",
+                                                                              tsparsemat=t(sparsemat),
+                                                                              overdisp.est,
+                                                                              cellsix_out,
+                                                                              conf.level))
+        
         message("Burnham & Anderson bounds finished")
         outmata.theta.time <- system.time(outmata.theta <- matabounds.cells(thetaa,
                                                                             res,
@@ -1450,5 +1524,7 @@ calcbounds.cells <- function(id_ic, IC, res, byloc, Ex, Obs,w, thetaa,thetai, sp
             outmata.theta.time = outmata.theta.time[[3]],
             outmataTlog.theta.time = outmataTlog.theta.time[[3]]
         ))
+    }
+    
 }
 
