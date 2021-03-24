@@ -332,7 +332,9 @@ for (m in startsim:(startsim+4)){
     #####################################################################################
     #####################################################################################
     if(id.bic_pc!=0){
-        outbic.pc <- calcbounds(id.bic_pc, IC="bic", sim_superclust_pc, bylocation = FALSE,outExp)
+        outbic.pc <- calcbounds(id.bic_pc, IC="bic", sim_superclust_pc, 
+                                 byloc = FALSE,Ex, YSIM, target="cluster", 
+                                 sparsemat = sparsematrix)
     } else {
         print("No clusters identified: BIC")
     }
@@ -341,7 +343,9 @@ for (m in startsim:(startsim+4)){
         if(id.bic_pc==id.aic_pc){
             outaic.pc <- outbic.pc
         } else {
-            outaic.pc <- calcbounds(id.aic_pc, IC="aic", sim_superclust_pc, bylocation = FALSE,outExp)
+            outaic.pc <- calcbounds(id.aic_pc, IC="aic", sim_superclust_pc, 
+                                    byloc = FALSE,Ex, YSIM, target="cluster", 
+                                    sparsemat = sparsematrix)
         }
     } else {
         print("No clusters identified: AIC")
@@ -358,54 +362,70 @@ for (m in startsim:(startsim+4)){
     ##############################
     # #Which PCs overlap true cluster?
     #what was identified in each sim by IC
-    ident.bic <-sim_superclust_pc$wtMAT[, sim_superclust_pc$selection.bic]
-    mat.bic <-t(ident.bic)%*%t(sparsematrix)
+    #BIC 
+    ident.bic <- matrix(sim_superclust_pc$wtMAT[, sim_superclust_pc$selection.bic], ncol=sim_superclust_pc$selection.bic)
+    mat0.bic <- sapply(1:sim_superclust_pc$selection.bic, function(i) t(ident.bic[,i])%*%t(sparsematrix))
+    matSum.bic <- rowSums(sapply(1:sim_superclust_pc$selection.bic, function(i) ifelse(mat0.bic[[i]]>=0.1,1,0)))
+    mat.bic <- ifelse(matSum.bic!=0,1,0)
     
-    ident.aic <- sim_superclust_pc$wtMAT[, sim_superclust_pc$selection.aic]
-    mat.aic <- t(ident.aic)%*%t(sparsematrix)
-    
+    #AIC
+    ident.aic <- matrix(sim_superclust_pc$wtMAT[, 1:sim_superclust_pc$selection.aic], ncol=sim_superclust_pc$selection.aic)
+    mat0.aic <- sapply(1:sim_superclust_pc$selection.aic, function(i) t(ident.aic[,i])%*%t(sparsematrix))
+    matSum.aic <- rowSums(sapply(1:sim_superclust_pc$selection.aic, function(i) ifelse(mat0.aic[[i]]>=0.1,1,0)))
+    mat.aic <- ifelse(matSum.aic!=0,1,0)
     
     
     #1) Did it find anything INSIDE the cluster?
-    incluster.bic <- mat.bic%*%matrix(rrbin_inside, ncol=1)
-    incluster.aic <- mat.aic%*%matrix(rrbin_inside, ncol=1)
-    
+    incluster0.bic <- mat.bic%*%matrix(rrbin_inside, ncol=1)
+    incluster0.aic <- mat.aic%*%matrix(rrbin_inside, ncol=1)
+    incluster.bic <- ifelse(incluster.bic!=0,1,0)
+    incluster.aic <- ifelse(incluster.aic!=0,1,0)
+    # 
     
     #2) Did it find anything OUTSIDE the cluster?
     #this should be everything that doesn't touch the cluster
     outcluster.bic <- mat.bic%*%matrix(rrbin_outside, ncol=1)
     outcluster.aic <- mat.aic%*%matrix(rrbin_outside, ncol=1)
+    outcluster0.bic <- mat.bic%*%matrix(rrbin_outside, ncol=1)
+    outcluster0.aic <- mat.aic%*%matrix(rrbin_outside, ncol=1)
+    outcluster.bic <- ifelse(outcluster0.bic!=0,1,0)
+    outcluster.aic <- ifelse(outcluster0.aic!=0,1,0)
     
     
     ##################################
     #Add sim results to table
     ##################################
     ##################################
+    maxwLambda <- max(sim_superclust_loc$selection.bic, sim_superclust_loc$selection.aic)
     if(length(as.vector(sim_superclust_pc$wLambda[sim_superclust_pc$selection.bic,]))==0){
         wLambda.bic <- rep(1, 1040)
     } else {
         wLambda.bic <- as.vector(sim_superclust_pc$wLambda[sim_superclust_pc$selection.bic,])
+        pad <-rep(NA, 1040*(maxwLambda-sim_superclust_pc$selection.bic), ncol=maxwLambda-sim_superclust_pc$selection.bic)
+        wLambda.bic <- cbind(wLambda.bic, pad)
     }
     if(length(as.vector(sim_superclust_pc$wLambda[sim_superclust_pc$selection.aic,]))==0){
         wLambda.aic <- rep(1, 1040)
     } else {
         wLambda.aic <- as.vector(sim_superclust_pc$wLambda[sim_superclust_pc$selection.aic,])
+        pad <-rep(NA, 1040*(maxwLambda-sim_superclust_pc$selection.aic), ncol=maxwLambda-sim_superclust_pc$selection.aic)
+        wLambda.aic <- cbind(wLambda.aic, pad)
     }
     
     
     tabn.pc <- rbind(c(IC="BIC",rad, risk, cent, theta,
                        timeperiod=as.numeric(paste(tim, collapse="")),
                        mod=mod, type="NA",time=sim_superclust_pc.time, method="pc",
-                       incluster.bic = ifelse(length(incluster.bic@x)==0,0, incluster.bic@x),
-                       outcluster.bic = ifelse(length(outcluster.bic@x)==0,0, outcluster.bic@x),
+                       incluster.bic = ifelse(length(incluster.bic)==0,0, incluster.bic),
+                       outcluster.bic = ifelse(length(outcluster.bic)==0,0, outcluster.bic),
                        iter = m,
                        wLambda.bic),
                      
                      c(IC="AIC",rad, risk, cent, theta,
                        timeperiod=as.numeric(paste(tim, collapse="")),
                        mod=mod,type="NA",time=sim_superclust_pc.time, method="pc",
-                       incluster.aic = ifelse(length(incluster.aic@x)==0,0, incluster.aic@x),
-                       outcluster.aic = ifelse(length(outcluster.aic@x)==0,0, outcluster.aic@x),
+                       incluster.aic = ifelse(length(incluster.aic)==0,0, incluster.aic),
+                       outcluster.aic = ifelse(length(outcluster.aic)==0,0, outcluster.aic),
                        iter = m,
                        wLambda.aic))
     
@@ -506,7 +526,7 @@ for (m in startsim:(startsim+4)){
     bounds.pc$simID <- 1:nrow(bounds.pc)
     bounds.pc$method <- "PC"
     
-    names(bounds.loc) <- c("nonma.LB", "clusterMA.1", "nonma.UB",
+    names(bounds.pc) <- c("nonma.LB", "clusterMA.1", "nonma.UB",
                            "nonmaTlog.LB", "clusterMA.2", "nonmaTlog.UB",
                            "nonma_asymp.LB", "clusterMA.3", "nonma_asymp.UB",
                            "nonma_asympTlog.LB", "clusterMA.4", "nonma_asympTlog.UB",
