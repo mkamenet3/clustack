@@ -2,7 +2,7 @@
 library(clusso)
 library(MASS)
 source("clustack.R")
-source("helperfuncs .R")
+source("helperfuncs.R")
 
 #get arg from script
 args<- commandArgs(TRUE)
@@ -69,7 +69,7 @@ for (m in startsim:(startsim+4)){
         
     }
     sim_superclust_loc.time <- system.time(sim_superclust_loc <- detectclusters(sparsematrix, Ex, YSIM, numCenters, Time, maxclust,
-                                                                                bylocation = TRUE, mod="poisson", 
+                                                                                byloc = TRUE, mod="poisson", 
                                                                                 overdisp.est = overdisp.est))[[3]]
     print("finished stacking: by LOC")
     if(mod=="space"){
@@ -91,7 +91,10 @@ for (m in startsim:(startsim+4)){
     #####################################################################################
     #####################################################################################
     if(id.bic_loc!=0){
-        outbic.loc <- calcbounds(id.bic_loc, IC="bic", sim_superclust_loc, bylocation = TRUE,outExp)
+        outbic.loc <- calcbounds(id.aic_loc, IC="bic", sim_superclust_loc, 
+                                 byloc = TRUE,Ex, YSIM, target="cluster", 
+                                 sparsemat = sparsematrix)
+        #outbic.loc <- calcbounds(id.bic_loc, IC="bic", sim_superclust_loc, bylocation = TRUE,outExp)
     } else {
         print("No clusters identified: BIC")
     }
@@ -100,7 +103,10 @@ for (m in startsim:(startsim+4)){
         if(id.bic_loc==id.aic_loc){
             outaic.loc <- outbic.loc
         } else {
-            outaic.loc <- calcbounds(id.aic_loc, IC="aic", sim_superclust_loc, bylocation = TRUE,outExp)
+            outaic.loc <- calcbounds(id.aic_loc, IC="aic", sim_superclust_loc, 
+                                     byloc = TRUE,Ex, YSIM, target="cluster", 
+                                     sparsemat = sparsematrix)
+            #outaic.loc <- calcbounds(id.aic_loc, IC="aic", sim_superclust_loc, bylocation = TRUE,outExp)
         }
     } else {
         print("No clusters identified: AIC")
@@ -350,7 +356,7 @@ for (m in startsim:(startsim+4)){
     }
     
     sim_superclust_pc.time <- system.time(sim_superclust_pc<- detectclusters(sparsematrix, Ex, YSIM,numCenters, Time, maxclust,
-                                                                             bylocation = FALSE, model="poisson",
+                                                                             byloc = FALSE, model="poisson",
                                                                              overdisp.est = overdisp.est))[[3]]
     print(filename <- paste0(sim.i,"_superclustPC_",m,".RData"))
     #save(sim_superclust_pc, file=filename)

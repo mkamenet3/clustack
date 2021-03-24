@@ -1156,30 +1156,43 @@ selectuniqRR <- function(uniqRRs){
 #'
 #'}
 calcbounds <- function(id_ic, IC, res, byloc, Ex, Obs,target=c("cluster", "cells"), cellsix=NULL, sparsemat, conf.level=0.95){
-    # if(is.null(cellsix) | target=="cluster"){
-    #     message("No cell rates")
-    # }
-    IC <- tolower(IC)
-    if(!is.null(cellsix) & is.null(sparsemat)){
-        stop("You must provide the sparsemat when calculating rates for each cell.")
+  IC <- tolower(IC)
+  if(!is.null(cellsix) & is.null(sparsemat)){
+    stop("You must provide the sparsemat when calculating rates for each cell.")
+  }
+  if(target=="cells" & is.null(cellsix)){
+    stop("For cell-wise estimates, you must provide the index of the cells of interest")
+  } 
+  thetai_uniq <- sapply(1:nrow(res$Lambda_dense), function(k) unique(res$Lambda_dense[k,]))
+  thetai_uniqi <- as.matrix(do.call(rbind, thetai_uniq), ncol=2)
+  thetai <- selectuniqRR(thetai_uniqi)
+  if(IC=="aic"){
+    out <- vector(mode = "list", length = res$selection.aic)
+    w <- matrix(res$wtMAT[,1:res$selection.aic], ncol=res$selection.aic)
+    for(i in 1:res$selection.aic){
+      thetaa <- sum(thetai*w[,i])
+      out[[i]] <- switch(target,
+             cluster = calcbounds.cluster(id_ic, IC, res, byloc, Ex, Obs,as.vector(w[,i]), thetaa,thetai, sparsemat, conf.level),
+             cells = calcbounds.cells(id_ic, IC, res, byloc, Ex, Obs,as.vector(w[,i]), thetaa,thetai, sparsemat, cellsix, conf.level))
+      
     }
-    if(IC=="aic"){
-        w <- res$wtMAT[,res$selection.aic]
-    } else {
-        w <- res$wtMAT[,res$selection.bic]
+  } else {
+    out <- vector(mode = "list", length = res$selection.bic)
+    w <- matrix(res$wtMAT[,1:res$selection.bic], ncol=res$selection.bic)
+    for(i in 1:res$selection.bic){
+      thetaa <- sum(thetai*w[,i])
+      out[[i]] <- switch(target,
+                    cluster = calcbounds.cluster(id_ic, IC, res, byloc, Ex, Obs,as.vector(w[,i]), thetaa,thetai, sparsemat, conf.level),
+                    cells = calcbounds.cells(id_ic, IC, res, byloc, Ex, Obs,as.vector(w[,i]), thetaa,thetai, sparsemat, cellsix, conf.level))
+      
     }
-    thetai_uniq <- sapply(1:nrow(res$Lambda_dense), function(k) unique(res$Lambda_dense[k,]))
-    #thetai <- rep(NA, dim(res$Lambda_dense)[1])
-    thetai_uniqi <- as.matrix(do.call(rbind, thetai_uniq), ncol=2)
-    thetai <- selectuniqRR(thetai_uniqi)
-    thetaa <- sum(thetai*w)
-    if(target=="cells" & is.null(cellsix)){
-        stop("For cell-wise estimates, you must provide the index of the cells of interest")
-    }
-    switch(target,
-           cluster = calcbounds.cluster(id_ic, IC, res, byloc, Ex, Obs,w, thetaa,thetai, sparsemat, conf.level),
-           cells = calcbounds.cells(id_ic, IC, res, byloc, Ex, Obs,w, thetaa,thetai, sparsemat, cellsix, conf.level))
+    
+  }
+  return(out)
 }
+
+
+
 
 
 #'@title calcbounds.cluster
@@ -1197,18 +1210,13 @@ calcbounds <- function(id_ic, IC, res, byloc, Ex, Obs,target=c("cluster", "cells
 #'@param conf.level Confidence level for the interval. Default is 0.95. 
 #'@return Returns large list of confidence bounds and stacked estimates in addition to timings for each of the confidence bounds methods.
 calcbounds.cluster <- function(id_ic, IC, res, byloc, Ex, Obs,w, thetaa,thetai, sparsemat, conf.level=0.95){
-    #browser()
-    #print("calcbounds.cluster")
-    #print(str(sparsemat))
     if(byloc==TRUE){
-        #print(paste0("byloc", byloc))
         outExp_out <- Ex
         outObs_out <- Obs
         outExp <- t(sparsemat)%*%Ex
         outObs <- t(sparsemat)%*%Obs
     }
     else if(byloc==FALSE){
-        #print(paste0("byloc", byloc))
         outExp <- t(sparsemat)%*%Ex
         outObs <- t(sparsemat)%*%Obs
         outExp_out <- outExp@x
@@ -1358,8 +1366,6 @@ calcbounds.cluster <- function(id_ic, IC, res, byloc, Ex, Obs,w, thetaa,thetai, 
 #'@param conf.level Confidence level for the interval. Default is 0.95. 
 #'@return Returns large list of confidence bounds and stacked estimates in addition to timings for each of the confidence bounds methods.    
 calcbounds.cells <- function(id_ic, IC, res, byloc, Ex, Obs,w, thetaa,thetai, sparsemat, cellsix, conf.level=0.95){
-    #print("calcbounds.cells")
-    #browser()
     if(id_ic==0){
         emptynonma <- vector(mode = "list", length = 2)
         emptynonma[[1]] <- 0
