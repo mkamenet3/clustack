@@ -4,6 +4,14 @@
 #Functions
 ########################################
 
+colorsgrey <- function (x) {
+    y = colorRamp(RColorBrewer::brewer.pal(9, "Greys")[1:9])(x)
+    rgb(y[, 1], y[, 2], y[, 3], maxColorValue = 255)
+}
+
+
+
+
 create_plotmeanrr_stack <- function(res,IC, flav,Time, nsim, sim.i, greys){
     if(IC=="aic"){
         selects <- sapply(1:nsim, function(i) res[[i]]$selection.aic)    
@@ -70,6 +78,7 @@ plotmeanrr_stack <- function(ric, Time, sim.i,ic, flav, greys){
         
     } else {
         color.ic <- sapply(1:Time, function(i) redblue(log(1.5 *pmax(1/1.5, pmin(ric[, i], 1.5)))/log(1.5^2)))
+        print(paste0(sim.i,"_meanrr_",flav, "_",ic,".pdf"))
         pdf(paste0(sim.i,"_meanrr_",flav, "_",ic,".pdf"), height=11, width=10)
     }
     

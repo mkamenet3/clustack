@@ -2,7 +2,7 @@
 library(clusso)
 library(MASS)
 source("clustack.R")
-source("helperfuncs .R")
+source("helperfuncs.R")
 
 #get arg from script
 args<- commandArgs(TRUE)
@@ -69,7 +69,7 @@ for (m in startsim:(startsim+4)){
         
     }
     sim_superclust_loc.time <- system.time(sim_superclust_loc <- detectclusters(sparsematrix, Ex, YSIM, numCenters, Time, maxclust,
-                                                                                bylocation = TRUE, mod="poisson", 
+                                                                                byloc = TRUE, mod="poisson", 
                                                                                 overdisp.est = overdisp.est))[[3]]
     print("finished stacking: by LOC")
     if(mod=="space"){
@@ -91,7 +91,10 @@ for (m in startsim:(startsim+4)){
     #####################################################################################
     #####################################################################################
     if(id.bic_loc!=0){
-        outbic.loc <- calcbounds(id.bic_loc, IC="bic", sim_superclust_loc, bylocation = TRUE,outExp)
+        outbic.loc <- calcbounds(id.aic_loc, IC="bic", sim_superclust_loc, 
+                                 byloc = TRUE,Ex, YSIM, target="cluster", 
+                                 sparsemat = sparsematrix)
+        #outbic.loc <- calcbounds(id.bic_loc, IC="bic", sim_superclust_loc, bylocation = TRUE,outExp)
     } else {
         print("No clusters identified: BIC")
     }
@@ -100,7 +103,10 @@ for (m in startsim:(startsim+4)){
         if(id.bic_loc==id.aic_loc){
             outaic.loc <- outbic.loc
         } else {
-            outaic.loc <- calcbounds(id.aic_loc, IC="aic", sim_superclust_loc, bylocation = TRUE,outExp)
+            outaic.loc <- calcbounds(id.aic_loc, IC="aic", sim_superclust_loc, 
+                                     byloc = TRUE,Ex, YSIM, target="cluster", 
+                                     sparsemat = sparsematrix)
+            #outaic.loc <- calcbounds(id.aic_loc, IC="aic", sim_superclust_loc, bylocation = TRUE,outExp)
         }
     } else {
         print("No clusters identified: AIC")
@@ -114,35 +120,51 @@ for (m in startsim:(startsim+4)){
     rrbin_inside <- ifelse(sparsematrix%*%t(clusteroverlap)!=0,1,0)
     
     ##############################
-    ident.bic <- sim_superclust_loc$wtMAT[, sim_superclust_loc$selection.bic] 
-    mat.bic <- t(ident.bic)%*%t(sparsematrix)
+    #BIC
+    ident.bic <- matrix(sim_superclust_loc$wtMAT[, sim_superclust_loc$selection.bic], ncol=sim_superclust_loc$selection.bic)
+    mat0.bic <- sapply(1:sim_superclust_loc$selection.bic, function(i) t(ident.bic[,i])%*%t(sparsematrix))
+    matSum.bic <- rowSums(sapply(1:sim_superclust_loc$selection.bic, function(i) ifelse(mat0.bic[[i]]>=0.1,1,0)))
+    mat.bic <- ifelse(matSum.bic!=0,1,0)
     
-    ident.aic <- sim_superclust_loc$wtMAT[, sim_superclust_loc$selection.aic] 
-    mat.aic <- t(ident.bic)%*%t(sparsematrix)
+    #AIC
+    ident.aic <- matrix(sim_superclust_loc$wtMAT[, 1:sim_superclust_loc$selection.aic], ncol=sim_superclust_loc$selection.aic)
+    mat0.aic <- sapply(1:sim_superclust_loc$selection.aic, function(i) t(ident.aic[,i])%*%t(sparsematrix))
+    matSum.aic <- rowSums(sapply(1:sim_superclust_loc$selection.aic, function(i) ifelse(mat0.aic[[i]]>=0.1,1,0)))
+    mat.aic <- ifelse(matSum.aic!=0,1,0)
     
     #1) Did it find anything INSIDE the cluster?
     #start here
-    incluster.bic <- mat.bic%*%matrix(rrbin_inside, ncol=1)
-    incluster.aic <- mat.aic%*%matrix(rrbin_inside, ncol=1)
+    incluster0.bic <- mat.bic%*%matrix(rrbin_inside, ncol=1)
+    incluster0.aic <- mat.aic%*%matrix(rrbin_inside, ncol=1)
     
+    incluster.bic <- ifelse(incluster.bic!=0,1,0)
+    incluster.aic <- ifelse(incluster.aic!=0,1,0)
     #2) Did it find anything OUTSIDE the cluster?
     rrbin_outside <- ifelse(sparsematrix%*%t(clusteroverlap)==0,1,0)
     #this should be everything that doesn't touch the cluster
-    outcluster.bic <- mat.bic%*%matrix(rrbin_outside, ncol=1)
-    outcluster.aic <- mat.aic%*%matrix(rrbin_outside, ncol=1)
+    outcluster0.bic <- mat.bic%*%matrix(rrbin_outside, ncol=1)
+    outcluster0.aic <- mat.aic%*%matrix(rrbin_outside, ncol=1)
+    outcluster.bic <- ifelse(outcluster0.bic!=0,1,0)
+    outcluster.aic <- ifelse(outcluster0.aic!=0,1,0)
     
     ##################################
     #Add sim results to table
     ##################################
+    maxwLambda <- max(sim_superclust_loc$selection.bic, sim_superclust_loc$selection.aic)
     if(length(as.vector(sim_superclust_loc$wLambda[sim_superclust_loc$selection.bic,]))==0){
         wLambda.bic <- rep(1, 1040)
     } else {
-        wLambda.bic <- as.vector(sim_superclust_loc$wLambda[sim_superclust_loc$selection.bic,])
+        wLambda.bic <- sim_superclust_loc$wLambda[1:sim_superclust_loc$selection.bic,]
+        pad <-rep(NA, 1040*(maxwLambda-sim_superclust_loc$selection.bic), ncol=maxwLambda-sim_superclust_loc$selection.bic)
+        wLambda.bic <- cbind(wLambda.bic, pad)
+        
     }
     if(length(as.vector(sim_superclust_loc$wLambda[sim_superclust_loc$selection.aic,]))==0){
         wLambda.aic <- rep(1, 1040)
     } else {
-        wLambda.aic <- as.vector(sim_superclust_loc$wLambda[sim_superclust_loc$selection.aic,])
+        wLambda.aic <- sim_superclust_loc$wLambda[1:sim_superclust_loc$selection.aic,]
+        pad <-rep(NA, 1040*(maxwLambda-sim_superclust_loc$selection.aic), ncol=maxwLambda-sim_superclust_loc$selection.aic)
+        wLambda.aic <- cbind(wLambda.aic, pad)
     }
     
     
@@ -150,133 +172,97 @@ for (m in startsim:(startsim+4)){
     tabn.loc <- rbind(c(IC="BIC",rad, risk, cent, theta,
                         timeperiod=as.numeric(paste(tim, collapse="")),
                         mod=mod, type="NA",time=sim_superclust_loc.time, method="loc", 
-                        incluster.bic =  ifelse(length(incluster.bic@x)==0,0, incluster.bic@x),
-                        #incluster.aic = as.vector(incluster.aic),
-                        outcluster.bic =  ifelse(length(outcluster.bic@x)==0,0, outcluster.bic@x),
+                        incluster.bic =  ifelse(length(incluster.bic)==0,0, incluster.bic),
+                        outcluster.bic =  ifelse(length(outcluster.bic)==0,0, outcluster.bic),
                         iter=m,
-                        #outcluster.aic = as.vector(outcluster.aic)
                         wLambda.bic),
                       c(IC="AIC",rad, risk, cent, theta,
                         timeperiod=as.numeric(paste(tim, collapse="")),
                         mod=mod, type="NA",time=sim_superclust_loc.time, method="loc",
-                        #incluster.bic = as.vector(incluster.bic),
-                        incluster.aic =  ifelse(length(incluster.aic@x)==0,0, incluster.aic@x),
-                        #outcluster.bic = as.vector(outcluster.bic),
-                        outcluster.aic = ifelse(length(outcluster.aic@x)==0,0, outcluster.aic@x),
+                        incluster.aic =  ifelse(length(incluster.aic)==0,0, incluster.aic),
+                        outcluster.aic = ifelse(length(outcluster.aic)==0,0, outcluster.aic),
                         iter=m,
                         wLambda.aic))
-    
-    #table.detection.loc <- rbind(table.detection.loc, tabn.loc)
     
     ##################################
     #Add clustackbounds to table
     ##################################
     if(isTRUE(id.bic_loc==0) & isTRUE(id.aic_loc==0)){
         print("No clusters identified")
-        bounds.loc <- cbind.data.frame(matrix(rep(NA,3), byrow=TRUE, ncol=3),
-                                       matrix(rep(NA,3), byrow=TRUE, ncol=3),
-                                       matrix(rep(NA,3), byrow=TRUE, ncol=3),
-                                       matrix(rep(NA,3), byrow=TRUE, ncol=3),
-                                       matrix(rep(NA,3), byrow=TRUE, ncol=3),
-                                       matrix(rep(NA,3), byrow=TRUE, ncol=3),
-                                       matrix(rep(NA,3), byrow=TRUE, ncol=3),
-                                       matrix(rep(NA,3), byrow=TRUE, ncol=3),
-                                       matrix(rep(NA,3), byrow=TRUE, ncol=3),
-                                       matrix(rep(NA,3), byrow=TRUE, ncol=3),
-                                       matrix(rep(NA,3), byrow=TRUE, ncol=3),
-                                       matrix(rep(NA,3), byrow=TRUE, ncol=3),
-                                       matrix(rep(NA,3), byrow=TRUE, ncol=3),
-                                       matrix(rep(NA,3), byrow=TRUE, ncol=3),
-                                       matrix(rep(NA,3), byrow=TRUE, ncol=3),
-                                       matrix(rep(NA,3), byrow=TRUE, ncol=3),
-                                       matrix(rep(NA,3), byrow=TRUE, ncol=3),
-                                       matrix(rep(NA,3), byrow=TRUE, ncol=3),
-                                       matrix(rep(NA,3), byrow=TRUE, ncol=3),
-                                       matrix(rep(NA,3), byrow=TRUE, ncol=3),
-                                       
-                                       matrix(rep(NA), byrow=TRUE, ncol=1),
-                                       matrix(rep(NA), byrow=TRUE, ncol=1),
-                                       matrix(rep(NA), byrow=TRUE, ncol=1),
-                                       matrix(rep(NA), byrow=TRUE, ncol=1),
-                                       matrix(rep(NA), byrow=TRUE, ncol=1),
-                                       matrix(rep(NA), byrow=TRUE, ncol=1),
-                                       matrix(rep(NA), byrow=TRUE, ncol=1),
-                                       matrix(rep(NA), byrow=TRUE, ncol=1),
-                                       matrix(rep(NA), byrow=TRUE, ncol=1),
-                                       matrix(rep(NA), byrow=TRUE, ncol=1),
-                                       
-                                       matrix(rep(NA), byrow=TRUE, ncol=1),
-                                       matrix(rep(NA), byrow=TRUE, ncol=1),
-                                       matrix(rep(NA), byrow=TRUE, ncol=1),
-                                       matrix(rep(NA), byrow=TRUE, ncol=1),
-                                       matrix(rep(NA), byrow=TRUE, ncol=1),
-                                       matrix(rep(NA), byrow=TRUE, ncol=1),
-                                       matrix(rep(NA), byrow=TRUE, ncol=1),
-                                       matrix(rep(NA), byrow=TRUE, ncol=1),
-                                       matrix(rep(NA), byrow=TRUE, ncol=1),
-                                       matrix(rep(NA), byrow=TRUE, ncol=1))
+        bounds.loc <- as.data.frame(matrix(rep(NA*41), ncol=41))
         
     } else{
         if(id.bic_loc==0){
-            fill.bic <- matrix(rep(NA,30*(length(which(id.bic_loc!=0)))),
+            fill.bic <- matrix(rep(NA,41*(length(which(id.bic_loc!=0)))),
                                nrow=length(which(id.bic_loc!=0)))
         } else {
             fill.bic <- NULL
         }
         if(id.aic_loc==0){
-            fill.aic <- matrix(rep(NA,30*(length(which(id.aic_loc!=0)))),
+            fill.aic <- matrix(rep(NA,41*(length(which(id.aic_loc!=0)))),
                                nrow=length(which(id.aic_loc!=0)))
         } else {
             fill.aic <- NULL
         }
-        print(str(fill.bic))
-        print(str(fill.aic))
-        bounds.loc <- cbind.data.frame(rbind.data.frame(cbind(matrix(unlist(outbic.loc$outnonma$nonma.theta), 
-                                                                     byrow=TRUE, ncol=3),
-                                                              matrix(unlist(outbic.loc$outnonmaTlog$nonma.theta), byrow=TRUE, ncol=3),
-                                                              matrix(unlist(outbic.loc$outnonma_asymp$nonma_asymp.theta), byrow=TRUE, ncol=3),
-                                                              matrix(unlist(outbic.loc$outnonma_asympTlog$nonma_asymp.theta), byrow=TRUE, ncol=3),
-                                                              matrix(unlist(outbic.loc$outbuck.theta), byrow=TRUE, ncol=3),
-                                                              matrix(unlist(outbic.loc$outbuckTlog.theta), byrow=TRUE, ncol=3),
-                                                              matrix(unlist(outbic.loc$outmaw2.theta), byrow=TRUE, ncol=3),
-                                                              matrix(unlist(outbic.loc$outmaw2Tlog.theta), byrow=TRUE, ncol=3),
-                                                              matrix(unlist(outbic.loc$outmata.theta), byrow=TRUE, ncol=3),
-                                                              matrix(unlist(outbic.loc$outmataTlog.theta), byrow=TRUE, ncol=3)),
-                                                        fill.bic),
+        #######################
+        bounds.aic <-  matrix(rep(NA, 41*sim_superclust_loc$selection.aic),nrow=sim_superclust_loc$selection.aic)
+        bounds.bic <- matrix(rep(NA, 41*sim_superclust_loc$selection.bic),nrow=sim_superclust_loc$selection.bic)
+        for(i in 1:sim_superclust_loc$selection.bic){
+                bounds.bic[i,] <- cbind(matrix(unlist(outbic.loc[[i]]$outnonma$nonma.theta),
+                                              byrow=TRUE, ncol=3),
+                                       matrix(unlist(outbic.loc[[i]]$outnonmaTlog$nonma.theta), byrow=TRUE, ncol=3),
+                                       matrix(unlist(outbic.loc[[i]]$outnonma_asymp$nonma_asymp.theta), byrow=TRUE, ncol=3),
+                                       matrix(unlist(outbic.loc[[i]]$outnonma_asympTlog$nonma_asymp.theta), byrow=TRUE, ncol=3),
+                                       matrix(unlist(outbic.loc[[i]]$outbuck.theta), byrow=TRUE, ncol=3),
+                                       matrix(unlist(outbic.loc[[i]]$outbuckTlog.theta), byrow=TRUE, ncol=3),
+                                       matrix(unlist(outbic.loc[[i]]$outmaw2.theta), byrow=TRUE, ncol=3),
+                                       matrix(unlist(outbic.loc[[i]]$outmaw2Tlog.theta), byrow=TRUE, ncol=3),
+                                       matrix(unlist(outbic.loc[[i]]$outmata.theta), byrow=TRUE, ncol=3),
+                                       matrix(unlist(outbic.loc[[i]]$outmataTlog.theta), byrow=TRUE, ncol=3),
+                                       fill.bic,
                                        
-                                       rbind.data.frame(cbind(matrix(unlist(outaic.loc$outnonma$nonma.theta), byrow=TRUE, ncol=3),
-                                                              matrix(unlist(outaic.loc$outnonmaTlog$nonma.theta), byrow=TRUE, ncol=3),
-                                                              matrix(unlist(outaic.loc$outnonma_asymp$nonma_asymp.theta), byrow=TRUE, ncol=3),
-                                                              matrix(unlist(outaic.loc$outnonma_asympTlog$nonma_asymp.theta), byrow=TRUE, ncol=3),
-                                                              matrix(unlist(outaic.loc$outbuck.theta), byrow=TRUE, ncol=3),
-                                                              matrix(unlist(outaic.loc$outbuckTlog.theta), byrow=TRUE, ncol=3),
-                                                              matrix(unlist(outaic.loc$outmaw2.theta), byrow=TRUE, ncol=3),
-                                                              matrix(unlist(outaic.loc$outmaw2Tlog.theta), byrow=TRUE, ncol=3),
-                                                              matrix(unlist(outaic.loc$outmata.theta), byrow=TRUE, ncol=3),
-                                                              matrix(unlist(outaic.loc$outmataTlog.theta), byrow=TRUE, ncol=3)),
-                                                        fill.aic),
-                                       
-                                       rep(outbic.loc$outnonma.time),
-                                       rep(outbic.loc$outnonmaTlog.time),
-                                       rep(outbic.loc$outnonma_asymp.time),
-                                       rep(outbic.loc$outnonma_asympTlog.time),
-                                       rep(outbic.loc$outbuck.theta.time),
-                                       rep(outbic.loc$outbuckTlog.theta.time),
-                                       rep(outbic.loc$outmaw2.theta.time),
-                                       rep(outbic.loc$outmaw2Tlog.theta.time),
-                                       rep(outbic.loc$outmata.theta.time),
-                                       rep(outbic.loc$outmataTlog.theta.time),
-                                       
-                                       rep(outaic.loc$outnonma.time),
-                                       rep(outaic.loc$outnonmaTlog.time),
-                                       rep(outaic.loc$outnonma_asymp.time),
-                                       rep(outaic.loc$outnonma_asympTlog.time),
-                                       rep(outaic.loc$outbuck.theta.time),
-                                       rep(outaic.loc$outbuckTlog.theta.time),
-                                       rep(outaic.loc$outmaw2.theta.time),
-                                       rep(outaic.loc$outmaw2Tlog.theta.time),
-                                       rep(outaic.loc$outmata.theta.time),
-                                       rep(outaic.loc$outmataTlog.theta.time))
+                                       outbic.loc[[i]]$outnonma.time,
+                                       outbic.loc[[i]]$outnonmaTlog.time,
+                                       outbic.loc[[i]]$outnonma_asymp.time,
+                                       outbic.loc[[i]]$outnonma_asympTlog.time,
+                                       outbic.loc[[i]]$outbuck.theta.time,
+                                       outbic.loc[[i]]$outbuckTlog.theta.time,
+                                       outbic.loc[[i]]$outmaw2.theta.time,
+                                       outbic.loc[[i]]$outmaw2Tlog.theta.time,
+                                       outbic.loc[[i]]$outmata.theta.time,
+                                       outbic.loc[[i]]$outmataTlog.theta.time, 
+                                       "BIC")
+
+        }
+        for(i in 1:sim_superclust_loc$selection.aic){
+            bounds.aic[i,] <- cbind(matrix(unlist(outaic.loc[[i]]$outnonma$nonma.theta),
+                                                        byrow=TRUE, ncol=3),
+                                                 matrix(unlist(outaic.loc[[i]]$outnonmaTlog$nonma.theta), byrow=TRUE, ncol=3),
+                                                 matrix(unlist(outaic.loc[[i]]$outnonma_asymp$nonma_asymp.theta), byrow=TRUE, ncol=3),
+                                                 matrix(unlist(outaic.loc[[i]]$outnonma_asympTlog$nonma_asymp.theta), byrow=TRUE, ncol=3),
+                                                 matrix(unlist(outaic.loc[[i]]$outbuck.theta), byrow=TRUE, ncol=3),
+                                                 matrix(unlist(outaic.loc[[i]]$outbuckTlog.theta), byrow=TRUE, ncol=3),
+                                                 matrix(unlist(outaic.loc[[i]]$outmaw2.theta), byrow=TRUE, ncol=3),
+                                                 matrix(unlist(outaic.loc[[i]]$outmaw2Tlog.theta), byrow=TRUE, ncol=3),
+                                                 matrix(unlist(outaic.loc[[i]]$outmata.theta), byrow=TRUE, ncol=3),
+                                                 matrix(unlist(outaic.loc[[i]]$outmataTlog.theta), byrow=TRUE, ncol=3),
+                                    fill.aic,
+                                    
+                                    outaic.loc[[i]]$outnonma.time,
+                                    outaic.loc[[i]]$outnonmaTlog.time,
+                                    outaic.loc[[i]]$outnonma_asymp.time,
+                                    outaic.loc[[i]]$outnonma_asympTlog.time,
+                                    outaic.loc[[i]]$outbuck.theta.time,
+                                    outaic.loc[[i]]$outbuckTlog.theta.time,
+                                    outaic.loc[[i]]$outmaw2.theta.time,
+                                    outaic.loc[[i]]$outmaw2Tlog.theta.time,
+                                    outaic.loc[[i]]$outmata.theta.time,
+                                    outaic.loc[[i]]$outmataTlog.theta.time,
+                                    "AIC")
+            
+        }
+        
+        bounds.loc <- rbind.data.frame(bounds.bic, bounds.aic)
     }
     
     bounds.loc$risk <- risk
@@ -291,39 +277,23 @@ for (m in startsim:(startsim+4)){
     bounds.loc$simID <- 1:nrow(bounds.loc)
     bounds.loc$method <- "LOC"
     
-    names(bounds.loc) <- c("nonma.bic.LB", "clusterMA.bic.1", "nonma.bic.UB",
-                           "nonmaTlog.bic.LB", "clusterMA.bic.2", "nonmaTlog.bic.UB",
-                           "nonma_asymp.bic.LB", "clusterMA.bic.3", "nonma_asymp.bic.UB",
-                           "nonma_asympTlog.bic.LB", "clusterMA.bic.4", "nonma_asympTlog.bic.UB",
-                           "buck.bic.LB", "clusterMA.bic.5", "buck.bic.UB",
-                           "bucklog.bic.LB", "clusterMA.bic.6", "bucklog.bic.UB",
-                           "maw2.bic.LB", "clusterMA.bic.7", "maw2.bic.UB",
-                           "maw2log.bic.LB", "clusterMA.bic.8", "maw2log.bic.UB",
-                           "mata.bic.LB", "clusterMA.bic.9", "mata.bic.UB",
-                           "matalog.bic.LB", "clusterMA.bic.10", "matalog.bic.UB",
+    names(bounds.loc) <- c("nonma.LB", "clusterMA.1", "nonma.UB",
+                           "nonmaTlog.LB", "clusterMA.2", "nonmaTlog.UB",
+                           "nonma_asymp.LB", "clusterMA.3", "nonma_asymp.UB",
+                           "nonma_asympTlog.LB", "clusterMA.4", "nonma_asympTlog.UB",
+                           "buck.LB", "clusterMA.5", "buck.UB",
+                           "bucklog.LB", "clusterMA.6", "bucklog.UB",
+                           "maw2.LB", "clusterMA.7", "maw2.UB",
+                           "maw2log.LB", "clusterMA.8", "maw2log.UB",
+                           "mata.LB", "clusterMA.9", "mata.UB",
+                           "matalog.LB", "clusterMA.10", "matalog.UB",
                            
-                           "nonma.aic.LB", "clusterMA.aic.1", "nonma.aic.UB",
-                           "nonmaTlog.aic.LB", "clusterMA.aic.2", "nonmaTlog.aic.UB",
-                           "nonma_asymp.aic.LB", "clusterMA.aic.3", "nonma_asymp.aic.UB",
-                           "nonma_asympTlog.aic.LB", "clusterMA.aic.4", "nonma_asympTlog.aic.UB",
-                           "buck.aic.LB", "clusterMA.aic.5", "buck.aic.UB",
-                           "bucklog.aic.LB", "clusterMA.aic.6", "bucklog.aic.UB",
-                           "maw2.aic.LB", "clusterMA.aic.7", "maw2.aic.UB",
-                           "maw2log.aic.LB", "clusterMA.aic.8", "maw2log.aic.UB",
-                           "mata.aic.LB", "clusterMA.aic.9", "mata.aic.UB",
-                           "matalog.aic.LB", "clusterMA.aic.10", "matalog.aic.UB",
-                           
-                           "nonma.bic.time", "nonmaTlog.bic.time",
-                           "nonma_asymp.bic.time", "nonma_asympTlog.bic.time", 
-                           "buck.bic.time","bucklog.bic.time",
-                           "maw2.bic.time", "maw2log.bic.time",
-                           "mata.bic.time", "matalog.bic.time",
-                           
-                           "nonma.aic.time", "nonmaTlog.aic.time", 
-                           "nonma_asymp.aic.time", "nonma_asympTlog.aic.time", 
-                           "buck.aic.time","bucklog.aic.time",
-                           "maw2.aic.time", "maw2log.aic.time",
-                           "mata.aic.time", "matalog.aic.time",
+                           "nonma.time", "nonmaTlog.time", 
+                           "nonma_asymp.time", "nonma_asympTlog.time", 
+                           "buck.time","bucklog.time",
+                           "maw2.time", "maw2log.time",
+                           "mata.time", "matalog.time",
+                           "IC",
                            "risk","rad","iter","theta", "cent",
                            "select_orig.bic", "select_orig.aic", "simID", "method")
     
@@ -350,7 +320,7 @@ for (m in startsim:(startsim+4)){
     }
     
     sim_superclust_pc.time <- system.time(sim_superclust_pc<- detectclusters(sparsematrix, Ex, YSIM,numCenters, Time, maxclust,
-                                                                             bylocation = FALSE, model="poisson",
+                                                                             byloc = FALSE, model="poisson",
                                                                              overdisp.est = overdisp.est))[[3]]
     print(filename <- paste0(sim.i,"_superclustPC_",m,".RData"))
     #save(sim_superclust_pc, file=filename)
@@ -362,7 +332,9 @@ for (m in startsim:(startsim+4)){
     #####################################################################################
     #####################################################################################
     if(id.bic_pc!=0){
-        outbic.pc <- calcbounds(id.bic_pc, IC="bic", sim_superclust_pc, bylocation = FALSE,outExp)
+        outbic.pc <- calcbounds(id.bic_pc, IC="bic", sim_superclust_pc, 
+                                 byloc = FALSE,Ex, YSIM, target="cluster", 
+                                 sparsemat = sparsematrix)
     } else {
         print("No clusters identified: BIC")
     }
@@ -371,7 +343,9 @@ for (m in startsim:(startsim+4)){
         if(id.bic_pc==id.aic_pc){
             outaic.pc <- outbic.pc
         } else {
-            outaic.pc <- calcbounds(id.aic_pc, IC="aic", sim_superclust_pc, bylocation = FALSE,outExp)
+            outaic.pc <- calcbounds(id.aic_pc, IC="aic", sim_superclust_pc, 
+                                    byloc = FALSE,Ex, YSIM, target="cluster", 
+                                    sparsemat = sparsematrix)
         }
     } else {
         print("No clusters identified: AIC")
@@ -388,54 +362,70 @@ for (m in startsim:(startsim+4)){
     ##############################
     # #Which PCs overlap true cluster?
     #what was identified in each sim by IC
-    ident.bic <-sim_superclust_pc$wtMAT[, sim_superclust_pc$selection.bic]
-    mat.bic <-t(ident.bic)%*%t(sparsematrix)
+    #BIC 
+    ident.bic <- matrix(sim_superclust_pc$wtMAT[, sim_superclust_pc$selection.bic], ncol=sim_superclust_pc$selection.bic)
+    mat0.bic <- sapply(1:sim_superclust_pc$selection.bic, function(i) t(ident.bic[,i])%*%t(sparsematrix))
+    matSum.bic <- rowSums(sapply(1:sim_superclust_pc$selection.bic, function(i) ifelse(mat0.bic[[i]]>=0.1,1,0)))
+    mat.bic <- ifelse(matSum.bic!=0,1,0)
     
-    ident.aic <- sim_superclust_pc$wtMAT[, sim_superclust_pc$selection.aic]
-    mat.aic <- t(ident.aic)%*%t(sparsematrix)
-    
+    #AIC
+    ident.aic <- matrix(sim_superclust_pc$wtMAT[, 1:sim_superclust_pc$selection.aic], ncol=sim_superclust_pc$selection.aic)
+    mat0.aic <- sapply(1:sim_superclust_pc$selection.aic, function(i) t(ident.aic[,i])%*%t(sparsematrix))
+    matSum.aic <- rowSums(sapply(1:sim_superclust_pc$selection.aic, function(i) ifelse(mat0.aic[[i]]>=0.1,1,0)))
+    mat.aic <- ifelse(matSum.aic!=0,1,0)
     
     
     #1) Did it find anything INSIDE the cluster?
-    incluster.bic <- mat.bic%*%matrix(rrbin_inside, ncol=1)
-    incluster.aic <- mat.aic%*%matrix(rrbin_inside, ncol=1)
-    
+    incluster0.bic <- mat.bic%*%matrix(rrbin_inside, ncol=1)
+    incluster0.aic <- mat.aic%*%matrix(rrbin_inside, ncol=1)
+    incluster.bic <- ifelse(incluster.bic!=0,1,0)
+    incluster.aic <- ifelse(incluster.aic!=0,1,0)
+    # 
     
     #2) Did it find anything OUTSIDE the cluster?
     #this should be everything that doesn't touch the cluster
     outcluster.bic <- mat.bic%*%matrix(rrbin_outside, ncol=1)
     outcluster.aic <- mat.aic%*%matrix(rrbin_outside, ncol=1)
+    outcluster0.bic <- mat.bic%*%matrix(rrbin_outside, ncol=1)
+    outcluster0.aic <- mat.aic%*%matrix(rrbin_outside, ncol=1)
+    outcluster.bic <- ifelse(outcluster0.bic!=0,1,0)
+    outcluster.aic <- ifelse(outcluster0.aic!=0,1,0)
     
     
     ##################################
     #Add sim results to table
     ##################################
     ##################################
+    maxwLambda <- max(sim_superclust_loc$selection.bic, sim_superclust_loc$selection.aic)
     if(length(as.vector(sim_superclust_pc$wLambda[sim_superclust_pc$selection.bic,]))==0){
         wLambda.bic <- rep(1, 1040)
     } else {
         wLambda.bic <- as.vector(sim_superclust_pc$wLambda[sim_superclust_pc$selection.bic,])
+        pad <-rep(NA, 1040*(maxwLambda-sim_superclust_pc$selection.bic), ncol=maxwLambda-sim_superclust_pc$selection.bic)
+        wLambda.bic <- cbind(wLambda.bic, pad)
     }
     if(length(as.vector(sim_superclust_pc$wLambda[sim_superclust_pc$selection.aic,]))==0){
         wLambda.aic <- rep(1, 1040)
     } else {
         wLambda.aic <- as.vector(sim_superclust_pc$wLambda[sim_superclust_pc$selection.aic,])
+        pad <-rep(NA, 1040*(maxwLambda-sim_superclust_pc$selection.aic), ncol=maxwLambda-sim_superclust_pc$selection.aic)
+        wLambda.aic <- cbind(wLambda.aic, pad)
     }
     
     
     tabn.pc <- rbind(c(IC="BIC",rad, risk, cent, theta,
                        timeperiod=as.numeric(paste(tim, collapse="")),
                        mod=mod, type="NA",time=sim_superclust_pc.time, method="pc",
-                       incluster.bic = ifelse(length(incluster.bic@x)==0,0, incluster.bic@x),
-                       outcluster.bic = ifelse(length(outcluster.bic@x)==0,0, outcluster.bic@x),
+                       incluster.bic = ifelse(length(incluster.bic)==0,0, incluster.bic),
+                       outcluster.bic = ifelse(length(outcluster.bic)==0,0, outcluster.bic),
                        iter = m,
                        wLambda.bic),
                      
                      c(IC="AIC",rad, risk, cent, theta,
                        timeperiod=as.numeric(paste(tim, collapse="")),
                        mod=mod,type="NA",time=sim_superclust_pc.time, method="pc",
-                       incluster.aic = ifelse(length(incluster.aic@x)==0,0, incluster.aic@x),
-                       outcluster.aic = ifelse(length(outcluster.aic@x)==0,0, outcluster.aic@x),
+                       incluster.aic = ifelse(length(incluster.aic)==0,0, incluster.aic),
+                       outcluster.aic = ifelse(length(outcluster.aic)==0,0, outcluster.aic),
                        iter = m,
                        wLambda.aic))
     
@@ -444,110 +434,82 @@ for (m in startsim:(startsim+4)){
     ##################################
     if(isTRUE(id.bic_pc==0) & isTRUE(id.aic_pc==0)){
         print("No clusters identified")
-        bounds.pc <- cbind.data.frame(matrix(rep(NA,3), byrow=TRUE, ncol=3),
-                                      matrix(rep(NA,3), byrow=TRUE, ncol=3),
-                                      matrix(rep(NA,3), byrow=TRUE, ncol=3),
-                                      matrix(rep(NA,3), byrow=TRUE, ncol=3),
-                                      matrix(rep(NA,3), byrow=TRUE, ncol=3),
-                                      matrix(rep(NA,3), byrow=TRUE, ncol=3),
-                                      matrix(rep(NA,3), byrow=TRUE, ncol=3),
-                                      matrix(rep(NA,3), byrow=TRUE, ncol=3),
-                                      matrix(rep(NA,3), byrow=TRUE, ncol=3),
-                                      matrix(rep(NA,3), byrow=TRUE, ncol=3),
-                                      matrix(rep(NA,3), byrow=TRUE, ncol=3),
-                                      matrix(rep(NA,3), byrow=TRUE, ncol=3),
-                                      matrix(rep(NA,3), byrow=TRUE, ncol=3),
-                                      matrix(rep(NA,3), byrow=TRUE, ncol=3),
-                                      matrix(rep(NA,3), byrow=TRUE, ncol=3),
-                                      matrix(rep(NA,3), byrow=TRUE, ncol=3),
-                                      matrix(rep(NA,3), byrow=TRUE, ncol=3),
-                                      matrix(rep(NA,3), byrow=TRUE, ncol=3),
-                                      matrix(rep(NA,3), byrow=TRUE, ncol=3),
-                                      matrix(rep(NA,3), byrow=TRUE, ncol=3),
-                                      
-                                      matrix(rep(NA), byrow=TRUE, ncol=1),
-                                      matrix(rep(NA), byrow=TRUE, ncol=1),
-                                      matrix(rep(NA), byrow=TRUE, ncol=1),
-                                      matrix(rep(NA), byrow=TRUE, ncol=1),
-                                      matrix(rep(NA), byrow=TRUE, ncol=1),
-                                      matrix(rep(NA), byrow=TRUE, ncol=1),
-                                      matrix(rep(NA), byrow=TRUE, ncol=1),
-                                      matrix(rep(NA), byrow=TRUE, ncol=1),
-                                      matrix(rep(NA), byrow=TRUE, ncol=1),
-                                      matrix(rep(NA), byrow=TRUE, ncol=1),
-                                      
-                                      matrix(rep(NA), byrow=TRUE, ncol=1),
-                                      matrix(rep(NA), byrow=TRUE, ncol=1),
-                                      matrix(rep(NA), byrow=TRUE, ncol=1),
-                                      matrix(rep(NA), byrow=TRUE, ncol=1),
-                                      matrix(rep(NA), byrow=TRUE, ncol=1),
-                                      matrix(rep(NA), byrow=TRUE, ncol=1),
-                                      matrix(rep(NA), byrow=TRUE, ncol=1),
-                                      matrix(rep(NA), byrow=TRUE, ncol=1),
-                                      matrix(rep(NA), byrow=TRUE, ncol=1),
-                                      matrix(rep(NA), byrow=TRUE, ncol=1))
+        bounds.pc <- as.data.frame(matrix(rep(NA*41), ncol=41))
     } else{
         #how many empty rows?
         if(id.bic_pc==0){
-            fill.bic <- matrix(rep(NA,30*(length(which(id.bic_pc!=0)))),
+            fill.bic <- matrix(rep(NA,41*(length(which(id.bic_pc!=0)))),
                                nrow=length(which(id.bic_pc!=0)))
         } else {
             fill.bic <- NULL
         }
         if(id.aic_pc==0){
-            fill.aic <- matrix(rep(NA,30*(length(which(id.aic_pc!=0)))),
+            fill.aic <- matrix(rep(NA,41*(length(which(id.aic_pc!=0)))),
                                nrow=length(which(id.aic_pc!=0)))
         } else {
             fill.aic <- NULL
         }
+        #######################
+        bounds.aic <-  matrix(rep(NA, 41*sim_superclust_pc$selection.aic),nrow=sim_superclust_pc$selection.aic)
+        bounds.bic <- matrix(rep(NA, 41*sim_superclust_pc$selection.bic),nrow=sim_superclust_pc$selection.bic)
+        for(i in 1:sim_superclust_pc$selection.bic){
+            bounds.bic[i,] <- cbind(matrix(unlist(outbic.pc[[i]]$outnonma$nonma.theta),
+                                           byrow=TRUE, ncol=3),
+                                    matrix(unlist(outbic.pc[[i]]$outnonmaTlog$nonma.theta), byrow=TRUE, ncol=3),
+                                    matrix(unlist(outbic.pc[[i]]$outnonma_asymp$nonma_asymp.theta), byrow=TRUE, ncol=3),
+                                    matrix(unlist(outbic.pc[[i]]$outnonma_asympTlog$nonma_asymp.theta), byrow=TRUE, ncol=3),
+                                    matrix(unlist(outbic.pc[[i]]$outbuck.theta), byrow=TRUE, ncol=3),
+                                    matrix(unlist(outbic.pc[[i]]$outbuckTlog.theta), byrow=TRUE, ncol=3),
+                                    matrix(unlist(outbic.pc[[i]]$outmaw2.theta), byrow=TRUE, ncol=3),
+                                    matrix(unlist(outbic.pc[[i]]$outmaw2Tlog.theta), byrow=TRUE, ncol=3),
+                                    matrix(unlist(outbic.pc[[i]]$outmata.theta), byrow=TRUE, ncol=3),
+                                    matrix(unlist(outbic.pc[[i]]$outmataTlog.theta), byrow=TRUE, ncol=3),
+                                    fill.bic,
+                                    
+                                    outbic.pc[[i]]$outnonma.time,
+                                    outbic.pc[[i]]$outnonmaTlog.time,
+                                    outbic.pc[[i]]$outnonma_asymp.time,
+                                    outbic.pc[[i]]$outnonma_asympTlog.time,
+                                    outbic.pc[[i]]$outbuck.theta.time,
+                                    outbic.pc[[i]]$outbuckTlog.theta.time,
+                                    outbic.pc[[i]]$outmaw2.theta.time,
+                                    outbic.pc[[i]]$outmaw2Tlog.theta.time,
+                                    outbic.pc[[i]]$outmata.theta.time,
+                                    outbic.pc[[i]]$outmataTlog.theta.time, 
+                                    "BIC")
+            
+        }
+        for(i in 1:sim_superclust_pc$selection.aic){
+            bounds.aic[i,] <- cbind(matrix(unlist(outaic.pc[[i]]$outnonma$nonma.theta),
+                                           byrow=TRUE, ncol=3),
+                                    matrix(unlist(outaic.pc[[i]]$outnonmaTlog$nonma.theta), byrow=TRUE, ncol=3),
+                                    matrix(unlist(outaic.pc[[i]]$outnonma_asymp$nonma_asymp.theta), byrow=TRUE, ncol=3),
+                                    matrix(unlist(outaic.pc[[i]]$outnonma_asympTlog$nonma_asymp.theta), byrow=TRUE, ncol=3),
+                                    matrix(unlist(outaic.pc[[i]]$outbuck.theta), byrow=TRUE, ncol=3),
+                                    matrix(unlist(outaic.pc[[i]]$outbuckTlog.theta), byrow=TRUE, ncol=3),
+                                    matrix(unlist(outaic.pc[[i]]$outmaw2.theta), byrow=TRUE, ncol=3),
+                                    matrix(unlist(outaic.pc[[i]]$outmaw2Tlog.theta), byrow=TRUE, ncol=3),
+                                    matrix(unlist(outaic.pc[[i]]$outmata.theta), byrow=TRUE, ncol=3),
+                                    matrix(unlist(outaic.pc[[i]]$outmataTlog.theta), byrow=TRUE, ncol=3),
+                                    fill.aic,
+                                    
+                                    outaic.pc[[i]]$outnonma.time,
+                                    outaic.pc[[i]]$outnonmaTlog.time,
+                                    outaic.pc[[i]]$outnonma_asymp.time,
+                                    outaic.pc[[i]]$outnonma_asympTlog.time,
+                                    outaic.pc[[i]]$outbuck.theta.time,
+                                    outaic.pc[[i]]$outbuckTlog.theta.time,
+                                    outaic.pc[[i]]$outmaw2.theta.time,
+                                    outaic.pc[[i]]$outmaw2Tlog.theta.time,
+                                    outaic.pc[[i]]$outmata.theta.time,
+                                    outaic.pc[[i]]$outmataTlog.theta.time,
+                                    "AIC")
+            
+        }
         
+        bounds.pc <- rbind.data.frame(bounds.bic, bounds.aic)
         
-        bounds.pc <- cbind.data.frame(rbind.data.frame(cbind(matrix(unlist(outbic.pc$outnonma$nonma.theta), 
-                                                                    byrow=TRUE, ncol=3),
-                                                             matrix(unlist(outbic.pc$outnonmaTlog$nonma.theta), byrow=TRUE, ncol=3),
-                                                             matrix(unlist(outbic.pc$outnonma_asymp$nonma_asymp.theta), byrow=TRUE, ncol=3),
-                                                             matrix(unlist(outbic.pc$outnonma_asympTlog$nonma_asymp.theta), byrow=TRUE, ncol=3),
-                                                             matrix(unlist(outbic.pc$outbuck.theta), byrow=TRUE, ncol=3),
-                                                             matrix(unlist(outbic.pc$outbuckTlog.theta), byrow=TRUE, ncol=3),
-                                                             matrix(unlist(outbic.pc$outmaw2.theta), byrow=TRUE, ncol=3),
-                                                             matrix(unlist(outbic.pc$outmaw2Tlog.theta), byrow=TRUE, ncol=3),
-                                                             matrix(unlist(outbic.pc$outmata.theta), byrow=TRUE, ncol=3),
-                                                             matrix(unlist(outbic.pc$outmataTlog.theta), byrow=TRUE, ncol=3)),
-                                                       fill.bic),
-                                      
-                                      rbind.data.frame(cbind(matrix(unlist(outaic.pc$outnonma$nonma.theta), byrow=TRUE, ncol=3),
-                                                             matrix(unlist(outaic.pc$outnonmaTlog$nonma.theta), byrow=TRUE, ncol=3),
-                                                             matrix(unlist(outaic.pc$outnonma_asymp$nonma_asymp.theta), byrow=TRUE, ncol=3),
-                                                             matrix(unlist(outaic.pc$outnonma_asympTlog$nonma_asymp.theta), byrow=TRUE, ncol=3),
-                                                             matrix(unlist(outaic.pc$outbuck.theta), byrow=TRUE, ncol=3),
-                                                             matrix(unlist(outaic.pc$outbuckTlog.theta), byrow=TRUE, ncol=3),
-                                                             matrix(unlist(outaic.pc$outmaw2.theta), byrow=TRUE, ncol=3),
-                                                             matrix(unlist(outaic.pc$outmaw2Tlog.theta), byrow=TRUE, ncol=3),
-                                                             matrix(unlist(outaic.pc$outmata.theta), byrow=TRUE, ncol=3),
-                                                             matrix(unlist(outaic.pc$outmataTlog.theta), byrow=TRUE, ncol=3)),
-                                                       fill.aic),
-                                      
-                                      rep(outbic.pc$outnonma.time),
-                                      rep(outbic.pc$outnonmaTlog.time),
-                                      rep(outbic.pc$outnonma_asymp.time),
-                                      rep(outbic.pc$outnonma_asympTlog.time),
-                                      rep(outbic.pc$outbuck.theta.time),
-                                      rep(outbic.pc$outbuckTlog.theta.time),
-                                      rep(outbic.pc$outmaw2.theta.time),
-                                      rep(outbic.pc$outmaw2Tlog.theta.time),
-                                      rep(outbic.pc$outmata.theta.time),
-                                      rep(outbic.pc$outmataTlog.theta.time),
-                                      
-                                      rep(outaic.pc$outnonma.time),
-                                      rep(outaic.pc$outnonmaTlog.time),
-                                      rep(outaic.pc$outnonma_asymp.time),
-                                      rep(outaic.pc$outnonma_asympTlog.time),
-                                      rep(outaic.pc$outbuck.theta.time),
-                                      rep(outaic.pc$outbuckTlog.theta.time),
-                                      rep(outaic.pc$outmaw2.theta.time),
-                                      rep(outaic.pc$outmaw2Tlog.theta.time),
-                                      rep(outaic.pc$outmata.theta.time),
-                                      rep(outaic.pc$outmataTlog.theta.time))
+     
     }
     
     bounds.pc$risk <- risk
@@ -564,41 +526,25 @@ for (m in startsim:(startsim+4)){
     bounds.pc$simID <- 1:nrow(bounds.pc)
     bounds.pc$method <- "PC"
     
-    names(bounds.pc) <- c("nonma.bic.LB", "clusterMA.bic.1", "nonma.bic.UB",
-                          "nonmaTlog.bic.LB", "clusterMA.bic.2", "nonmaTlog.bic.UB",
-                          "nonma_asymp.bic.LB", "clusterMA.bic.3", "nonma_asymp.bic.UB",
-                          "nonma_asympTlog.bic.LB", "clusterMA.bic.4", "nonma_asympTlog.bic.UB",
-                          "buck.bic.LB", "clusterMA.bic.5", "buck.bic.UB",
-                          "bucklog.bic.LB", "clusterMA.bic.6", "bucklog.bic.UB",
-                          "maw2.bic.LB", "clusterMA.bic.7", "maw2.bic.UB",
-                          "maw2log.bic.LB", "clusterMA.bic.8", "maw2log.bic.UB",
-                          "mata.bic.LB", "clusterMA.bic.9", "mata.bic.UB",
-                          "matalog.bic.LB", "clusterMA.bic.10", "matalog.bic.UB",
-                          
-                          "nonma.aic.LB", "clusterMA.aic.1", "nonma.aic.UB",
-                          "nonmaTlog.aic.LB", "clusterMA.aic.2", "nonmaTlog.aic.UB",
-                          "nonma_asymp.aic.LB", "clusterMA.aic.3", "nonma_asymp.aic.UB",
-                          "nonma_asympTlog.aic.LB", "clusterMA.aic.4", "nonma_asympTlog.aic.UB",
-                          "buck.aic.LB", "clusterMA.aic.5", "buck.aic.UB",
-                          "bucklog.aic.LB", "clusterMA.aic.6", "bucklog.aic.UB",
-                          "maw2.aic.LB", "clusterMA.aic.7", "maw2.aic.UB",
-                          "maw2log.aic.LB", "clusterMA.aic.8", "maw2log.aic.UB",
-                          "mata.aic.LB", "clusterMA.aic.9", "mata.aic.UB",
-                          "matalog.aic.LB", "clusterMA.aic.10", "matalog.aic.UB",
-                          
-                          "nonma.bic.time", "nonmaTlog.bic.time",
-                          "nonma_asymp.bic.time", "nonma_asympTlog.bic.time", 
-                          "buck.bic.time","bucklog.bic.time",
-                          "maw2.bic.time", "maw2log.bic.time",
-                          "mata.bic.time", "matalog.bic.time",
-                          
-                          "nonma.aic.time", "nonmaTlog.aic.time", 
-                          "nonma_asymp.aic.time", "nonma_asympTlog.aic.time", 
-                          "buck.aic.time","bucklog.aic.time",
-                          "maw2.aic.time", "maw2log.aic.time",
-                          "mata.aic.time", "matalog.aic.time",
-                          "risk","rad","iter","theta", "cent",
-                          "select_orig.bic", "select_orig.aic", "simID", "method")
+    names(bounds.pc) <- c("nonma.LB", "clusterMA.1", "nonma.UB",
+                           "nonmaTlog.LB", "clusterMA.2", "nonmaTlog.UB",
+                           "nonma_asymp.LB", "clusterMA.3", "nonma_asymp.UB",
+                           "nonma_asympTlog.LB", "clusterMA.4", "nonma_asympTlog.UB",
+                           "buck.LB", "clusterMA.5", "buck.UB",
+                           "bucklog.LB", "clusterMA.6", "bucklog.UB",
+                           "maw2.LB", "clusterMA.7", "maw2.UB",
+                           "maw2log.LB", "clusterMA.8", "maw2log.UB",
+                           "mata.LB", "clusterMA.9", "mata.UB",
+                           "matalog.LB", "clusterMA.10", "matalog.UB",
+                           
+                           "nonma.time", "nonmaTlog.time", 
+                           "nonma_asymp.time", "nonma_asympTlog.time", 
+                           "buck.time","bucklog.time",
+                           "maw2.time", "maw2log.time",
+                           "mata.time", "matalog.time",
+                           "IC",
+                           "risk","rad","iter","theta", "cent",
+                           "select_orig.bic", "select_orig.aic", "simID", "method")
     
     print("Finished clustack PC")
     #####################################################################################

@@ -5,15 +5,7 @@ library(testthat)
 library(Matrix)
 
 
-########################################
-#Functions
-########################################
-
-colorsgrey <- function (x) {
-    y = colorRamp(RColorBrewer::brewer.pal(9, "Greys")[1:9])(x)
-    rgb(y[, 1], y[, 2], y[, 3], maxColorValue = 255)
-}
-
+############################################################
 
 
 #' @title likeweights
@@ -23,21 +15,20 @@ colorsgrey <- function (x) {
 likweights <- function(liki){
     wi <- liki/sum(liki)
     if(any(is.na(liki))){
-        print("There are NA likelihoods")
+        message("There are NA likelihoods")
     }
     return(wi)
 }
 
-####NOTE: this overdisp function is part of clusso. Omit after testing
-overdisp <- function(offset_reg, sim = TRUE, overdispfloor = TRUE) {
-    if(sim==TRUE){
-        stopifnot(inherits(offset_reg[[1]], c("glm", "lm")))
-        phi <- max(unlist(lapply(1:length(offset_reg), function(i) deviance(offset_reg[[i]])/df.residual(offset_reg[[i]]))))
-    }
-    else{
-        stopifnot(inherits(offset_reg, c("glm", "lm")))
-        phi <- max(unlist(deviance(offset_reg)/df.residual(offset_reg)))
-    }
+
+#' @title overdisp
+#' @description Calculate the overdispersion parameter (\eqn{\phi}),
+#' @param offset_reg Object of class glm or lm.
+#' @param overdispfloor Boolean. When \code{TRUE}, overdispersion parameter (\eqn{\phi}) is limited to not be less than 1. If \code{FALSE}, underdispersion can be estimated. 
+#' @return An estimate of \eqn{\phi} (overdispersion or underdispersion)
+overdisp <- function(offset_reg, overdispfloor = TRUE) {
+    stopifnot(inherits(offset_reg, c("glm", "lm")))
+    phi <- max(unlist(deviance(offset_reg)/df.residual(offset_reg)))
     if(overdispfloor == TRUE & phi < 1){
         message(paste("Underdispersion detected (", phi,"). Setting phi to 1"))
         phi <- 1
@@ -49,7 +40,7 @@ overdisp <- function(offset_reg, sim = TRUE, overdispfloor = TRUE) {
 }
 
 #'@title poisLik
-#'@description Poisson-based likelihood
+#'@description Poisson-based LRT comparing cluster model to null model.
 #'@param Ex Vector of expected counts.
 #'@param Yx Vector of observed counts.
 #'@param sparsemat Large sparsematrix where rows are potential clusters and columns are space-time locations.
@@ -73,7 +64,7 @@ poisLik <-function(Ex, Yx, sparsemat){
 }
 
 #'@title binomLik
-#'@description Poisson-based likelihood
+#'@description Binomial-based likelihood LRT comparing cluster model to null model.
 #'@param Ex Vector of expected counts.
 #'@param Yx Vector of observed counts.
 #'@param sparsemat Large sparsematrix where rows are potential clusters and columns are space-time locations.
@@ -111,7 +102,6 @@ binomLik <-function(nx, Yx, sparsemat){
 #'@param maxclust Maximum number of clusters to be detected.
 #'@return List. First element is a Weighted relative risks for identified locations. Second element is a large matrix of weights for each iteration.
 #'
-
 bylocation <- function(Lik, Lambda_dense,sparsemat, maxclust){
     wtMAT <- matrix(rep(NA, maxclust*nrow(sparsemat)), ncol=maxclust)
     wt0 <- likweights(Lik)
@@ -174,22 +164,17 @@ bycluster <-  function(Lik, Lambda_dense, sparsemat,maxclust){
     ixall <- NULL
         for (i in 1:maxclust){
             Lik[ixall] <-0
-            wtmp <- likweights(Lik)#wt0
+            wtmp <- likweights(Lik)
             wtmp[ixall] <-0
             #find potential cluster with largest weight
             maxpc <- which.max(as.vector(wtmp))
-            #maxloc <- which.max(as.vector(wi_loc))
             message(paste0("Potential cluster identified: ",(maxpc)))
             maxpcs[i] <- maxpc 
-            
             wtMAT0[,i] <- wtmp
             #find all potential clusters that overlap that PC
             pcmax <- rep(0,length(wtmp)); pcmax[maxpc] <-1; pcmax <- matrix(pcmax,ncol=1)
             pcpcmax <- t(t(sparsemat)%*%pcmax)%*%t(sparsemat); pcpcmax <- ifelse(pcpcmax!=0,1,0)
             ix <- which(pcpcmax!=0)
-            #upweight Lik* to 1 in all PCs that overlap max PC
-            #reweight so that everything inside the PCs that overlap max cluster sum to 1
-            #aa <- likweights(Lik[ix]) 
             wtmp[ix] <- likweights(Lik[ix]) 
             wtMAT[,i] <- wtmp
             if(all(ix %in% ixall)){
@@ -212,7 +197,7 @@ bycluster <-  function(Lik, Lambda_dense, sparsemat,maxclust){
 
 #'@title detectclusters
 #'@description Detect disease clusters either by location or by potential cluster.
-#'@param sparseMAT Large sparsematrix TODO
+#'@param sparsemat Large sparsematrix 
 #'@param Ex Vector of expected counts.
 #'@param Yx Vector of observed counts.
 #'@param numCenters Number of centroids.
@@ -224,35 +209,29 @@ bycluster <-  function(Lik, Lambda_dense, sparsemat,maxclust){
 #'@param overdisp.est Overdispersion parameter estimated across all simulations (max).
 #'@return Returns list for each iteration with weighted relative risks by location inside identified cluster.
 #'@export
-detectclusters <- function(sparseMAT, Ex, Yx,numCenters,Time, maxclust,byloc=TRUE, model=c("poisson", "binomial"),
-                           cv=FALSE,  overdisp.est) {
+detectclusters <- function(sparsemat, Ex, Yx,numCenters,Time, maxclust,byloc=TRUE, model=c("poisson", "binomial"),overdisp.est) {
     if(is.null(overdisp.est)){
         quasi <- FALSE
         message(paste0("Model specified: ", model))
     } else{ quasi <- TRUE
-    #print("Quasi model")
     message(paste0("Model specified: ", "quasi-",model))
     }
-    sparsemat <- Matrix::t(sparseMAT) 
+    tsparsemat <- Matrix::t(sparsemat) 
     if (model=="poisson"){
-        out <- poisLik(Ex, Yx, sparsemat)  
-        #out <- poisLik(Ex[[1]], YSIM[[1]], sparsemat)  
+        out <- poisLik(Ex, Yx, tsparsemat)  
     }
     else if (model=="binomial"){
-        out <- binomLik(Ex, Yx, sparsemat) #in dev
+        out <- binomLik(Ex, Yx, tsparsemat) #in dev
     }
     else {
         stop("Model not specified. Please indicate `poisson` or `binomial`.")
     }
-    #message(paste0("Model specified: ", model))
     Lik <- out$Lik
     Lambda_dense <- out$Lambda_dense
-    #locLambdas <- vector("list", maxclust)
     if(byloc==FALSE){
-        print("Cluster detection by potential cluster")
-        res <- bycluster(Lik, Lambda_dense, sparsemat, maxclust)
-        #perform selection by IC/CV
-        selection <- clusterselect(res[[1]], Yx, Ex, model,maxclust, numCenters, Time, quasi,cv=FALSE,overdisp.est)
+        message("Cluster detection by potential cluster")
+        res <- bycluster(Lik, Lambda_dense, tsparsemat, maxclust)
+        selection <- clusterselect(res[[1]], Yx, Ex, model,maxclust, numCenters, Time, quasi,overdisp.est)
         return(list(wLambda = res[[1]],
                     loglik = selection$loglik,
                     selection.bic = selection$select.bic,
@@ -261,26 +240,15 @@ detectclusters <- function(sparseMAT, Ex, Yx,numCenters,Time, maxclust,byloc=TRU
                     selection.bic_forceid = ifelse(selection$select.bic==0,1, selection$select.bic),
                     selection.aic_forceid = ifelse(selection$select.aic==0,1, selection$select.aic),
                     selection.aicc_forceid = ifelse(selection$select.aicc==0,1,selection$select.aicc),
-                    # selection.bic_orig = selection$select.bic,
-                    # selection.aic_orig = selection$select.aic,
-                    # selection.aicc_orig = selection$select.aicc,
-                    # selection.bic = ifelse(selection$select.bic==0,1, selection$select.bic),
-                    # selection.aic = ifelse(selection$select.aic==0,1, selection$select.aic),
-                    # selection.aicc = ifelse(selection$select.aicc==0,1,selection$select.aicc),
-                    #sparsemat = res[[2]],
                     wtMAT = res[[2]],
-                    #wtMAT0 = res[[3]],
-                    #maxpcs = res[[3]],
                     maxid = res[[3]],
-                    Lambda_dense = Lambda_dense))#,
-                    #Lambda_sparse = res[[3]]))
+                    Lambda_dense = Lambda_dense))
     }
     else{
         #default
-        print("Cluster detection by location")
-        res <- bylocation(Lik, Lambda_dense, sparsemat, maxclust)
-        #perform selection by IC/CV
-        selection <- clusterselect(res[[1]], Yx, Ex, model,maxclust, numCenters, Time, quasi,cv=FALSE,overdisp.est)
+        message("Cluster detection by location")
+        res <- bylocation(Lik, Lambda_dense, tsparsemat, maxclust)
+        selection <- clusterselect(res[[1]], Yx, Ex, model,maxclust, numCenters, Time, quasi,overdisp.est)
         return(list(wLambda = res[[1]],
                     loglik = selection$loglik,
                     selection.bic = selection$select.bic,
@@ -289,127 +257,87 @@ detectclusters <- function(sparseMAT, Ex, Yx,numCenters,Time, maxclust,byloc=TRU
                     selection.bic_forceid = ifelse(selection$select.bic==0,1,selection$select.bic),
                     selection.aic_forceid = ifelse(selection$select.aic==0,1, selection$select.aic),
                     selection.aicc_forceid = ifelse(selection$select.aic==0,1,selection$select.aicc),
-                    # selection.bic_orig = selection$select.bic,
-                    # selection.aic_orig = selection$select.aic,
-                    # selection.aicc_orig = selection$select.aicc,
-                    # selection.bic = ifelse(selection$select.bic==0,1,selection$select.bic),
-                    # selection.aic = ifelse(selection$select.aic==0,1, selection$select.aic),
-                    # selection.aicc = ifelse(selection$select.aic==0,1,selection$select.aicc),
-                    #sparsemat = res[[2]],
                     wtMAT = res[[2]],
-                    #maxlocs = res[[3]],
                     maxid = res[[3]],
-                    Lambda_dense = Lambda_dense))#,
-                    #wtMAT0 = res[[3]]))#,
-                    #Lambda_sparse = res[[3]]))
+                    Lambda_dense = Lambda_dense))
     }
 }
 
 #'@title clusterselect
 #'@description Select the optimal number of (overlapping) clusters using either information criteria or cross-validation
-#'@param wLambda 
-#'@param maxclust TODO
+#'@param wLambda Stacked estimates for relative risks in all locations.
+#'@param maxclust Maximum number of clusters to consider.
 #'@param model A string specifying which model to use, Poisson or binomial. For Poisson, specify \code{"poisson"} and both the Poisson and quasi-Poisson model results are returned. For binomial, specify \code{"binomial"}.
-#'@param numCenters TODO
-#'@param Time TODO
-#'@param quasi Boolean. \code{TRUE} indicates a quasi-Poisson or quasi-binomial model that accounts for overdispersion. \code{FALSE} indicates a Poisson or binomial model without adjustment for overdispersion.
-#'@param covars Dataframe of additional covariates to be included in the model that are un-penalized by the LASSO.
-#'@param Yx Number of observed cases for each space-time location.
-#'@param cv TODO
-#'@param overdisp.est Overdispersion parameter estimated across all simulations (max).
-#'@return TODO
-clusterselect <- function(wLambda,Yx, Ex, model,maxclust, numCenters, Time,quasi,cv=FALSE,overdisp.est){
-    #preprocess wLambda
+#'@param numCenters Number of polygon centroids (total number of locations).
+#'@param Time Number of time periods.
+#'@param quasi Boolean. \code{TRUE} indicates a quasi-Poisson or quasi-binomial model that accounts for overdispersion. \code{FALSE} indicates a Poisson or binomial model without adjustment for overdispersion or underdispersion.
+#'@param overdisp.est Overdispersion (or underdispersion) parameter estimate.
+#'@return Returns a list with the loglikelihood, selection by BIC (or QBIC), selection by AIC (or QAIC), and selection by AICc (or QAICc).
+clusterselect <- function(wLambda,Yx, Ex, model,maxclust, numCenters, Time,quasi,overdisp.est){
     remtab <- which(sapply(1:nrow(wLambda), function(k) all(is.nan(wLambda[k,])))==FALSE)
-    
-    #test <- t(a)%*%Lambda_dense
     loglik <- sapply(1:length(remtab), function(i) dpoisson(Yx, wLambda[i,], Ex))
-    #loglik <- sapply(1:nrow(wLambda), function(i) dpoisson(YSIM[[1]], wLambda[i,], Ex[[1]]))
-    #add null model loglik
     if (model=="poisson"){
         loglik <- c(dpoisson(Yx, rep(1,length(Yx)), Ex), loglik)    
-        #loglik <- c(dpoisson(YSIM[[1]], rep(1,length(YSIM[[1]])), Ex[[1]]), loglik)
         if (quasi== TRUE){
             message(paste("Overdispersion estimate:", round(overdisp.est,4)))
             if(quasi == TRUE & is.null(overdisp.est)) warning("No overdispersion for quasi-Poisson model. Please check.")
         } else {
-            print("no overdispersion being estimated")
+            message("no overdispersion being estimated")
         }
-        
     }
-    # else if (model=="binomial"){
-    #     #TODO
-    #     #loglik <- c(dbin(Yx, rep(1,length(Yx)), Ex), loglik)
-    #     # if (quasi== TRUE){
-    #     #     #TODO
-    #     # } else {
-    #     #     #TODO
-    #     # }
-    # }
-    
     #find K clusters
-    K <- seq(from=0, to=nrow(wLambda))#seq(from=0, to=maxclust)
-    if(cv==TRUE){
-        #TODO
+    K <- seq(from=0, to=nrow(wLambda))
+    #calc
+    if (quasi== TRUE){
+        PLL.bic <- (-2*loglik/overdisp.est) + (K+1)*log(sum(Yx)) 
+        PLL.aic <- 2*(K+1) - 2*(loglik/overdisp.est)
+        PLL.aicc <- 2*(K+1) - 2*(loglik/overdisp.est) +
+            ((2*(K+1)*(K+1 + 1))/(sum(Yx) - K+1 - 1))
+    } else {
+        PLL.bic <- (-2*loglik) + K*log(sum(Yx)) 
+        PLL.aic <- 2*K - 2*loglik
+        PLL.aicc <- 2*(K) - 2*(loglik) +
+            ((2*K*(K + 1))/(sum(Yx) - K - 1))
     }
-    else{
-        #calc
-        if (quasi== TRUE){
-            PLL.bic <- (-2*loglik/overdisp.est) + (K+1)*log(sum(Yx)) #(-2*loglik) + K*log(numCenters*Time)
-            PLL.aic <- 2*(K+1) - 2*(loglik/overdisp.est)
-            PLL.aicc <- 2*(K+1) - 2*(loglik/overdisp.est) +
-                ((2*(K+1)*(K+1 + 1))/(sum(Yx) - K+1 - 1))
-        } else {
-            PLL.bic <- (-2*loglik) + K*log(sum(Yx)) #(-2*loglik) + K*log(numCenters*Time)
-            PLL.aic <- 2*K - 2*loglik
-            PLL.aicc <- 2*(K) - 2*(loglik) +
-                ((2*K*(K + 1))/(sum(Yx) - K - 1))
-        }
-        
-        #make sure that aicc is not overparameterized
-        if(any(is.infinite(PLL.aicc))) {
-            idx <- which(is.infinite(PLL.aicc))
-            #replace everything in penalized loglik at infinite value and onward to be NA - these are nonsense solutions
-            PLL.aicc[idx:length(PLL.aicc)] <- NA
-        }
-        #select
-        select.bic <- which.min(PLL.bic)-1 #-1 because the first element corresponds to 0 clusters (null)
-        select.aic <- which.min(PLL.aic)-1
-        select.aicc <- which.min(PLL.aicc)-1 
-        cat(paste0("\t","Num. selected clusters by BIC: ", (select.bic),"\n",
-                   "\t","Num. selected clusters by AIC: ",(select.aic),"\n",
-                   "\t","Num. selected clusters by AICc: ",(select.aicc)))
-        # if(all.equal(select.bic, select.aic, select.aicc)){
-        #     #TODO
-        # }
-        # else{
-        #     #Do it for each criterion
-        #    #TODO
-        #     #BIC
-        #    #TODO
-        #     #AIC
-        #    #TODO    
-        #     #AICc
-        #    #TODO
-        #     # return(list())
-        # }
-        return(list(loglik = loglik,
-                    select.bic = select.bic,
-                    select.aic = select.aic,
-                    select.aicc = select.aicc))
+    if(any(is.infinite(PLL.aicc))) {
+        idx <- which(is.infinite(PLL.aicc))
+        PLL.aicc[idx:length(PLL.aicc)] <- NA
     }
+    #select
+    select.bic <- which.min(PLL.bic)-1 #-1 because the first element corresponds to 0 clusters (null)
+    select.aic <- which.min(PLL.aic)-1
+    select.aicc <- which.min(PLL.aicc)-1 
+    cat(paste0("\t","Num. selected clusters by BIC: ", (select.bic),"\n",
+               "\t","Num. selected clusters by AIC: ",(select.aic),"\n",
+               "\t","Num. selected clusters by AICc: ",(select.aicc)))
+    return(list(loglik = loglik,
+                select.bic = select.bic,
+                select.aic = select.aic,
+                select.aicc = select.aicc))
     
 }
-
-# 
 
 
 ####################################################################
 #CLUSTACKBOUNDS FUNCTIONS
 ####################################################################
 
-bucklandbounds.cluster <- function(thetaa, thetai,res, w_q, outExp_out ,IC,transform="none",overdisp.est) {
-    #browser()
+#'@title bucklandbounds.cluster
+#'@description Calculate confidence bounds for stacked cluster relative risk estimates based on Buckland et al. 
+#'@param thetaa Stacked relative risk estimate for the cluster(s)
+#'@param thetai Individual relative risk estimates for each potential cluster.
+#'@param res Resultant object from \code{detectclusters()}.
+#'@param w_q Likelihood-weights for all Q<K potential clusters.
+#'@param outExp_out Expected counts for each potential cluster
+#'@param IC Information criterion used. Currently available for BIC (QBIC) and AIC (QAIC)
+#'@param transform If a transformation is used. Default is \code{"none"}. Other transformation currently available is \code{"log"}.
+#'@param overdisp.est Estimate of overdispersion (or underdispersion).
+#'@param conf.level Confidence level for the interval. Default is 0.95. 
+#'@return List: lower bound estimate, stacked cluster relative risk estimate, upper bound estimate
+#'@export
+#'
+bucklandbounds.cluster <- function(thetaa, thetai,res, w_q, outExp_out ,IC,transform="none",overdisp.est, conf.level=0.95) {
+    critval <- qnorm(1-(1-conf.level)/2)
     if(transform=="log"){
         if(!is.null(overdisp.est)){
             varthetai <- overdisp.est*(1/(thetai*outExp_out ))
@@ -419,8 +347,8 @@ bucklandbounds.cluster <- function(thetaa, thetai,res, w_q, outExp_out ,IC,trans
         withintheta <- (log(thetai) - log(thetaa))^2
         varthetas_w <- sum(w_q*sqrt(varthetai + withintheta))^2
         var_thetaa <- (as.vector(varthetas_w))^2
-        UBa = exp(as.vector(log(thetaa)) + 1.96*sqrt(var_thetaa))
-        LBa = exp(as.vector(log(thetaa)) - 1.96*sqrt(var_thetaa))
+        UBa = exp(as.vector(log(thetaa)) + critval*sqrt(var_thetaa))
+        LBa = exp(as.vector(log(thetaa)) - critval*sqrt(var_thetaa))
         
     } else {
         if(!is.null(overdisp.est)){
@@ -431,58 +359,85 @@ bucklandbounds.cluster <- function(thetaa, thetai,res, w_q, outExp_out ,IC,trans
         withintheta <- (thetai - thetaa)^2
         varthetas_w <- sum(w_q*sqrt(varthetai + withintheta))
         var_thetaa <- (as.vector(varthetas_w))^2
-        UBa = as.vector(thetaa) + 1.96*sqrt(var_thetaa)
-        LBa = as.vector(thetaa) - 1.96*sqrt(var_thetaa)
+        UBa = as.vector(thetaa) + critval*sqrt(var_thetaa)
+        LBa = as.vector(thetaa) - critval*sqrt(var_thetaa)
     }
-    
-    
     return(list(buckland.LB = LBa,
                 clusterMA = thetaa,
                 buckland.UB = UBa))
 }
-
-bucklandbounds.cells <- function(thetaa, res, w_q, outExp_out ,IC,transform="none",tsparsematrix,overdisp.est, cellsix_out) {
-    #browser()
+#'@title bucklandbounds.cells
+#'@description Calculate confidence bounds for stacked cluster relative risk estimates based on Buckland et al. for specific cells (given by \code{cellsix_out}) 
+#'@param thetaa Stacked relative risk estimate for the cluster(s)
+#'@param thetai Individual relative risk estimates for each potential cluster.
+#'@param res Resultant object from \code{detectclusters()}.
+#'@param w_q Likelihood-weights for all Q<K potential clusters.
+#'@param outExp_out Expected counts for each potential cluster.
+#'@param IC Information criterion used. Currently available for BIC (QBIC) and AIC (QAIC)
+#'@param transform If a transformation is used. Default is \code{"none"}. Other transformation currently available is \code{"log"}.
+#'@param tsparsemat Transpose of large sparsematrix where columns are potential clusters and rows are space-time locations.
+#'@param overdisp.est Estimate of overdispersion (or underdispersion).
+#'@param cellsix_out Indices of the cells to calculate bounds for.
+#'@param conf.level Confidence level for the interval. Default is 0.95. 
+#'@return List: lower bound estimate, stacked cluster relative risk estimate, upper bound estimate for each of the cells in \code{cellsix_out}
+#'@export
+#'
+bucklandbounds.cells <- function(thetaa, res, w_q, outExp_out ,IC,transform="none",tsparsemat,overdisp.est, cellsix_out, conf.level) {
     thetai <- res$Lambda_dense
+    critval <- qnorm(1-(1-conf.level)/2)
+    #print(critval)
     if(IC=="aic"){
         thetaa <- res$wLambda[res$selection.aic,][cellsix_out]
     } else {
         thetaa <- res$wLambda[res$selection.bic,][cellsix_out]
     }
-    print(str(thetaa))
+    #print(str(thetaa))
     if(transform=="log"){
-        print("transform")
+        #print("transform")
         if(!is.null(overdisp.est)){
-            varthetai <- sapply(1:nrow(tsparsematrix), function(k) overdisp.est*(1/(thetai[k,]*outExp_out )))
+            varthetai <- sapply(1:nrow(tsparsemat), function(k) overdisp.est*(1/(thetai[k,]*outExp_out )))
         } else {
-            varthetai <- sapply(1:nrow(tsparsematrix), function(k) 1/(thetai[k,]*outExp_out))
+            varthetai <- sapply(1:nrow(tsparsemat), function(k) 1/(thetai[k,]*outExp_out))
         }
         withintheta <- sapply(1:length(cellsix_out), function(j) (log(thetai[,cellsix_out][,j]) - log(thetaa[j])))^2
-        wtnbtn <- sapply(1:nrow(tsparsematrix), function(k) sqrt(varthetai[cellsix_out,k] + withintheta[k,]))
+        wtnbtn <- sapply(1:nrow(tsparsemat), function(k) sqrt(varthetai[cellsix_out,k] + withintheta[k,]))
         varthetas_w <- matrix(w_q, nrow = 1)%*%t(wtnbtn)
         var_thetaa <- (as.vector(varthetas_w))^2
-        UBa = exp(as.vector(log(thetaa)) + 1.96*sqrt(var_thetaa))
-        LBa = exp(as.vector(log(thetaa)) - 1.96*sqrt(var_thetaa))
+        UBa = exp(as.vector(log(thetaa)) + critval*sqrt(var_thetaa))
+        LBa = exp(as.vector(log(thetaa)) - critval*sqrt(var_thetaa))
         
     } else {
         if(!is.null(overdisp.est)){
-            varthetai <- sapply(1:nrow(tsparsematrix), function(k) overdisp.est*thetai[k,]/outExp_out)
+            varthetai <- sapply(1:nrow(tsparsemat), function(k) overdisp.est*thetai[k,]/outExp_out)
         } else {
-            varthetai <- sapply(1:nrow(tsparsematrix), function(k) thetai[k,]/outExp_out)
+            varthetai <- sapply(1:nrow(tsparsemat), function(k) thetai[k,]/outExp_out)
         }
         withintheta <- sapply(1:length(cellsix_out), function(j) (thetai[,cellsix_out][,j] - thetaa[j]))^2
-        wtnbtn <- sapply(1:nrow(tsparsematrix), function(k) sqrt(varthetai[cellsix_out,k] + withintheta[k,]))
+        wtnbtn <- sapply(1:nrow(tsparsemat), function(k) sqrt(varthetai[cellsix_out,k] + withintheta[k,]))
         varthetas_w <- matrix(w_q, nrow = 1)%*%t(wtnbtn)
         var_thetaa <- (as.vector(varthetas_w))^2
-        UBa = as.vector(thetaa) + 1.96*sqrt(var_thetaa)
-        LBa = as.vector(thetaa) - 1.96*sqrt(var_thetaa)
+        UBa = as.vector(thetaa) + critval*sqrt(var_thetaa)
+        LBa = as.vector(thetaa) - critval*sqrt(var_thetaa)
     }
     return(list(buckland.LB = LBa,
                 clusterMA = thetaa,
                 buckland.UB = UBa))
 }
 
-maw2.cluster <- function(thetaa,thetai, w_q, outExp, transform,overdisp.est) {
+#'@title maw2.cluster
+#'@description Calculate confidence bounds for stacked cluster relative risk estimates based on Burnham and Anderson.
+#'@param thetaa Stacked relative risk estimate for the cluster(s)
+#'@param thetai Individual relative risk estimates for each potential cluster.
+#'@param outExp Expected counts
+#'@param IC Information criterion used. Currently available for BIC (QBIC) and AIC (QAIC)
+#'@param transform If a transformation is used. Default is \code{"none"}. Other transformation currently available is \code{"log"}.
+#'@param overdisp.est Estimate of overdispersion (or underdispersion).
+#'@param conf.level Confidence level for the interval. Default is 0.95. 
+#'@return List: lower bound estimate, stacked cluster relative risk estimate, upper bound estimate
+#'@export
+#'
+maw2.cluster <- function(thetaa,thetai, w_q, outExp, transform,overdisp.est, conf.level=0.95) {
+    critval <- qnorm(1-(1-conf.level)/2)
     if(transform=="log"){
         #print("log-scale")
         if(!is.null(overdisp.est)){
@@ -493,8 +448,8 @@ maw2.cluster <- function(thetaa,thetai, w_q, outExp, transform,overdisp.est) {
         withintheta <- (log(thetai) - log(thetaa))^2
         var_thetaa <- sum(w_q*(varthetai + withintheta))
         var_thetaa <- as.vector(var_thetaa)
-        UBa = exp(as.vector(log(thetaa)) + 1.96*sqrt(var_thetaa))
-        LBa = exp(as.vector(log(thetaa)) - 1.96*sqrt(var_thetaa))
+        UBa = exp(as.vector(log(thetaa)) + critval*sqrt(var_thetaa))
+        LBa = exp(as.vector(log(thetaa)) - critval*sqrt(var_thetaa))
     } else{
         if(!is.null(overdisp.est)){
             varthetai <- overdisp.est*(thetai/outExp)
@@ -504,16 +459,32 @@ maw2.cluster <- function(thetaa,thetai, w_q, outExp, transform,overdisp.est) {
         withintheta <- (thetai - thetaa)^2
         var_thetaa <- sum(w_q*(varthetai + withintheta))
         var_thetaa <- as.vector(var_thetaa)
-        UBa = as.vector(thetaa) + 1.96*sqrt(var_thetaa)
-        LBa = as.vector(thetaa) - 1.96*sqrt(var_thetaa)
+        UBa = as.vector(thetaa) + critval*sqrt(var_thetaa)
+        LBa = as.vector(thetaa) - critval*sqrt(var_thetaa)
     }
     return(list(maw2.LB = LBa,
                 clusterMA = thetaa,
                 maw2.UB = UBa))
 }
-
-maw2.cells <- function(thetaa,res, w_q, outExp, IC, transform,tsparsematrix, overdisp.est, cellsix_out){
+#'@title maw2.cells
+#'@description Calculate confidence bounds for stacked cluster relative risk estimates based on Buckland et al. for specific cells (given by \code{cellsix_out}) 
+#'@param thetaa Stacked relative risk estimate for the cluster(s)
+#'@param thetai Individual relative risk estimates for each potential cluster.
+#'@param res Resultant object from \code{detectclusters()}.
+#'@param w_q Likelihood-weights for all Q<K potential clusters.
+#'@param outExp_out Expected counts for each potential cluster.
+#'@param IC Information criterion used. Currently available for BIC (QBIC) and AIC (QAIC).
+#'@param transform If a transformation is used. Default is \code{"none"}. Other transformation currently available is \code{"log"}.
+#'@param tsparsemat Transpose of large sparsematrix where columns are potential clusters and rows are space-time locations.
+#'@param overdisp.est Estimate of overdispersion (or underdispersion).
+#'@param cellsix_out Indices of the cells to calculate bounds for.
+#'@param conf.level Confidence level for the interval. Default is 0.95. 
+#'@return List: lower bound estimate, stacked cluster relative risk estimate, upper bound estimate for each of the cells in \code{cellsix_out}
+#'@export
+#'
+maw2.cells <- function(thetaa,res, w_q, outExp, IC, transform,tsparsemat, overdisp.est, cellsix_out, conf.level=0.95){
     thetai <- res$Lambda_dense
+    critval <- qnorm(1-(1-conf.level)/2)
     if(IC=="aic"){
         thetaa <- res$wLambda[res$selection.aic,][cellsix_out]
     } else {
@@ -521,46 +492,61 @@ maw2.cells <- function(thetaa,res, w_q, outExp, IC, transform,tsparsematrix, ove
     }
         if(transform=="log"){
             if(!is.null(overdisp.est)){
-                varthetai <- sapply(1:nrow(tsparsematrix), function(k) overdisp.est*(1/(thetai[k,]*outExp)))
+                varthetai <- sapply(1:nrow(tsparsemat), function(k) overdisp.est*(1/(thetai[k,]*outExp)))
             } else {
-                varthetai <- sapply(1:nrow(tsparsematrix), function(k) 1/(thetai[k,]*outExp))
+                varthetai <- sapply(1:nrow(tsparsemat), function(k) 1/(thetai[k,]*outExp))
             }
             withintheta <- sapply(1:length(cellsix_out), function(j) (log(thetai[, cellsix_out][,j]) - log(thetaa[j])))^2
-            wtnbtn <- sapply(1:nrow(tsparsematrix), function(k) (varthetai[cellsix_out,k] + withintheta[k,]))
+            wtnbtn <- sapply(1:nrow(tsparsemat), function(k) (varthetai[cellsix_out,k] + withintheta[k,]))
             #var_thetaa <- sum(w_q*(varthetai + withintheta))
             var_thetaa <- as.vector(matrix(w_q, nrow=1)%*%t(wtnbtn))
-            UBa = exp(as.vector(log(thetaa)) + 1.96*sqrt(var_thetaa))
-            LBa = exp(as.vector(log(thetaa)) - 1.96*sqrt(var_thetaa))
+            UBa = exp(as.vector(log(thetaa)) + critval*sqrt(var_thetaa))
+            LBa = exp(as.vector(log(thetaa)) - critval*sqrt(var_thetaa))
         } else{
             if(!is.null(overdisp.est)){
-                varthetai <- sapply(1:nrow(tsparsematrix), function(k) overdisp.est*thetai[k,]/outExp)
+                varthetai <- sapply(1:nrow(tsparsemat), function(k) overdisp.est*thetai[k,]/outExp)
             } else {
-                varthetai <- sapply(1:nrow(tsparsematrix), function(k) thetai[k,]/outExp)
+                varthetai <- sapply(1:nrow(tsparsemat), function(k) thetai[k,]/outExp)
             }
             withintheta <- sapply(1:length(cellsix_out), function(j) (thetai[,cellsix_out][,j] - thetaa[j]))^2
-            wtnbtn <- sapply(1:nrow(tsparsematrix), function(k) sqrt(varthetai[cellsix_out,k] + withintheta[k,]))
+            wtnbtn <- sapply(1:nrow(tsparsemat), function(k) sqrt(varthetai[cellsix_out,k] + withintheta[k,]))
             #var_thetaa <- sum(w_q*(varthetai + withintheta))
             var_thetaa <- as.vector(matrix(w_q, nrow=1)%*%t(wtnbtn))
-            UBa = as.vector(thetaa) + 1.96*sqrt(var_thetaa)
-            LBa = as.vector(thetaa) - 1.96*sqrt(var_thetaa)
+            UBa = as.vector(thetaa) + critval*sqrt(var_thetaa)
+            LBa = as.vector(thetaa) - critval*sqrt(var_thetaa)
         }
     return(list(maw2.LB = LBa,
                 clusterMA = thetaa,
                 maw2.UB = UBa))
 }
 
-
-mata_tailareazscore <- function(thetaii, thetaaa, se.thetaii, w_q, alpha){
-    thetaii <- as.vector(thetaii)
-    zval <- (thetaaa - thetaii)/se.thetaii
+#' @title mata_tailareazcore
+#' @description Calculate MATA tail area weighted z-score based on Turek et al.
+#' @param thetai Each individual cluster relative risk.
+#' @param thetaa Stacked relative risk estimate.
+#' @param sd.thetai Standard deviation of estimated variance for each individual cluster relative risk.
+#' @param w_q Likelihood-weights for all Q<K potential clusters.
+#' @param alpha \eqn{\alpha}, probability of rejecting the null hypothesis when it is true.
+mata_tailareazscore <- function(thetai, thetaa, sd.thetai, w_q, alpha){
+    thetai <- as.vector(thetai)
+    zval <- (thetaa - thetai)/sd.thetai
     zpnorm <- pnorm(zval)
-   # print(str(zpnorm))
-#    print(str(w_q))
     w_zpnorm <- sum((w_q*zpnorm))-alpha
-    
 }
 
-matabounds.cluster <- function(thetaa,thetai, w_q, outExp, transform=c("none","log", "sqrt"), overdisp.est) {
+#'@title matabounds.cluster
+#'@description Calculate confidence bounds for stacked cluster relative risk estimates based on MATA (model-averaged tail area) intervals based on Turek et al.
+#'@param thetaa Stacked relative risk estimate for the cluster(s).
+#'@param thetai Individual relative risk estimates for each potential cluster.
+#'@param w_q Likelihood-weights for all Q<K potential clusters.
+#'@param outExp Expected counts.
+#'@param transform If a transformation is used. Default is \code{"none"}. Other transformation currently available are \code{"log"} and \code{"sqrt"}.
+#'@param overdisp.est Estimate of overdispersion (or underdispersion).
+#'@param conf.level Confidence level for the interval. Default is 0.95. 
+#'@return List: lower bound estimate, stacked cluster relative risk estimate, upper bound estimate
+#'@export
+#'
+matabounds.cluster <- function(thetaa,thetai, w_q, outExp, transform=c("none","log", "sqrt"), overdisp.est, conf.level=0.95) {
     if(is.null(transform)){
         none = matabounds_none.cluster(thetaa,thetai, w_q, outExp, overdisp.est)
     }
@@ -570,18 +556,44 @@ matabounds.cluster <- function(thetaa,thetai, w_q, outExp, transform=c("none","l
            sqrt = matabounds_sqrt.cluster(thetaa,thetai, w_q,  outExp, overdisp.est))
 }
 
-
-matabounds.cells <- function(thetaa,res, w_q, outExp, IC, transform=c("none","log", "sqrt"),tsparsematrix,overdisp.est, cellsix_out) {
+#'@title matabounds.cells
+#'@description Calculate confidence bounds for stacked cluster relative risk estimates based on MATA (model-averaged tail area) intervals based on Turek et al. for specific cells (given by \code{cellsix_out}).
+#'@param thetaa Stacked relative risk estimate for the cluster(s).
+#'@param res Resultant object from \code{detectclusters()}.
+#'@param w_q Likelihood-weights for all Q<K potential clusters.
+#'@param outExp Expected counts.
+#'@param IC Information criterion used. Currently available for BIC (QBIC) and AIC (QAIC).
+#'@param transform If a transformation is used. Default is \code{"none"}. Other transformation currently available are \code{"log"} and \code{"sqrt"}.
+#'@param tsparsemat Transpose of large sparsematrix where columns are potential clusters and rows are space-time locations.
+#'@param overdisp.est Estimate of overdispersion (or underdispersion).
+#'@param cellsix_out Indices of the cells to calculate bounds for.
+#'@param conf.level Confidence level for the interval. Default is 0.95. 
+#'@return List: lower bound estimate, stacked cluster relative risk estimate, upper bound estimate
+#'@export
+#'
+matabounds.cells <- function(thetaa,res, w_q, outExp, IC, transform=c("none","log", "sqrt"),tsparsemat,overdisp.est, cellsix_out, conf.level=0.95) {
     if(is.null(transform)){
-        none = matabounds_none.cells(thetaa, res, w_q, outExp, IC, tsparsematrix, overdisp.est, cellsix_out)
+        none = matabounds_none.cells(thetaa, res, w_q, outExp, IC, tsparsemat, overdisp.est, cellsix_out, conf.level)
     }
     switch(transform,
-           none = matabounds_none.cells(thetaa, res, w_q, outExp, IC, tsparsematrix, overdisp.est, cellsix_out),
-           log = matabounds_log.cells(thetaa, res, w_q, outExp, IC, tsparsematrix, overdisp.est, cellsix_out),
-           sqrt = matabounds_sqrt.cells(thetaa, res, w_q, outExp, IC, tsparsematrix, overdisp.est, cellsix_out))
+           none = matabounds_none.cells(thetaa, res, w_q, outExp, IC, tsparsemat, overdisp.est, cellsix_out, conf.level),
+           log = matabounds_log.cells(thetaa, res, w_q, outExp, IC, tsparsemat, overdisp.est, cellsix_out, conf.level),
+           sqrt = matabounds_sqrt.cells(thetaa, res, w_q, outExp, IC, tsparsemat, overdisp.est, cellsix_out, conf.level))
 }
 
-matabounds_none.cluster <- function(thetaa,thetai, w_q, outExp, overdisp.est) {
+#'@title matabounds_none.cluster
+#'@description Helper function for \code{matabounds.cluster}. Calculates confidence bounds for stacked cluster relative risk estimates based on MATA (model-averaged tail area) intervals based on Turek et al. with no transformation(\code{transform="none"}).
+#'@param thetaa Stacked relative risk estimate for the cluster(s).
+#'@param thetai Individual relative risk estimates for each potential cluster.
+#'@param w_q Likelihood-weights for all Q<K potential clusters.
+#'@param outExp Expected counts.
+#'@param overdisp.est Estimate of overdispersion (or underdispersion).
+#'@param conf.level Confidence level for the interval. Default is 0.95. 
+#'@return List: lower bound estimate, stacked cluster relative risk estimate, upper bound estimate
+#'@export
+#'
+matabounds_none.cluster <- function(thetaa,thetai, w_q, outExp, overdisp.est, conf.level=0.95) {
+    alpha <- (1-conf.level)/2
    # browser()
     if(!is.null(overdisp.est)){
         varthetai <- overdisp.est*(thetai/outExp)
@@ -589,43 +601,57 @@ matabounds_none.cluster <- function(thetaa,thetai, w_q, outExp, overdisp.est) {
         varthetai <- thetai/outExp
     }
     mataLB <- uniroot(f=mata_tailareazscore, interval=c(-10, 10),
-                      thetaii= thetai,
-                      se.thetaii=sqrt(varthetai@x),
-                      w_q=w_q, alpha=0.025, tol=1e-8)$root    
+                      thetai= thetai,
+                      sd.thetai=sqrt(varthetai@x),
+                      w_q=w_q, alpha=alpha, tol=1e-8)$root    
     
     mataUB <- uniroot(f=mata_tailareazscore, interval=c(-10, 10),
-                      thetaii= thetai,
-                      se.thetaii=sqrt(varthetai@x),
-                      w_q=w_q, alpha=1-0.025, tol=1e-8)$root 
+                      thetai= thetai,
+                      sd.thetai=sqrt(varthetai@x),
+                      w_q=w_q, alpha=1-alpha, tol=1e-8)$root 
     return(list(mata.LB = mataLB,
                 clusterMA = thetaa,
                 mata.UB = mataUB))
 }
 
-matabounds_none.cells <- function(thetaa, res, w_q,outExp, IC, tsparsematrix, overdisp.est,cellsix_out) {
-    #browser()
-    thetai <- res$Lambda_dens
+#'@title matabounds_none.cells
+#'@description Calculate confidence bounds for stacked cluster relative risk estimates based on MATA (model-averaged tail area) intervals based on Turek et al. for specific cells (given by \code{cellsix_out}) with no transformation(\code{transform="none"})..
+#'@param thetaa Stacked relative risk estimate for the cluster(s).
+#'@param res Resultant object from \code{detectclusters()}.
+#'@param w_q Likelihood-weights for all Q<K potential clusters.
+#'@param outExp Expected counts.
+#'@param IC Information criterion used. Currently available for BIC (QBIC) and AIC (QAIC).
+#'@param tsparsemat Transpose of large sparsematrix where columns are potential clusters and rows are space-time locations.
+#'@param overdisp.est Estimate of overdispersion (or underdispersion).
+#'@param cellsix_out Indices of the cells to calculate bounds for.
+#'@param conf.level Confidence level for the interval. Default is 0.95. 
+#'@return List: lower bound estimate, stacked cluster relative risk estimate, upper bound estimate
+#'@export
+#'
+matabounds_none.cells <- function(thetaa, res, w_q,outExp, IC, tsparsemat, overdisp.est,cellsix_out, conf.level=0.95) {
+    thetai <- res$Lambda_dense
+    alpha <- (1-conf.level)/2
     if(IC=="aic"){
         thetaa <- res$wLambda[res$selection.aic,][cellsix_out]
     } else {
         thetaa <- res$wLambda[res$selection.bic,][cellsix_out]
     }
     if(!is.null(overdisp.est)){
-        varthetai <- sapply(1:nrow(tsparsematrix), function(k) overdisp.est*(1/(thetai[k,]*outExp)))
+        varthetai <- sapply(1:nrow(tsparsemat), function(k) overdisp.est*(1/(thetai[k,]*outExp)))
     } else {
-        varthetai <- sapply(1:nrow(tsparsematrix), function(k) thetai[k,]/outExp)
+        varthetai <- sapply(1:nrow(tsparsemat), function(k) thetai[k,]/outExp)
     }
     mataLB <- sapply(1:length(cellsix_out),
                      function(k) uniroot(f=mata_tailareazscore, interval=c(-10, 10),
-                                         thetaii= thetai[,cellsix_out[k]],
-                                         se.thetaii=sqrt(varthetai[cellsix_out[k],]),
-                                         w_q=w_q, alpha=0.025, tol=1e-8)$root)
+                                         thetai= thetai[,cellsix_out[k]],
+                                         sd.thetai=sqrt(varthetai[cellsix_out[k],]),
+                                         w_q=w_q, alpha=alpha, tol=1e-8)$root)
     
     mataUB <- sapply(1:length(cellsix_out),
                      function(k) uniroot(f=mata_tailareazscore, interval=c(-10, 10),
-                                         thetaii= thetai[,cellsix_out[k]],
-                                         se.thetaii=sqrt(varthetai[cellsix_out[k],]),
-                                         w_q=w_q, alpha=1-0.025, tol=1e-8)$root)
+                                         thetai= thetai[,cellsix_out[k]],
+                                         sd.thetai=sqrt(varthetai[cellsix_out[k],]),
+                                         w_q=w_q, alpha=1-alpha, tol=1e-8)$root)
     
     return(list(mata.LB = mataLB,
                 clusterMA = thetaa,
@@ -633,8 +659,19 @@ matabounds_none.cells <- function(thetaa, res, w_q,outExp, IC, tsparsematrix, ov
 }
 
 
-
-matabounds_sqrt.cluster <- function(thetaa,thetai, w_q, outExp, overdisp.est) {
+#'@title matabounds_sqrt.cluster
+#'@description Helper function for \code{matabounds.cluster}. Calculates confidence bounds for stacked cluster relative risk estimates based on MATA (model-averaged tail area) intervals based on Turek et al. with square root transformation(\code{transform="sqrt"}).
+#'@param thetaa Stacked relative risk estimate for the cluster(s).
+#'@param thetai Individual relative risk estimates for each potential cluster.
+#'@param w_q Likelihood-weights for all Q<K potential clusters.
+#'@param outExp Expected counts.
+#'@param overdisp.est Estimate of overdispersion (or underdispersion).
+#'@param conf.level Confidence level for the interval. Default is 0.95. 
+#'@return List: lower bound estimate, stacked cluster relative risk estimate, upper bound estimate
+#'@export
+#'
+matabounds_sqrt.cluster <- function(thetaa,thetai, w_q, outExp, overdisp.est, conf.level=0.95) {
+    alpha <- (1-conf.level)/2
     if(!is.null(overdisp.est)){
         varthetai <- overdisp.est*(1/(4*outExp))
     } else {
@@ -643,19 +680,34 @@ matabounds_sqrt.cluster <- function(thetaa,thetai, w_q, outExp, overdisp.est) {
     mataLB <- uniroot(f=mata_tailareazscore, interval=c(-10, 10),
                       thetaii= sqrt(thetai),
                       se.thetaii=sqrt(Tvarthetai@x),
-                      w_q=w_q, alpha=0.025, tol=1e-8)$root
+                      w_q=w_q, alpha=alpha, tol=1e-8)$root
     
     mataUB <- uniroot(f=mata_tailareazscore, interval=c(-10, 10),
-                      thetaii= sqrt(thetai),
-                      se.thetaii=sqrt(Tvarthetai@x),
-                      w_q=w_q, alpha=1-0.025, tol=1e-8)$root
+                      thetai= sqrt(thetai),
+                      sd.thetai=sqrt(Tvarthetai@x),
+                      w_q=w_q, alpha=1-alpha, tol=1e-8)$root
     return(list(matasqrt.LB = (mataLB)^2,
                 clusterMA = thetaa,
                 matasqrt.UB = (mataUB)^2))
 }
 
-matabounds_sqrt.cells <- function(thetaa, res, w_q,outExp, IC, tsparsematrix, overdisp.est,cellsix_out) {
+#'@title matabounds_sqrt.cells
+#'@description Calculate confidence bounds for stacked cluster relative risk estimates based on MATA (model-averaged tail area) intervals based on Turek et al. for specific cells (given by \code{cellsix_out}) with square root transformation(\code{transform="sqrt"}).
+#'@param thetaa Stacked relative risk estimate for the cluster(s).
+#'@param res Resultant object from \code{detectclusters()}.
+#'@param w_q Likelihood-weights for all Q<K potential clusters.
+#'@param outExp Expected counts.
+#'@param IC Information criterion used. Currently available for BIC (QBIC) and AIC (QAIC).
+#'@param tsparsemat Transpose of large sparsematrix where columns are potential clusters and rows are space-time locations.
+#'@param overdisp.est Estimate of overdispersion (or underdispersion).
+#'@param cellsix_out Indices of the cells to calculate bounds for.
+#'@param conf.level Confidence level for the interval. Default is 0.95. 
+#'@return List: lower bound estimate, stacked cluster relative risk estimate, upper bound estimate
+#'@export
+#'
+matabounds_sqrt.cells <- function(thetaa, res, w_q,outExp, IC, tsparsemat, overdisp.est,cellsix_out, conf.level=0.95) {
     thetai <- res$Lambda_dens
+    alpha <- (1-conf.level)/2
     if(IC=="aic"){
         thetaa <- res$wLambda[res$selection.aic,][cellsix_out]
     } else {
@@ -668,21 +720,33 @@ matabounds_sqrt.cells <- function(thetaa, res, w_q,outExp, IC, tsparsematrix, ov
     }
         mataLB <- sapply(1:length(cellsix_out), 
                          function(k) uniroot(f=mata_tailareazscore, interval=c(-10, 10),
-                                             thetaii= sqrt(thetai[,cellsix_out[k]]),
-                                             se.thetaii=sqrt(Tvarthetai[k]),
-                                             w_q=w_q, alpha=0.025, tol=1e-8)$root)
+                                             thetai= sqrt(thetai[,cellsix_out[k]]),
+                                             sd.thetai=sqrt(Tvarthetai[k]),
+                                             w_q=w_q, alpha=conf.level, tol=1e-8)$root)
         
         mataUB <- sapply(1:length(cellsix_out),
                          function(k) uniroot(f=mata_tailareazscore, interval=c(-10, 10),
-                                             thetaii= sqrt(thetai[,cellsix_out[k]]),
-                                             se.thetaii=sqrt(Tvarthetai[k]),
-                                             w_q=w_q, alpha=1-0.025, tol=1e-8)$root)
+                                             thetai= sqrt(thetai[,cellsix_out[k]]),
+                                             sd.thetai=sqrt(Tvarthetai[k]),
+                                             w_q=w_q, alpha=1-conf.level, tol=1e-8)$root)
     return(list(matasqrt.LB = (mataLB)^2,
                 clusterMA = thetaa,
                 matasqrt.UB = (mataUB)^2))
 }
 
-matabounds_log.cluster <- function(thetaa,thetai, w_q, outExp, overdisp.est) {
+#'@title matabounds_log.cluster
+#'@description Helper function for \code{matabounds.cluster}. Calculates confidence bounds for stacked cluster relative risk estimates based on MATA (model-averaged tail area) intervals based on Turek et al. with natural log transformation(\code{transform="log"}).
+#'@param thetaa Stacked relative risk estimate for the cluster(s).
+#'@param thetai Individual relative risk estimates for each potential cluster.
+#'@param w_q Likelihood-weights for all Q<K potential clusters.
+#'@param outExp Expected counts.
+#'@param overdisp.est Estimate of overdispersion (or underdispersion).
+#'@param conf.level Confidence level for the interval. Default is 0.95. 
+#'@return List: lower bound estimate, stacked cluster relative risk estimate, upper bound estimate
+#'@export
+#'
+matabounds_log.cluster <- function(thetaa,thetai, w_q, outExp, overdisp.est, conf.level=0.95) {
+    alpha <- (1-conf.level)/2
     if(!is.null(overdisp.est)){
         logTvarthetai <-  overdisp.est*(1/(thetai*outExp)) 
     } else {
@@ -690,48 +754,370 @@ matabounds_log.cluster <- function(thetaa,thetai, w_q, outExp, overdisp.est) {
     }
     logTvarthetai <- 1/(thetai*outExp)   
     mataLB <- uniroot(f=mata_tailareazscore, interval=c(-10, 10),
-                      thetaii= log(thetai),
-                      se.thetaii=sqrt(logTvarthetai@x),
-                      w_q=w_q, alpha=0.025, tol=1e-8)$root
+                      thetai= log(thetai),
+                      sd.thetai=sqrt(logTvarthetai@x),
+                      w_q=w_q, alpha=alpha, tol=1e-8)$root
     
     mataUB <- uniroot(f=mata_tailareazscore, interval=c(-10, 10),
-                      thetaii= log(thetai),
-                      se.thetaii=sqrt(logTvarthetai@x),
-                      w_q=w_q, alpha=1-0.025, tol=1e-8)$root
+                      thetai= log(thetai),
+                      sd.thetai=sqrt(logTvarthetai@x),
+                      w_q=w_q, alpha=1-alpha, tol=1e-8)$root
     return(list(matalog.LB = exp(mataLB),
                 clusterMA = thetaa,
                 matalog.UB = exp(mataUB)))
 }
 
-matabounds_log.cells<- function(thetaa, res, w_q,outExp, IC, tsparsematrix, overdisp.est,cellsix_out) {
-    thetai <- res$Lambda_dens
+#'@title matabounds_log.cells
+#'@description Calculate confidence bounds for stacked cluster relative risk estimates based on MATA (model-averaged tail area) intervals based on Turek et al. for specific cells (given by \code{cellsix_out}) with natural log transformation(\code{transform="log"}).
+#'@param thetaa Stacked relative risk estimate for the cluster(s).
+#'@param res Resultant object from \code{detectclusters()}.
+#'@param w_q Likelihood-weights for all Q<K potential clusters.
+#'@param outExp Expected counts.
+#'@param IC Information criterion used. Currently available for BIC (QBIC) and AIC (QAIC).
+#'@param tsparsemat Transpose of large sparsematrix where columns are potential clusters and rows are space-time locations.
+#'@param overdisp.est Estimate of overdispersion (or underdispersion).
+#'@param cellsix_out Indices of the cells to calculate bounds for.
+#'@param conf.level Confidence level for the interval. Default is 0.95. 
+#'@return List: lower bound estimate, stacked cluster relative risk estimate, upper bound estimate
+#'@export
+#'
+matabounds_log.cells<- function(thetaa, res, w_q,outExp, IC, tsparsemat, overdisp.est,cellsix_out, conf.level=0.95) {
+    thetai <- res$Lambda_dense
+    alpha <- (1-conf.level)/2
     if(IC=="aic"){
         thetaa <- res$wLambda[res$selection.aic,][cellsix_out]
     } else {
         thetaa <- res$wLambda[res$selection.bic,][cellsix_out]
     }
     if(!is.null(overdisp.est)){
-        logTvarthetai <- sapply(1:nrow(tsparsematrix), function(k) overdisp.est*(1/(thetai[k,]*outExp)))
+        logTvarthetai <- sapply(1:nrow(tsparsemat), function(k) overdisp.est*(1/(thetai[k,]*outExp)))
     } else{
-        logTvarthetai <- sapply(1:nrow(tsparsematrix), function(k) 1/(thetai[k,]*outExp))
+        logTvarthetai <- sapply(1:nrow(tsparsemat), function(k) 1/(thetai[k,]*outExp))
     }
     
 
     mataLB <- sapply(1:length(cellsix_out),
                      function(k) uniroot(f=mata_tailareazscore, interval=c(-10, 10),
-                                         thetaii= log(thetai[,cellsix_out[k]]),
-                                         se.thetaii=sqrt(logTvarthetai[cellsix_out[k],]),
-                                         w_q=w_q, alpha=0.025, tol=1e-8)$root)
+                                         thetai= log(thetai[,cellsix_out[k]]),
+                                         sd.thetai=sqrt(logTvarthetai[cellsix_out[k],]),
+                                         w_q=w_q, alpha=alpha, tol=1e-8)$root)
     mataUB <- sapply(1:length(cellsix_out),
                      function(k) uniroot(f=mata_tailareazscore, interval=c(-10, 10),
-                                         thetaii= log(thetai[,cellsix_out[k]]),
-                                         se.thetaii=sqrt(logTvarthetai[cellsix_out[k],]),
-                                         w_q=w_q, alpha=1-0.025, tol=1e-8)$root)
+                                         thetai= log(thetai[,cellsix_out[k]]),
+                                         sd.thetai=sqrt(logTvarthetai[cellsix_out[k],]),
+                                         w_q=w_q, alpha=1-alpha, tol=1e-8)$root)
     return(list(matalog.LB = exp(mataLB),
                 clusterMA = thetaa,
                 matalog.UB = exp(mataUB)))
 }
 
+
+#'@title nonma.cluster
+#'@description Calculate confidence bounds for stacked cluster relative risk estimates assuming the cluster was known \textit{a priori}.
+#'@param thetaa Stacked relative risk estimate for the cluster(s)
+#'@param thetai Individual relative risk estimates for each potential cluster.
+#'@param res Resultant object from \code{detectclusters()}.
+#'@param w Likelihood-weights for all potential clusters.
+#'@param id_ic The number of clusters identified either by BIC (QBIC) or AIC (QAIC).
+#'@param outExp_out Expected counts for each potential cluster.
+#'@param IC Information criterion used. Currently available for BIC (QBIC) and AIC (QAIC). This should match \code{id_ic} argument.
+#'@param transform If a transformation is used. Default is \code{"none"}. Other transformation currently available is \code{"log"}.
+#'@param byloc Boolean. Use \code{TRUE} when stacking by location. Use \code{FALSE} when stacking by potential cluster.
+#'@param conf.level Confidence level for the interval. Default is 0.95. 
+#'@return List: lower bound estimate, stacked cluster relative risk estimate, upper bound estimate
+#'@export
+#'
+nonma.cluster <- function(thetaa,thetai, res,w,id_ic, outExp_out,IC, transform, byloc=TRUE, conf.level=0.95){
+    critval <- qnorm(1-(1-conf.level)/2)
+    if(byloc==FALSE){
+        if(transform=="log"){
+            if(IC=="aic") {
+                thetai<- unique(res$Lambda_dense[res$maxid[res$selection.aic],])[2]
+                se_thetai<- sqrt(1/(thetai*outExp_out[res$maxid[res$selection.aic]]))
+                
+            } else {
+                thetai<- unique(res$Lambda_dense[res$maxid[res$selection.bic],])[2]
+                se_thetai<- sqrt(thetai/outExp_out[res$maxid[res$selection.bic]])
+                
+            }
+            nonma.theta.time <- system.time(nonma.theta <- cbind(lb=exp(log(thetaa)-critval*se_thetai), 
+                                                                 clusterMA = thetaa,
+                                                                 ub=exp(log(thetaa)+critval*se_thetai)))
+        } else {
+            if(IC=="aic") {
+                thetai <- unique(res$Lambda_dense[res$maxid[res$selection.aic],])[2]
+                se_thetai <- sqrt(thetai/outExp_out[res$maxid[res$selection.aic]])
+                
+            } else {
+                thetai <- unique(res$Lambda_dense[res$maxid[res$selection.bic],])[2]
+                se_thetai <- sqrt(thetai/outExp_out[res$maxid[res$selection.bic]])
+            }
+            nonma.theta.time <- system.time(nonma.theta <- cbind(lb=thetaa-critval*se_thetai, 
+                                                                 clusterMA = thetaa,
+                                                                 ub=thetaa+critval*se_thetai))
+        }
+    } else {
+      # print("by loc")
+        if(transform=="log"){
+            if(IC=="aic") {
+                thetai <- unique(res$Lambda_dense[,res$maxid[res$selection.aic]])[2]
+                se_thetai <- sqrt(1/(thetai*outExp_out[res$maxid[res$selection.aic]]))
+                
+            } else {
+                thetai <- unique(res$Lambda_dense[,res$maxid[res$selection.bic]])[2]
+                se_thetai <- sqrt(1/(thetai*outExp_out[res$maxid[res$selection.bic]]))
+                
+            }
+            nonma.theta.time <-system.time(nonma.theta <-  cbind(lb=exp(log(thetaa)-critval*se_thetai), 
+                                                                 clusterMA = thetaa,
+                                                                 ub=exp(log(thetaa)+critval*se_thetai)))
+        } else {
+            if(IC=="aic") {
+                thetai <-unique(res$Lambda_dense[,res$maxid[res$selection.aic]])[2]
+                se_thetai <- sqrt(thetai/outExp_out[res$maxid[res$selection.aic]])
+                
+            } else {
+                thetai <- unique(res$Lambda_dense[,res$maxid[res$selection.bic]])[2]
+                se_thetai <- sqrt(thetai/outExp_out[res$maxid[res$selection.bic]])
+                
+            }
+            nonma.theta.time <- system.time(nonma.theta <- cbind(lb=thetaa-critval*se_thetai, 
+                                                                 clusterMA = thetaa,
+                                                                 ub=thetaa+critval*se_thetai))
+            
+        }
+    }
+    return(list(nonma.theta.time = nonma.theta.time[[3]],
+                nonma.theta = nonma.theta))
+}
+
+#'@title nonma.cells
+#'@description Calculate confidence bounds for stacked cluster relative risk estimates assuming the cluster was known \textit{a priori}  for specific cells (given by \code{cellsix_out}).
+#'@param thetaa Stacked relative risk estimate for the cluster(s)
+#'@param res Resultant object from \code{detectclusters()}.
+#'@param w Likelihood-weights for all potential clusters.
+#'@param id_ic The number of clusters identified either by BIC (QBIC) or AIC (QAIC).
+#'@param outExp_out Expected counts for each potential cluster.
+#'@param IC Information criterion used. Currently available for BIC (QBIC) and AIC (QAIC). This should match \code{id_ic} argument.
+#'@param transform If a transformation is used. Default is \code{"none"}. Other transformation currently available is \code{"log"}.
+#'@param byloc Boolean. Use \code{TRUE} when stacking by location. Use \code{FALSE} when stacking by potential cluster.
+#'@param cellrisk_wt_out Stacked relative risk estimates for cells indicted by \code{cellsix_out}.
+#'@param cellsix_out Indices of the cells to calculate bounds for.
+#'@param conf.level Confidence level for the interval. Default is 0.95. 
+#'@return List: lower bound estimate, stacked cluster relative risk estimate, upper bound estimate
+#'@export
+#'
+nonma.cells <- function(thetaa, thetai,res,w,id_ic, outExp_out,IC, transform, byloc=TRUE, cellrisk_wt_out=NULL, cellsix_out, conf.level=0.95){
+    critval <- qnorm(1-(1-conf.level)/2)
+    if(byloc==FALSE){
+        if(transform=="log"){
+            if(IC=="aic") {
+                thetai <- res$Lambda_dense[res$maxid[res$selection.aic],][cellsix_out]
+                se_thetai <- sqrt(1/(thetai*outExp_out))
+                clusterMA <- res$wLambda[res$selection.aic,][cellsix_out]
+                
+            } else {
+                thetai <- res$Lambda_dense[res$maxid[res$selection.bic],][cellsix_out]
+                se_thetai <- sqrt(1/(thetai*outExp_out))
+                clusterMA <- res$wLambda[res$selection.bic,][cellsix_out]
+            }
+            nonma.theta.time <- system.time(nonma.theta <- cbind(lb=exp(log(clusterMA)-critval*se_thetai), 
+                                                                 clusterMA = clusterMA,
+                                                                 ub=exp(log(clusterMA)+critval*se_thetai)))
+        }else {
+            if(IC=="aic") {
+                thetai <- res$Lambda_dense[res$maxid[res$selection.aic],][cellsix_out]
+                se_thetai <- sqrt(thetai/outExp_out)
+                clusterMA <- res$wLambda[res$selection.aic,][cellsix_out]
+            } else {
+                thetai <- res$Lambda_dense[res$maxid[res$selection.bic],][cellsix_out]
+                se_thetai <- sqrt(thetai/outExp_out)
+                clusterMA <- res$wLambda[res$selection.bic,][cellsix_out]
+            }
+            nonma.theta.time <- system.time(nonma.theta <- cbind(lb=clusterMA-critval*se_thetai, 
+                                                                 clusterMA = clusterMA,
+                                                                 ub=clusterMA+critval*se_thetai))
+        } 
+        
+
+    }else {
+        if(transform=="log"){
+            if(IC=="aic") {
+                se_thetai <- sqrt(1/(cellrisk_wt_out*outExp_out))
+            } else {
+                se_thetai <- sqrt(1/(cellrisk_wt_out*outExp_out))
+            }
+            nonma.theta.time <- system.time(nonma.theta <- cbind(lb=exp(log(cellrisk_wt_out)-critval*se_thetai), 
+                                                                 clusterMA = cellrisk_wt_out,
+                                                                 ub=exp(log(cellrisk_wt_out) +critval*se_thetai)))
+        } else {
+            if(IC=="aic") {
+                se_thetai <- sqrt(cellrisk_wt_out/outExp_out)
+            } else {
+                se_thetai <- sqrt(cellrisk_wt_out/outExp_out)
+            }
+            nonma.theta.time <- system.time(nonma.theta <- cbind(lb=cellrisk_wt_out-critval*se_thetai, 
+                                                                 clusterMA = cellrisk_wt_out,
+                                                                 ub=cellrisk_wt_out +critval*se_thetai))
+        }
+    }
+    return(list(nonma.theta.time = nonma.theta.time[[3]],
+                nonma.theta = nonma.theta))
+}
+
+
+
+
+#'@title nonma_asymp.cluster
+#'@description Calculate confidence bounds for stacked cluster relative risk estimates assuming the cluster was known \textit{a priori} and the sampling distribution is asymptotic.
+#'@param thetaa Stacked relative risk estimate for the cluster(s)
+#'@param thetai Individual relative risk estimates for each potential cluster.
+#'@param res Resultant object from \code{detectclusters()}.
+#'@param w Likelihood-weights for all potential clusters.
+#'@param id_ic The number of clusters identified either by BIC (QBIC) or AIC (QAIC).
+#'@param outExp_out Expected counts for each potential cluster.
+#'@param IC Information criterion used. Currently available for BIC (QBIC) and AIC (QAIC). This should match \code{id_ic} argument.
+#'@param transform If a transformation is used. Default is \code{"none"}. Other transformation currently available is \code{"log"}.
+#'@param byloc Boolean. Use \code{TRUE} when stacking by location. Use \code{FALSE} when stacking by potential cluster.
+#'@param conf.level Confidence level for the interval. Default is 0.95. 
+#'@return List: lower bound estimate, stacked cluster relative risk estimate, upper bound estimate
+#'@export
+#'
+nonma_asymp.cluster <- function(thetaa, thetai,res, w,id_ic, outObs_out,IC, transform, byloc=TRUE, conf.level=0.95){
+    critval <- qnorm(1-(1-conf.level)/2)
+    if(byloc==FALSE){
+        #print("by pc")
+        if(transform=="log"){
+            if(IC=="aic") {
+                thetai <- res$Lambda_dense[res$maxid[res$selection.aic],][2]
+                se_thetai_asymp <- sqrt(1/(thetaa*outObs_out[res$maxid[res$selection.aic]]))
+            } else {
+                thetai <- res$Lambda_dense[res$maxid[res$selection.bic],][2]
+                se_thetai_asymp <- sqrt(1/(thetai*outObs_out[res$maxid[res$selection.bic]]))
+            }
+            nonma_asymp.theta.time <- system.time(nonma_asymp.theta <- cbind(lbasymp=exp(log(thetaa)-critval*se_thetai_asymp), 
+                                                                             clusterMA = thetaa,
+                                                                             ubasymp=exp(log(thetaa)+critval*se_thetai_asymp)))
+        } else {
+            if(IC=="aic") {
+                thetai <- res$Lambda_dense[res$maxid[res$selection.aic],][2]
+                se_thetai_asymp <- sqrt(thetai/outObs_out[res$maxid[res$selection.aic]])
+            } else {
+                thetai <-  res$Lambda_dense[res$maxid[res$selection.bic],][2]
+                se_thetai_asymp <- sqrt(thetai/outObs_out[res$maxid[res$selection.bic]])
+            }
+            nonma_asymp.theta.time <- system.time(nonma_asymp.theta <- cbind(lbasymp=thetaa-critval*se_thetai_asymp, 
+                                                                             clusterMA = thetaa,
+                                                                             ubasymp=thetaa+critval*se_thetai_asymp))
+        }
+    } else {
+        #print("by LOC")
+        if(transform=="log"){
+            if(IC=="aic") {
+                thetai <- unique(res$Lambda_dense[,res$maxid[res$selection.aic]])[2]
+                se_thetai_asymp <- sqrt(1/(thetai*outObs_out[res$maxid[res$selection.aic]]))    
+            } else {
+                thetai <- unique(res$Lambda_dense[,res$maxid[res$selection.bic]])[2]
+                se_thetai_asymp <- sqrt(1/(thetai*outObs_out[res$maxid[res$selection.bic]]))    
+            }
+            nonma_asymp.theta.time <- system.time(nonma_asymp.theta <- cbind(lbasymp=exp(log(thetaa)-critval*se_thetai_asymp), 
+                                                                             clusterMA = thetaa,
+                                                                             ubasymp=exp(log(thetaa)+critval*se_thetai_asymp)))
+        } else {
+            if(IC=="aic") {
+                se_thetai_asymp <- sqrt(thetaa/outObs_out[res$maxid[res$selection.aic]]) 
+            } else{
+                se_thetai_asymp <- sqrt(thetaa/outObs_out[res$maxid[res$selection.bic]]) 
+            }
+            nonma_asymp.theta.time <- system.time(nonma_asymp.theta <- cbind(lbasymp=thetaa-critval*se_thetai_asymp, 
+                                                                             clusterMA = thetaa,
+                                                                             ubasymp=thetaa+critval*se_thetai_asymp))
+        }
+    }
+    return(list(nonma_asymp.theta.time = nonma_asymp.theta.time[[3]],
+                nonma_asymp.theta = nonma_asymp.theta))
+}
+
+#'@title nonma_asymp.cells
+#'@description Calculate confidence bounds for stacked cluster relative risk estimates assuming the cluster was known \textit{a priori} and the sampling distribution is asymptotic for specific cells (given by \code{cellsix_out}).
+#'@param thetaa Stacked relative risk estimate for the cluster(s)
+#'@param thetai Individual relative risk estimates for each potential cluster.
+#'@param res Resultant object from \code{detectclusters()}.
+#'@param w Likelihood-weights for all potential clusters.
+#'@param id_ic The number of clusters identified either by BIC (QBIC) or AIC (QAIC).
+#'@param outExp_out Expected counts for each potential cluster.
+#'@param IC Information criterion used. Currently available for BIC (QBIC) and AIC (QAIC). This should match \code{id_ic} argument.
+#'@param transform If a transformation is used. Default is \code{"none"}. Other transformation currently available is \code{"log"}.
+#'@param byloc Boolean. Use \code{TRUE} when stacking by location. Use \code{FALSE} when stacking by potential cluster.
+#'@param cellrisk_wt_out Stacked relative risk estimates for cells indicted by \code{cellsix_out}.
+#'@param cellsix_out Indices of the cells to calculate bounds for.
+#'@param conf.level Confidence level for the interval. Default is 0.95. 
+#'@return List: lower bound estimate, stacked cluster relative risk estimate, upper bound estimate.
+#'@export
+#'
+nonma_asymp.cells <-function(thetaa, thetai,res, w,id_ic, outObs_out,IC, transform, byloc=TRUE, cellrisk_wt_out, cellsix_out, conf.level=0.95){
+    critval <- qnorm(1-(1-conf.level)/2)
+    if(byloc==FALSE){
+        #print("by PC")
+        if(transform=="log"){
+            if(IC=="aic") {
+                thetai <- res$Lambda_dense[res$maxid[res$selection.aic],][cellsix_out]
+                se_thetai <- sqrt(1/(thetai*outObs_out))
+                clusterMA <- res$wLambda[res$selection.aic,][cellsix_out]
+                
+            } else {
+                thetai <- res$Lambda_dense[res$maxid[res$selection.bic],][cellsix_out]
+                se_thetai <- sqrt(1/(thetai*outObs_out))
+                clusterMA <- res$wLambda[res$selection.bic,][cellsix_out]
+            }
+            nonma_asymp.theta.time <- system.time(nonma_asymp.theta <- cbind(lb=exp(log(clusterMA)-critval*se_thetai), 
+                                                                 clusterMA = clusterMA,
+                                                                 ub=exp(log(clusterMA)+critval*se_thetai)))
+        }else {
+            if(IC=="aic") {
+                thetai <- res$Lambda_dense[res$maxid[res$selection.aic],][cellsix_out]
+                se_thetai <- sqrt(thetai/outObs_out)
+                clusterMA <- res$wLambda[res$selection.aic,][cellsix_out]
+            } else {
+                thetai <- res$Lambda_dense[res$maxid[res$selection.bic],][cellsix_out]
+                se_thetai <- sqrt(thetai/outObs_out)
+                clusterMA <- res$wLambda[res$selection.bic,][cellsix_out]
+            }
+            nonma_asymp.theta.time <- system.time(nonma_asymp.theta <- cbind(lb=clusterMA-critval*se_thetai, 
+                                                                 clusterMA = clusterMA,
+                                                                 ub=clusterMA+critval*se_thetai))
+        } 
+    }else {
+       # print("by loc")
+        #print(cellrisk_wt_out)
+        if(transform=="log"){
+            if(IC=="aic") {
+                se_thetai <- sqrt(1/(cellrisk_wt_out*outObs_out))
+            } else {
+                se_thetai <- sqrt(1/(cellrisk_wt_out*outObs_out))
+            }
+            nonma_asymp.theta.time <- system.time(nonma_asymp.theta <- cbind(lb=exp(log(cellrisk_wt_out)-critval*se_thetai), 
+                                                                 clusterMA = cellrisk_wt_out,
+                                                                 ub=exp(log(cellrisk_wt_out) +critval*se_thetai)))
+        } else {
+            if(IC=="aic") {
+                se_thetai <- sqrt(cellrisk_wt_out/outObs_out)
+            } else {
+                se_thetai <- sqrt(cellrisk_wt_out/outObs_out)
+            }
+            nonma_asymp.theta.time <- system.time(nonma_asymp.theta <- cbind(lb=cellrisk_wt_out-critval*se_thetai, 
+                                                                 clusterMA = cellrisk_wt_out,
+                                                                 ub=cellrisk_wt_out +critval*se_thetai))
+        }
+    }
+    return(list(nonma_asymp.theta.time = nonma_asymp.theta.time[[3]],
+                nonma_asymp.theta = nonma_asymp.theta))
+}
+
+
+#' @title selectuniqRR
+#' @description Helper function for \code{calcbounds()}. Identifies unique relative risks across potential clusters that are not equal to 1.
+#' @param uniqRRs Matrix of unique relative risks for each potential cluster and background.
 selectuniqRR <- function(uniqRRs){
     clusterRR_i <- rep(NA, nrow(uniqRRs))
     flag1 <- sapply(1:nrow(uniqRRs), function(k) length(unique(uniqRRs[k,])))
@@ -742,481 +1128,383 @@ selectuniqRR <- function(uniqRRs){
     
 }
 
-##############################################################################
-#SIMULATION HELPER FUNCTIONS
-##############################################################################
-#cellsix if TRUE, then perform bounds for cluster RR. Otherwise cellsix is the index of each cell and bounds calcuated for each cell
-#nonma
 
-nonma.cluster <- function(cluster_thetaa,res, clusterRR_ilarge,wslarge,idix, outExp_out,IC, transform, byloc=TRUE){
-    if(byloc==FALSE){
-        #browser()
-        print("by pc")
-        if(transform=="log"){
-            if(IC=="aic") {
-                clusterRRlarge <- unique(res$Lambda_dense[res$maxid[res$selection.aic],])[2]
-                se_clusterRRlarge <- sqrt(1/(clusterRRlarge*outExp_out[res$maxid[res$selection.aic]]))
-                
-            } else {
-                clusterRRlarge <- unique(res$Lambda_dense[res$maxid[res$selection.bic],])[2]
-                se_clusterRRlarge <- sqrt(clusterRRlarge/outExp_out[res$maxid[res$selection.bic]])
-                
-            }
-            nonma.theta.time <- system.time(nonma.theta <- cbind(lb=exp(log(cluster_thetaa)-1.96*se_clusterRRlarge), 
-                                                                 clusterMA = cluster_thetaa,
-                                                                 ub=exp(log(cluster_thetaa)+1.96*se_clusterRRlarge)))
-        } else {
-            if(IC=="aic") {
-                clusterRRlarge <- unique(res$Lambda_dense[res$maxid[res$selection.aic],])[2]
-                se_clusterRRlarge <- sqrt(clusterRRlarge/outExp_out[res$maxid[res$selection.aic]])
-                
-            } else {
-                clusterRRlarge <- unique(res$Lambda_dense[res$maxid[res$selection.bic],])[2]
-                se_clusterRRlarge <- sqrt(clusterRRlarge/outExp_out[res$maxid[res$selection.bic]])
-            }
-            nonma.theta.time <- system.time(nonma.theta <- cbind(lb=cluster_thetaa-1.96*se_clusterRRlarge, 
-                                                                 clusterMA = cluster_thetaa,
-                                                                 ub=cluster_thetaa+1.96*se_clusterRRlarge))
-        }
-    } else {
-        print("by loc")
-        if(transform=="log"){
-            if(IC=="aic") {
-                clusterRRlarge <- unique(res$Lambda_dense[,res$maxid[res$selection.aic]])[2]
-                se_clusterRRlarge <- sqrt(1/(clusterRRlarge*outExp_out[res$maxid[res$selection.aic]]))
-                
-            } else {
-                clusterRRlarge <- unique(res$Lambda_dense[,res$maxid[res$selection.bic]])[2]
-                se_clusterRRlarge <- sqrt(1/(clusterRRlarge*outExp_out[res$maxid[res$selection.bic]]))
-                
-            }
-            nonma.theta.time <-system.time(nonma.theta <-  cbind(lb=exp(log(cluster_thetaa)-1.96*se_clusterRRlarge), 
-                                                                 clusterMA = cluster_thetaa,
-                                                                 ub=exp(log(cluster_thetaa)+1.96*se_clusterRRlarge)))
-        } else {
-            if(IC=="aic") {
-                clusterRRlarge <-unique(res$Lambda_dense[,res$maxid[res$selection.aic]])[2]
-                se_clusterRRlarge <- sqrt(clusterRRlarge/outExp_out[res$maxid[res$selection.aic]])
-                
-            } else {
-                clusterRRlarge <- unique(res$Lambda_dense[,res$maxid[res$selection.bic]])[2]
-                se_clusterRRlarge <- sqrt(clusterRRlarge/outExp_out[res$maxid[res$selection.bic]])
-                
-            }
-            nonma.theta.time <- system.time(nonma.theta <- cbind(lb=cluster_thetaa-1.96*se_clusterRRlarge, 
-                                                                 clusterMA = cluster_thetaa,
-                                                                 ub=cluster_thetaa+1.96*se_clusterRRlarge))
-            
-        }
+#'@title calcbounds
+#'@description Calculates lower and upper confidence bounds.
+#'@param id_ic The number of clusters identified either by BIC (QBIC) or AIC (QAIC).
+#'@param IC Information criterion used. Currently available for BIC (QBIC) and AIC (QAIC). This should match \code{id_ic} argument.
+#'@param res Resultant object from \code{detectclusters()}.
+#'@param byloc Boolean. Use \code{TRUE} when stacking by location. Use \code{FALSE} when stacking by potential cluster.
+#'@param Ex Expected counts (unstandardized) for each cell.
+#'@param Obs Observed counts for each cell.
+#'@param target Whether bounds should be calculated for the cluster \code{"cluster} or specific cells \code{"cells"}.
+#'@param cellsix_out Indices of the cells to calculate bounds for. If \code{target=TRUE}, then cell indices for which to calculate bounds must be provided. \code{NULL} corresponds to \code{target="cluster"}. Default is \code{NULL}.
+#'@param sparsemat Large sparsematrix where rows are potential clusters and columns are space-time locations.
+#'@param conf.level Confidence level for the interval. Default is 0.95. 
+#'@details The confidence bounds methods returned are:
+#'\itemize{
+#'\item \code{nonma}: Non-stacked (assumes the cluster was known \textit{a priori}).
+#'\item \code{nonmaTlog}: Non-stacked  (assumes the cluster was known \textit{a priori}); natural log-transformed.
+#'\item \code{nonma_asymp}: Non-stacked (assumes the cluster was known \textit{a priori}) assuming asymptotic sampling distribution.
+#'\item \code{nonma_asympTlog}: Non-stacked (assumes the cluster was known \textit{a priori}) assuming asymptotic sampling distribution; natural log-transformed.
+#'\item \code{buck}: Stacked confidence bounds based on Buckland et al.
+#'\item \code{buckTlog}: Stacked confidence bounds based on Buckland et al.; natural log-transformed.
+#'\item \code{maw}: Model-average weighted confidence bounds based on Burnham and Anderson
+#'\item \code{mawTlog}: Model-average weighted confidence bounds based on Burnham and Anderson.
+#'\item \code{mata}: Model-average tail area (MATA) intervals based on Turek et al.
+#'\item \code{mataTlog}: Model-average tail area (MATA) intervals based on Turek et al.; natural log-transformed.
+#'
+#'}
+calcbounds <- function(id_ic, IC, res, byloc, Ex, Obs,target=c("cluster", "cells"), cellsix=NULL, sparsemat, conf.level=0.95){
+  IC <- tolower(IC)
+  if(!is.null(cellsix) & is.null(sparsemat)){
+    stop("You must provide the sparsemat when calculating rates for each cell.")
+  }
+  if(target=="cells" & is.null(cellsix)){
+    stop("For cell-wise estimates, you must provide the index of the cells of interest")
+  } 
+  thetai_uniq <- sapply(1:nrow(res$Lambda_dense), function(k) unique(res$Lambda_dense[k,]))
+  thetai_uniqi <- as.matrix(do.call(rbind, thetai_uniq), ncol=2)
+  thetai <- selectuniqRR(thetai_uniqi)
+  if(IC=="aic"){
+    out <- vector(mode = "list", length = res$selection.aic)
+    w <- matrix(res$wtMAT[,1:res$selection.aic], ncol=res$selection.aic)
+    for(i in 1:res$selection.aic){
+      thetaa <- sum(thetai*w[,i])
+      out[[i]] <- switch(target,
+             cluster = calcbounds.cluster(id_ic, IC, res, byloc, Ex, Obs,as.vector(w[,i]), thetaa,thetai, sparsemat, conf.level),
+             cells = calcbounds.cells(id_ic, IC, res, byloc, Ex, Obs,as.vector(w[,i]), thetaa,thetai, sparsemat, cellsix, conf.level))
+      
     }
-    return(list(nonma.theta.time = nonma.theta.time[[3]],
-                nonma.theta = nonma.theta))
-}
-
-nonma.cells <- function(cluster_thetaa,res, clusterRR_ilarge,wslarge,idix, outExp_out,IC, transform, byloc=TRUE, cellrisk_wt_out=NULL, cellsix_out){
-    if(byloc==FALSE){
-        if(transform=="log"){
-            if(IC=="aic") {
-                clusterRRlarge <- res$Lambda_dense[res$maxid[res$selection.aic],][cellsix_out]
-                se_clusterRRlarge <- sqrt(1/(clusterRRlarge*outExp_out))
-                clusterMA <- res$wLambda[res$selection.aic,][cellsix_out]
-                
-            } else {
-                clusterRRlarge <- res$Lambda_dense[res$maxid[res$selection.bic],][cellsix_out]
-                se_clusterRRlarge <- sqrt(1/(clusterRRlarge*outExp_out))
-                clusterMA <- res$wLambda[res$selection.bic,][cellsix_out]
-            }
-            nonma.theta.time <- system.time(nonma.theta <- cbind(lb=exp(log(clusterMA)-1.96*se_clusterRRlarge), 
-                                                                 clusterMA = clusterMA,
-                                                                 ub=exp(log(clusterMA)+1.96*se_clusterRRlarge)))
-        }else {
-            if(IC=="aic") {
-                clusterRRlarge <- res$Lambda_dense[res$maxid[res$selection.aic],][cellsix_out]
-                se_clusterRRlarge <- sqrt(clusterRRlarge/outExp_out)
-                clusterMA <- res$wLambda[res$selection.aic,][cellsix_out]
-            } else {
-                clusterRRlarge <- res$Lambda_dense[res$maxid[res$selection.bic],][cellsix_out]
-                se_clusterRRlarge <- sqrt(clusterRRlarge/outExp_out)
-                clusterMA <- res$wLambda[res$selection.bic,][cellsix_out]
-            }
-            nonma.theta.time <- system.time(nonma.theta <- cbind(lb=clusterMA-1.96*se_clusterRRlarge, 
-                                                                 clusterMA = clusterMA,
-                                                                 ub=clusterMA+1.96*se_clusterRRlarge))
-        } 
-        
-
-    }else {
-        if(transform=="log"){
-            if(IC=="aic") {
-                se_clusterRRlarge <- sqrt(1/(cellrisk_wt_out*outExp_out))
-            } else {
-                se_clusterRRlarge <- sqrt(1/(cellrisk_wt_out*outExp_out))
-            }
-            nonma.theta.time <- system.time(nonma.theta <- cbind(lb=exp(log(cellrisk_wt_out)-1.96*se_clusterRRlarge), 
-                                                                 clusterMA = cellrisk_wt_out,
-                                                                 ub=exp(log(cellrisk_wt_out) +1.96*se_clusterRRlarge)))
-        } else {
-            if(IC=="aic") {
-                se_clusterRRlarge <- sqrt(cellrisk_wt_out/outExp_out)
-            } else {
-                se_clusterRRlarge <- sqrt(cellrisk_wt_out/outExp_out)
-            }
-            nonma.theta.time <- system.time(nonma.theta <- cbind(lb=cellrisk_wt_out-1.96*se_clusterRRlarge, 
-                                                                 clusterMA = cellrisk_wt_out,
-                                                                 ub=cellrisk_wt_out +1.96*se_clusterRRlarge))
-        }
-    }
-    return(list(nonma.theta.time = nonma.theta.time[[3]],
-                nonma.theta = nonma.theta))
-}
-
-
-
-
-#nonma_asymp
-nonma_asymp.cluster <- function(cluster_thetaa,res, clusterRR_ilarge,wslarge,idix, outObs_out,IC, transform, byloc=TRUE){
-    if(byloc==FALSE){
-        print("by pc")
-        if(transform=="log"){
-            if(IC=="aic") {
-                clusterRRlarge <- res$Lambda_dense[res$maxid[res$selection.aic],][2]
-                se_clusterRRlarge_asymp <- sqrt(1/(cluster_thetaa*outObs_out[res$maxid[res$selection.aic]]))
-            } else {
-                clusterRRlarge <- res$Lambda_dense[res$maxid[res$selection.bic],][2]
-                se_clusterRRlarge_asymp <- sqrt(1/(clusterRRlarge*outObs_out[res$maxid[res$selection.bic]]))
-            }
-            nonma_asymp.theta.time <- system.time(nonma_asymp.theta <- cbind(lbasymp=exp(log(cluster_thetaa)-1.96*se_clusterRRlarge_asymp), 
-                                                                             clusterMA = cluster_thetaa,
-                                                                             ubasymp=exp(log(cluster_thetaa)+1.96*se_clusterRRlarge_asymp)))
-        } else {
-            if(IC=="aic") {
-                clusterRRlarge <- res$Lambda_dense[res$maxid[res$selection.aic],][2]
-                se_clusterRRlarge_asymp <- sqrt(clusterRRlarge/outObs_out[res$maxid[res$selection.aic]])
-            } else {
-                clusterRRlarge <-  res$Lambda_dense[res$maxid[res$selection.bic],][2]
-                se_clusterRRlarge_asymp <- sqrt(clusterRRlarge/outObs_out[res$maxid[res$selection.bic]])
-            }
-            nonma_asymp.theta.time <- system.time(nonma_asymp.theta <- cbind(lbasymp=cluster_thetaa-1.96*se_clusterRRlarge_asymp, 
-                                                                             clusterMA = cluster_thetaa,
-                                                                             ubasymp=cluster_thetaa+1.96*se_clusterRRlarge_asymp))
-        }
-    } else {
-        print("by LOC")
-        if(transform=="log"){
-            if(IC=="aic") {
-                clusterRRlarge <- unique(res$Lambda_dense[,res$maxid[res$selection.aic]])[2]
-                se_clusterRRlarge_asymp <- sqrt(1/(clusterRRlarge*outObs_out[res$maxid[res$selection.aic]]))    
-            } else {
-                clusterRRlarge <- unique(res$Lambda_dense[,res$maxid[res$selection.bic]])[2]
-                se_clusterRRlarge_asymp <- sqrt(1/(clusterRRlarge*outObs_out[res$maxid[res$selection.bic]]))    
-            }
-            nonma_asymp.theta.time <- system.time(nonma_asymp.theta <- cbind(lbasymp=exp(log(cluster_thetaa)-1.96*se_clusterRRlarge_asymp), 
-                                                                             clusterMA = cluster_thetaa,
-                                                                             ubasymp=exp(log(cluster_thetaa)+1.96*se_clusterRRlarge_asymp)))
-            
-        } else {
-            if(IC=="aic") {
-                se_clusterRRlarge_asymp <- sqrt(cluster_thetaa/outObs_out[res$maxid[res$selection.aic]]) 
-            } else{
-                se_clusterRRlarge_asymp <- sqrt(cluster_thetaa/outObs_out[res$maxid[res$selection.bic]]) 
-            }
-            nonma_asymp.theta.time <- system.time(nonma_asymp.theta <- cbind(lbasymp=cluster_thetaa-1.96*se_clusterRRlarge_asymp, 
-                                                                             clusterMA = cluster_thetaa,
-                                                                             ubasymp=cluster_thetaa+1.96*se_clusterRRlarge_asymp))
-            
-        }
-        
-    }
-    return(list(nonma_asymp.theta.time = nonma_asymp.theta.time[[3]],
-                nonma_asymp.theta = nonma_asymp.theta))
-}
-
-
-nonma_asymp.cells <-function(cluster_thetaa,res, clusterRR_ilarge,wslarge,idix, outObs_out,IC, transform, byloc=TRUE, cellrisk_wt_out, cellsix_out){
-    if(byloc==FALSE){
-        print("by PC")
-        if(transform=="log"){
-            if(IC=="aic") {
-                clusterRRlarge <- res$Lambda_dense[res$maxid[res$selection.aic],][cellsix_out]
-                se_clusterRRlarge <- sqrt(1/(clusterRRlarge*outObs_out))
-                clusterMA <- res$wLambda[res$selection.aic,][cellsix_out]
-                
-            } else {
-                clusterRRlarge <- res$Lambda_dense[res$maxid[res$selection.bic],][cellsix_out]
-                se_clusterRRlarge <- sqrt(1/(clusterRRlarge*outObs_out))
-                clusterMA <- res$wLambda[res$selection.bic,][cellsix_out]
-            }
-            nonma_asymp.theta.time <- system.time(nonma_asymp.theta <- cbind(lb=exp(log(clusterMA)-1.96*se_clusterRRlarge), 
-                                                                 clusterMA = clusterMA,
-                                                                 ub=exp(log(clusterMA)+1.96*se_clusterRRlarge)))
-        }else {
-            if(IC=="aic") {
-                clusterRRlarge <- res$Lambda_dense[res$maxid[res$selection.aic],][cellsix_out]
-                se_clusterRRlarge <- sqrt(clusterRRlarge/outObs_out)
-                clusterMA <- res$wLambda[res$selection.aic,][cellsix_out]
-            } else {
-                clusterRRlarge <- res$Lambda_dense[res$maxid[res$selection.bic],][cellsix_out]
-                se_clusterRRlarge <- sqrt(clusterRRlarge/outObs_out)
-                clusterMA <- res$wLambda[res$selection.bic,][cellsix_out]
-            }
-            nonma_asymp.theta.time <- system.time(nonma_asymp.theta <- cbind(lb=clusterMA-1.96*se_clusterRRlarge, 
-                                                                 clusterMA = clusterMA,
-                                                                 ub=clusterMA+1.96*se_clusterRRlarge))
-        } 
-        
-        
-    }else {
-        print("by loc")
-        print(cellrisk_wt_out)
-        if(transform=="log"){
-            if(IC=="aic") {
-                se_clusterRRlarge <- sqrt(1/(cellrisk_wt_out*outObs_out))
-            } else {
-                se_clusterRRlarge <- sqrt(1/(cellrisk_wt_out*outObs_out))
-            }
-            nonma_asymp.theta.time <- system.time(nonma_asymp.theta <- cbind(lb=exp(log(cellrisk_wt_out)-1.96*se_clusterRRlarge), 
-                                                                 clusterMA = cellrisk_wt_out,
-                                                                 ub=exp(log(cellrisk_wt_out) +1.96*se_clusterRRlarge)))
-        } else {
-            if(IC=="aic") {
-                se_clusterRRlarge <- sqrt(cellrisk_wt_out/outObs_out)
-            } else {
-                se_clusterRRlarge <- sqrt(cellrisk_wt_out/outObs_out)
-            }
-            nonma_asymp.theta.time <- system.time(nonma_asymp.theta <- cbind(lb=cellrisk_wt_out-1.96*se_clusterRRlarge, 
-                                                                 clusterMA = cellrisk_wt_out,
-                                                                 ub=cellrisk_wt_out +1.96*se_clusterRRlarge))
-        }
-        
+  } else {
+    out <- vector(mode = "list", length = res$selection.bic)
+    w <- matrix(res$wtMAT[,1:res$selection.bic], ncol=res$selection.bic)
+    for(i in 1:res$selection.bic){
+      thetaa <- sum(thetai*w[,i])
+      out[[i]] <- switch(target,
+                    cluster = calcbounds.cluster(id_ic, IC, res, byloc, Ex, Obs,as.vector(w[,i]), thetaa,thetai, sparsemat, conf.level),
+                    cells = calcbounds.cells(id_ic, IC, res, byloc, Ex, Obs,as.vector(w[,i]), thetaa,thetai, sparsemat, cellsix, conf.level))
+      
     }
     
-    return(list(nonma_asymp.theta.time = nonma_asymp.theta.time[[3]],
-                nonma_asymp.theta = nonma_asymp.theta))
+  }
+  return(out)
 }
 
 
-calcbounds <- function(idix, IC, res, byloc, Ex, Obs,target=c("cluster", "cells"), cellsix=NULL, sparsematrix){
-    if(is.null(cellsix) | target=="cluster"){
-        print("no cell rates")
-    }
-    if(!is.null(cellsix) & is.null(sparsematrix)){
-        stop("You must provide the sparsematrix when calculating rates for each cell.")
-    }
-    if(IC=="aic"){
-        wslarge <- res$wtMAT[,res$selection.aic]
-    } else {
-        wslarge <- res$wtMAT[,res$selection.bic]
-    }
-    clusterRR_uniqlarge <- sapply(1:nrow(res$Lambda_dense), function(k) unique(res$Lambda_dense[k,]))
-    #clusterRR_ilarge <- rep(NA, dim(res$Lambda_dense)[1])
-    clusterRR_uniq_ilarge <- as.matrix(do.call(rbind, clusterRR_uniqlarge), ncol=2)
-    clusterRR_ilarge <- selectuniqRR(clusterRR_uniq_ilarge)
-    cluster_thetaa <- sum(clusterRR_ilarge*wslarge)
-    if(target=="cells" & is.null(cellsix)){
-        stop("For cell-wise estimates, you must provide the index of the cells of interest")
-    }
-    switch(target,
-           cluster = calcbounds.cluster(idix, IC, res, byloc, Ex, Obs,wslarge, cluster_thetaa,clusterRR_ilarge, sparsematrix),
-           cells = calcbounds.cells(idix, IC, res, byloc, Ex, Obs,wslarge, cluster_thetaa,clusterRR_ilarge, sparsematrix, cellsix))
-}
 
 
-calcbounds.cluster <- function(idix, IC, res, byloc, Ex, Obs,wslarge, cluster_thetaa,clusterRR_ilarge, sparsematrix){
-    print("calcbounds.cluster")
-    print(str(sparsematrix))
+
+#'@title calcbounds.cluster
+#'@description Helper function for \code{calcbounds()}.
+#'@param id_ic The number of clusters identified either by BIC (QBIC) or AIC (QAIC).
+#'@param IC Information criterion used. Currently available for BIC (QBIC) and AIC (QAIC). This should match \code{id_ic} argument.
+#'@param res Resultant object from \code{detectclusters()}.
+#'@param byloc Boolean. Use \code{TRUE} when stacking by location. Use \code{FALSE} when stacking by potential cluster.
+#'@param Ex Expected counts (unstandardized) for each cell.
+#'@param Obs Observed counts for each cell.
+#'@param w Likelihood-weights for all potential clusters.
+#'@param thetaa Stacked relative risk estimate for the cluster(s)
+#'@param thetai Individual relative risk estimates for each potential cluster.
+#'@param sparsemat Large sparsematrix where rows are potential clusters and columns are space-time locations.
+#'@param conf.level Confidence level for the interval. Default is 0.95. 
+#'@return Returns large list of confidence bounds and stacked estimates in addition to timings for each of the confidence bounds methods.
+calcbounds.cluster <- function(id_ic, IC, res, byloc, Ex, Obs,w, thetaa,thetai, sparsemat, conf.level=0.95){
     if(byloc==TRUE){
-        print(paste0("byloc", byloc))
         outExp_out <- Ex
         outObs_out <- Obs
-        outExp <- t(sparsematrix)%*%Ex
-        outObs <- t(sparsematrix)%*%Obs
+        outExp <- t(sparsemat)%*%Ex
+        outObs <- t(sparsemat)%*%Obs
     }
     else if(byloc==FALSE){
-        print(paste0("byloc", byloc))
-        outExp <- t(sparsematrix)%*%Ex
-        outObs <- t(sparsematrix)%*%Obs
+        outExp <- t(sparsemat)%*%Ex
+        outObs <- t(sparsemat)%*%Obs
         outExp_out <- outExp@x
         outObs_out <- outObs@x
     }
-    outnonma.time <- system.time(outnonma <- nonma.cluster(cluster_thetaa, res, clusterRR_ilarge, wslarge, idix,
-                                                   outExp_out, IC=IC, transform="none", byloc))
-    outnonmaTlog.time <- system.time(outnonmaTlog <- nonma.cluster(cluster_thetaa, res, clusterRR_ilarge, wslarge, idix,
-                                                           outExp_out, IC=IC, transform="log", byloc))
-    
-    
-    outnonma_asymp.time <- system.time(outnonma_asymp <- nonma_asymp.cluster(cluster_thetaa, res, clusterRR_ilarge, wslarge, idix,
-                                                                             outObs_out, IC=IC, transform="none", byloc))
-    outnonma_asympTlog.time <- system.time(outnonma_asympTlog <- nonma_asymp.cluster(cluster_thetaa, res, clusterRR_ilarge, wslarge, idix,
-                                                                                     outObs_out, IC=IC, transform="log", byloc))
-    print("nonma finished")
-    outbuck.theta.time <- system.time(outbuck.theta <- bucklandbounds.cluster(cluster_thetaa,
-                                                                              clusterRR_ilarge,
-                                                                            res,
-                                                                            w_q=wslarge,
-                                                                            outExp,
-                                                                            IC=IC,
-                                                                            transform="none",
-                                                                            overdisp.est))
-    outbuckTlog.theta.time  <- system.time(outbuckTlog.theta <- bucklandbounds.cluster(cluster_thetaa,
-                                                                              clusterRR_ilarge,
-                                                                              res,
-                                                                              w_q=wslarge,
-                                                                              outExp,
-                                                                              IC=IC,
-                                                                              transform="log",
-                                                                              overdisp.est))
-    print("buckland finished")
-    
-    outmaw2.theta.time <- system.time(outmaw2.theta <- maw2.cluster(cluster_thetaa,
-                                                                    clusterRR_ilarge,
-                                                                    w_q=wslarge,
-                                                                    outExp,
-                                                                    transform="none",
-                                                                    overdisp.est))
-    
-    outmaw2Tlog.theta.time <- system.time(outmaw2Tlog.theta <-maw2.cluster(cluster_thetaa,
-                                                                    clusterRR_ilarge,
-                                                                    w_q=wslarge,
-                                                                    outExp,
-                                                                    transform="log",
-                                                                    overdisp.est))
-   
-     print("maw2 finished")
-    outmata.theta.time <- system.time(outmata.theta <- matabounds.cluster(cluster_thetaa,
-                                                                          clusterRR_ilarge,
-                                                                  w_q=wslarge,
-                                                                  outExp,
-                                                                  transform="none",
-                                                                  overdisp.est))
-    
-    outmataTlog.theta.time <- system.time(outmataTlog.theta <- matabounds.cluster(cluster_thetaa,
-                                                                                  clusterRR_ilarge,
-                                                                                  w_q=wslarge,
+    if(id_ic==0){
+        emptynonma <- vector(mode = "list", length = 2)
+        emptynonma[[1]] <- 0
+        emptynonma[[2]] <- c(0,0,0)
+        outnonma <- outnonmaTlog <- outnonma_asymp <- outnonma_asympTlog <- emptynonma
+        names(outnonma) <- c("nonma.theta.time", "nonma.theta")
+        names(outnonmaTlog) <- c("nonma.theta.time", "nonma.theta")
+        names(outnonma_asymp) <- c("nonma_asymp.theta.time", "nonma_asymp.theta")
+        names(outnonma_asympTlog) <- c("nonma_asymp.theta.time", "nonma_asymp.theta")
+        return(list(
+            outnonma = outnonma,
+            outnonmaTlog = outnonmaTlog,
+            outnonma_asymp = outnonma_asymp,
+            outnonma_asympTlog = outnonma_asympTlog,
+            outbuck.theta =as.list(c(0,0,0)),
+            outbuckTlog.theta = as.list(c(0,0,0)),
+            outmaw2.theta = as.list(c(0,0,0)),
+            outmaw2Tlog.theta = as.list(c(0,0,0)),
+            outmata.theta = as.list(c(0,0,0)),
+            outmataTlog.theta = as.list(c(0,0,0)),
+            
+            outnonma.time = 000,
+            outnonmaTlog.time = 000,
+            outnonma_asymp.time = 000,
+            outnonma_asympTlog.time = 000,
+            outbuck.theta.time = 000,
+            outbuckTlog.theta.time = 000,
+            outmaw2.theta.time = 000,
+            outmaw2Tlog.theta.time = 000,
+            outmata.theta.time = 000,
+            outmataTlog.theta.time = 000
+        ))
+        
+    } else {
+        outnonma.time <- system.time(outnonma <- nonma.cluster(thetaa, thetai,res, w, id_ic,
+                                                               outExp_out, IC=IC, transform="none", byloc, conf.level))
+        outnonmaTlog.time <- system.time(outnonmaTlog <- nonma.cluster(thetaa, thetai,res, w, id_ic,
+                                                                       outExp_out, IC=IC, transform="log", byloc, conf.level))
+        
+        
+        outnonma_asymp.time <- system.time(outnonma_asymp <- nonma_asymp.cluster(thetaa, thetai,res, w, id_ic,
+                                                                                 outObs_out, IC=IC, transform="none", byloc,
+                                                                                 conf.level))
+        outnonma_asympTlog.time <- system.time(outnonma_asympTlog <- nonma_asymp.cluster(thetaa, thetai, res, w, id_ic,
+                                                                                         outObs_out, IC=IC, transform="log", byloc,
+                                                                                         conf.level))
+        message("Non-model averaged bounds finished")
+        outbuck.theta.time <- system.time(outbuck.theta <- bucklandbounds.cluster(thetaa,
+                                                                                  thetai,
+                                                                                  res,
+                                                                                  w_q=w,
                                                                                   outExp,
-                                                                                  transform="log",
-                                                                                  overdisp.est))
-    print("mata finished")
-    return(list(
-        outnonma = outnonma,
-        outnonmaTlog = outnonmaTlog,
-        outnonma_asymp = outnonma_asymp,
-        outnonma_asympTlog = outnonma_asympTlog,
-        outbuck.theta = outbuck.theta,
-        outbuckTlog.theta = outbuckTlog.theta,
-        outmaw2.theta = outmaw2.theta,
-        outmaw2Tlog.theta = outmaw2Tlog.theta,
-        outmata.theta = outmata.theta,
-        outmataTlog.theta = outmataTlog.theta,
+                                                                                  IC=IC,
+                                                                                  transform="none",
+                                                                                  overdisp.est,
+                                                                                  conf.level))
+        outbuckTlog.theta.time  <- system.time(outbuckTlog.theta <- bucklandbounds.cluster(thetaa,
+                                                                                           thetai,
+                                                                                           res,
+                                                                                           w_q=w,
+                                                                                           outExp,
+                                                                                           IC=IC,
+                                                                                           transform="log",
+                                                                                           overdisp.est,
+                                                                                           conf.level))
+        message("Buckland bounds finished")
         
-        outnonma.time = outnonma.time[[3]],
-        outnonmaTlog.time = outnonmaTlog.time[[3]],
-        outnonma_asymp.time = outnonma_asymp.time[[3]],
-        outnonma_asympTlog.time = outnonma_asympTlog.time[[3]],
-        outbuck.theta.time = outbuck.theta.time[[3]],
-        outbuckTlog.theta.time = outbuckTlog.theta.time[[3]],
-        outmaw2.theta.time = outmaw2.theta.time[[3]],
-        outmaw2Tlog.theta.time = outmaw2Tlog.theta.time[[3]],
-        outmata.theta.time = outmata.theta.time[[3]],
-        outmataTlog.theta.time = outmataTlog.theta.time[[3]]
-    ))
-}
-    
-calcbounds.cells <- function(idix, IC, res, byloc, Ex, Obs,wslarge, cluster_thetaa,clusterRR_ilarge, sparsematrix, cellsix){
-    print("calcbounds.cells")
-    cellrisk_wt_out <- rep(NA, length(cellsix))
-    cellsix_out <- cellsix
-    if(byloc==TRUE){
-        print(paste0("byloc", byloc))
-        outExp <- t(sparsematrix)%*%Ex
-        outObs <- t(sparsematrix)%*%Obs
-        outExp_out <- Ex[cellsix]
-        outObs_out <- Obs[cellsix]
-        for(i in 1:length(cellsix)){
-            cellsixvec <- rep(0,dim(res$wLambda)[2])
-            cellsixvec[cellsix[i]] <-1
-            overlapid <- matrix(cellsixvec, nrow=1)%*%t(res$Lambda_dense)
-            cellrisk_wt <- overlapid%*%wslarge 
-            cellrisk_wt_out[[i]] <- cellrisk_wt
-        }
+        outmaw2.theta.time <- system.time(outmaw2.theta <- maw2.cluster(thetaa,
+                                                                        thetai,
+                                                                        w_q=w,
+                                                                        outExp,
+                                                                        transform="none",
+                                                                        overdisp.est,
+                                                                        conf.level))
+        
+        outmaw2Tlog.theta.time <- system.time(outmaw2Tlog.theta <-maw2.cluster(thetaa,
+                                                                               thetai,
+                                                                               w_q=w,
+                                                                               outExp,
+                                                                               transform="log",
+                                                                               overdisp.est,
+                                                                               conf.level))
+        
+        message("Burnham & Anderson bounds finished")
+        outmata.theta.time <- system.time(outmata.theta <- matabounds.cluster(thetaa,
+                                                                              thetai,
+                                                                              w_q=w,
+                                                                              outExp,
+                                                                              transform="none",
+                                                                              overdisp.est,
+                                                                              conf.level))
+        
+        outmataTlog.theta.time <- system.time(outmataTlog.theta <- matabounds.cluster(thetaa,
+                                                                                      thetai,
+                                                                                      w_q=w,
+                                                                                      outExp,
+                                                                                      transform="log",
+                                                                                      overdisp.est,
+                                                                                      conf.level))
+        message("MATA bounds finished")
+        return(list(
+            outnonma = outnonma,
+            outnonmaTlog = outnonmaTlog,
+            outnonma_asymp = outnonma_asymp,
+            outnonma_asympTlog = outnonma_asympTlog,
+            outbuck.theta = outbuck.theta,
+            outbuckTlog.theta = outbuckTlog.theta,
+            outmaw2.theta = outmaw2.theta,
+            outmaw2Tlog.theta = outmaw2Tlog.theta,
+            outmata.theta = outmata.theta,
+            outmataTlog.theta = outmataTlog.theta,
+            
+            outnonma.time = outnonma.time[[3]],
+            outnonmaTlog.time = outnonmaTlog.time[[3]],
+            outnonma_asymp.time = outnonma_asymp.time[[3]],
+            outnonma_asympTlog.time = outnonma_asympTlog.time[[3]],
+            outbuck.theta.time = outbuck.theta.time[[3]],
+            outbuckTlog.theta.time = outbuckTlog.theta.time[[3]],
+            outmaw2.theta.time = outmaw2.theta.time[[3]],
+            outmaw2Tlog.theta.time = outmaw2Tlog.theta.time[[3]],
+            outmata.theta.time = outmata.theta.time[[3]],
+            outmataTlog.theta.time = outmataTlog.theta.time[[3]]
+        ))
     }
-    else if (byloc==FALSE){
-        print(paste0("byloc: ", byloc))
-        outExp <- t(sparsematrix)%*%Ex
-        outObs <- t(sparsematrix)%*%Obs
-        print(paste0("cellsix: ", cellsix))
-        outExp_out <- outExp@x[cellsix]
-        outObs_out <- outObs@x[cellsix]
-        cellrisk_wt_out <- NULL
-    }    
-        outnonma.time <- system.time(outnonma <- nonma.cells(cluster_thetaa, res, clusterRR_ilarge, wslarge, idix,
-                                                       outExp_out, IC=IC, transform="none", byloc, cellrisk_wt_out, cellsix_out))
-        outnonmaTlog.time <- system.time(outnonmaTlog <- nonma.cells(cluster_thetaa, res, clusterRR_ilarge, wslarge, idix,
-                                                                outExp_out, IC=IC, transform="log", byloc, cellrisk_wt_out, cellsix_out))
+    
+
+}
+
+#'@title calcbounds.cells
+#'@description Helper function for \code{calcbounds()}.
+#'@param id_ic The number of clusters identified either by BIC (QBIC) or AIC (QAIC).
+#'@param IC Information criterion used. Currently available for BIC (QBIC) and AIC (QAIC). This should match \code{id_ic} argument.
+#'@param res Resultant object from \code{detectclusters()}.
+#'@param byloc Boolean. Use \code{TRUE} when stacking by location. Use \code{FALSE} when stacking by potential cluster.
+#'@param Ex Expected counts (unstandardized) for each cell.
+#'@param Obs Observed counts for each cell.
+#'@param w Likelihood-weights for all potential clusters.
+#'@param thetaa Stacked relative risk estimate for the cluster(s)
+#'@param thetai Individual relative risk estimates for each potential cluster.
+#'@param sparsemat Large sparsematrix where rows are potential clusters and columns are space-time locations.
+#'@param cellsix Indices of the cells to calculate bounds for. 
+#'@param conf.level Confidence level for the interval. Default is 0.95. 
+#'@return Returns large list of confidence bounds and stacked estimates in addition to timings for each of the confidence bounds methods.    
+calcbounds.cells <- function(id_ic, IC, res, byloc, Ex, Obs,w, thetaa,thetai, sparsemat, cellsix, conf.level=0.95){
+    if(id_ic==0){
+        emptynonma <- vector(mode = "list", length = 2)
+        emptynonma[[1]] <- 0
+        emptynonma[[2]] <- matrix(rep(0, length(cellsix)*3), ncol=3)
+        outnonma <- outnonmaTlog <- outnonma_asymp <- outnonma_asympTlog <- emptynonma
+        names(outnonma) <- c("nonma.theta.time", "nonma.theta")
+        names(outnonmaTlog) <- c("nonma.theta.time", "nonma.theta")
+        names(outnonma_asymp) <- c("nonma_asymp.theta.time", "nonma_asymp.theta")
+        names(outnonma_asympTlog) <- c("nonma_asymp.theta.time", "nonma_asymp.theta")
+        return(list(
+            outnonma = outnonma,
+            outnonmaTlog = outnonmaTlog,
+            outnonma_asymp = outnonma_asymp,
+            outnonma_asympTlog = outnonma_asympTlog,
+            outbuck.theta = list(as.vector(rep(0, length(cellsix))), as.vector(rep(0, length(cellsix))), as.vector(rep(0, length(cellsix)))),
+            outbuckTlog.theta = list(as.vector(rep(0, length(cellsix))), as.vector(rep(0, length(cellsix))), as.vector(rep(0, length(cellsix)))),
+            outmaw2.theta = list(as.vector(rep(0, length(cellsix))), as.vector(rep(0, length(cellsix))), as.vector(rep(0, length(cellsix)))),
+            outmaw2Tlog.theta = list(as.vector(rep(0, length(cellsix))), as.vector(rep(0, length(cellsix))), as.vector(rep(0, length(cellsix)))),
+            outmata.theta = list(as.vector(rep(0, length(cellsix))), as.vector(rep(0, length(cellsix))), as.vector(rep(0, length(cellsix)))),
+            outmataTlog.theta = list(as.vector(rep(0, length(cellsix))), as.vector(rep(0, length(cellsix))), as.vector(rep(0, length(cellsix)))),
+            
+            outnonma.time = 000,
+            outnonmaTlog.time = 000,
+            outnonma_asymp.time = 000,
+            outnonma_asympTlog.time = 000,
+            outbuck.theta.time = 000,
+            outbuckTlog.theta.time = 000,
+            outmaw2.theta.time = 000,
+            outmaw2Tlog.theta.time = 000,
+            outmata.theta.time = 000,
+            outmataTlog.theta.time = 000
+        ))
         
-        outnonma_asymp.time <- system.time(outnonma_asymp <- nonma_asymp.cells(cluster_thetaa, res, clusterRR_ilarge, wslarge, idix,
+        
+    } else {
+        cellrisk_wt_out <- rep(NA, length(cellsix))
+        cellsix_out <- cellsix
+        if(byloc==TRUE){
+            #print(paste0("byloc", byloc))
+            outExp <- t(sparsemat)%*%Ex
+            outObs <- t(sparsemat)%*%Obs
+            outExp_out <- Ex[cellsix]
+            outObs_out <- Obs[cellsix]
+            for(i in 1:length(cellsix)){
+                cellsixvec <- rep(0,dim(res$wLambda)[2])
+                cellsixvec[cellsix[i]] <-1
+                overlapid <- matrix(cellsixvec, nrow=1)%*%t(res$Lambda_dense)
+                cellrisk_wt <- overlapid%*%w 
+                cellrisk_wt_out[[i]] <- cellrisk_wt
+            }
+        }
+        else if (byloc==FALSE){
+            #print(paste0("byloc: ", byloc))
+            outExp <- t(sparsemat)%*%Ex
+            outObs <- t(sparsemat)%*%Obs
+            #print(paste0("cellsix: ", cellsix))
+            outExp_out <- outExp@x[cellsix]
+            outObs_out <- outObs@x[cellsix]
+            cellrisk_wt_out <- NULL
+        }    
+        
+        outnonma.time <- system.time(outnonma <- nonma.cells(thetaa, thetai,res, w, id_ic,
+                                                             outExp_out, IC=IC, transform="none", byloc, 
+                                                             cellrisk_wt_out, cellsix_out,
+                                                             conf.level))
+        outnonmaTlog.time <- system.time(outnonmaTlog <- nonma.cells(thetaa, thetai,res, w, id_ic,
+                                                                     outExp_out, IC=IC, transform="log", byloc, 
+                                                                     cellrisk_wt_out, cellsix_out,
+                                                                     conf.level))
+        
+        outnonma_asymp.time <- system.time(outnonma_asymp <- nonma_asymp.cells(thetaa, thetai,res, w, id_ic,
                                                                                outObs_out, IC=IC, transform="none", byloc, cellrisk_wt_out, cellsix_out))
-        outnonma_asympTlog.time <- system.time(outnonma_asympTlog <- nonma_asymp.cells(cluster_thetaa, res, clusterRR_ilarge, wslarge, idix,
+        outnonma_asympTlog.time <- system.time(outnonma_asympTlog <- nonma_asymp.cells(thetaa, thetai, res, w, id_ic,
                                                                                        outObs_out, IC=IC, transform="log", byloc, 
-                                                                                       cellrisk_wt_out, cellsix_out))
-        print("nonma finished")
+                                                                                       cellrisk_wt_out, cellsix_out, conf.level))
+        message("Non-model averaged bounds finished")
         
-        outbuck.theta.time <- system.time(outbuck.theta <- bucklandbounds.cells(cluster_thetaa,
+        outbuck.theta.time <- system.time(outbuck.theta <- bucklandbounds.cells(thetaa,
                                                                                 res,
-                                                                                w_q=wslarge,
+                                                                                w_q=w,
                                                                                 Ex,
                                                                                 IC=IC,
                                                                                 transform="none",
-                                                                                tsparsematrix=t(sparsematrix),
-                                                                                overdisp.est, cellsix_out))
-        outbuckTlog.theta.time <- system.time(outbuckTlog.theta <- bucklandbounds.cells(cluster_thetaa,
+                                                                                tsparsemat=t(sparsemat),
+                                                                                overdisp.est, cellsix_out,
+                                                                                conf.level))
+        outbuckTlog.theta.time <- system.time(outbuckTlog.theta <- bucklandbounds.cells(thetaa,
                                                                                         res,
-                                                                                        w_q=wslarge,
+                                                                                        w_q=w,
                                                                                         Ex,
                                                                                         IC=IC,
                                                                                         transform="log",
-                                                                                        tsparsematrix=t(sparsematrix),
-                                                                                        overdisp.est, cellsix_out))
-        print("buckland finished")
-        outmaw2.theta.time <- system.time(outmaw2.theta <- maw2.cells(cluster_thetaa,
+                                                                                        tsparsemat=t(sparsemat),
+                                                                                        overdisp.est, cellsix_out,
+                                                                                        conf.level))
+        message("Buckland bounds finished")
+        outmaw2.theta.time <- system.time(outmaw2.theta <- maw2.cells(thetaa,
                                                                       res,
-                                                                w_q=wslarge,
-                                                                Ex,
-                                                                IC,
-                                                                transform="none",
-                                                                tsparsematrix=t(sparsematrix),
-                                                                overdisp.est,
-                                                                cellsix_out))
-        outmaw2Tlog.theta.time <- system.time(outmaw2Tlog.theta <- maw2.cells(cluster_thetaa,
-                                                                      res,
-                                                                      w_q=wslarge,
-                                                                      Ex,
-                                                                      IC,
-                                                                      transform="log",
-                                                                      tsparsematrix=t(sparsematrix),
-                                                                      overdisp.est,
-                                                                      cellsix_out))
-
-        # print("maw2 finished")
-        outmata.theta.time <- system.time(outmata.theta <- matabounds.cells(cluster_thetaa,
-                                                                            res,
-                                                                      w_q=wslarge,
+                                                                      w_q=w,
                                                                       Ex,
                                                                       IC,
                                                                       transform="none",
-                                                                      tsparsematrix=t(sparsematrix),
+                                                                      tsparsemat=t(sparsemat),
                                                                       overdisp.est,
-                                                                      cellsix_out))
-        #thetaa, res, w_q,outExp, IC, tsparsematrix, overdisp.est,cellsix_out
-        outmataTlog.theta.time <- system.time(outmataTlog.theta <- matabounds.cells(cluster_thetaa,
+                                                                      cellsix_out,
+                                                                      conf.level))
+        outmaw2Tlog.theta.time <- system.time(outmaw2Tlog.theta <- maw2.cells(thetaa,
+                                                                              res,
+                                                                              w_q=w,
+                                                                              Ex,
+                                                                              IC,
+                                                                              transform="log",
+                                                                              tsparsemat=t(sparsemat),
+                                                                              overdisp.est,
+                                                                              cellsix_out,
+                                                                              conf.level))
+        
+        message("Burnham & Anderson bounds finished")
+        outmata.theta.time <- system.time(outmata.theta <- matabounds.cells(thetaa,
+                                                                            res,
+                                                                            w_q=w,
+                                                                            Ex,
+                                                                            IC,
+                                                                            transform="none",
+                                                                            tsparsemat=t(sparsemat),
+                                                                            overdisp.est,
+                                                                            cellsix_out,
+                                                                            conf.level))
+        outmataTlog.theta.time <- system.time(outmataTlog.theta <- matabounds.cells(thetaa,
                                                                                     res,
-                                                                                    w_q=wslarge,
+                                                                                    w_q=w,
                                                                                     Ex,
                                                                                     IC,
                                                                                     transform="log",
-                                                                                    tsparsematrix=t(sparsematrix),
+                                                                                    tsparsemat=t(sparsemat),
                                                                                     overdisp.est,
-                                                                                    cellsix_out))
-        # print("mata finished")
+                                                                                    cellsix_out,
+                                                                                    conf.level))
+        message("MATA bounds finished")
         
         
         return(list(
@@ -1242,6 +1530,7 @@ calcbounds.cells <- function(idix, IC, res, byloc, Ex, Obs,wslarge, cluster_thet
             outmata.theta.time = outmata.theta.time[[3]],
             outmataTlog.theta.time = outmataTlog.theta.time[[3]]
         ))
+    }
+    
 }
 
-    
