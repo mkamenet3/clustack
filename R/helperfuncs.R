@@ -78,6 +78,7 @@ plotmeanrr_stack <- function(ric, Time, sim.i,ic, flav, greys){
         
     } else {
         color.ic <- sapply(1:Time, function(i) redblue(log(1.5 *pmax(1/1.5, pmin(ric[, i], 1.5)))/log(1.5^2)))
+        print(paste0(sim.i,"_meanrr_",flav, "_",ic,".pdf"))
         pdf(paste0(sim.i,"_meanrr_",flav, "_",ic,".pdf"), height=11, width=10)
     }
     
