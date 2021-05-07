@@ -1,4 +1,5 @@
 #setup
+rm(list=ls())
 library(clusso)
 library(MASS)
 source("clustack.R")
@@ -6,7 +7,7 @@ source("helperfuncs.R")
 
 #get arg from script
 args<- commandArgs(TRUE)
-startsim <- args[1]
+startsim <- as.numeric(args[1])
 setsims <- read.csv("setsims.csv")
 rrsims <- read.csv("rrsims.csv")
 utmJapan <- read.csv("utmJapan.csv")
@@ -28,8 +29,17 @@ rMax <- 20
 Time <- 5
 tim <- 3:5
 
-#Loop through batches of 5
-for (m in startsim:(startsim+4)){
+
+#
+setsims <- setsims[startsim:(startsim+4),]
+
+
+#Loop through batches of 10
+#for (m in startsim:(startsim+4)){
+for (m in 1:(1+4)){
+    print(m)
+#for (m in startsim:(startsim+9)){
+#for (m in startsim:(startsim+1)){
     #print(m)
     #set sim
     rr <- as.matrix(rrsims[m,])
@@ -65,7 +75,7 @@ for (m in startsim:(startsim+4)){
     } else {
         offset_reg <- glm(YSIM ~ as.factor(rep(c("1","2","3","4","5"), each=length(Ex)/Time)) + offset(log(Ex)),
                                                      family=quasipoisson)
-        overdisp.est <- overdisp(offset_reg, sim = TRUE, overdispfloor = TRUE)
+        overdisp.est <- overdisp(offset_reg, overdispfloor = TRUE)
         
     }
     sim_superclust_loc.time <- system.time(sim_superclust_loc <- detectclusters(sparsematrix, Ex, YSIM, numCenters, Time, maxclust,
@@ -90,27 +100,6 @@ for (m in startsim:(startsim+4)){
     id.aic_loc <- as.vector(unlist(sim_superclust_loc$selection.aic))
     #####################################################################################
     #####################################################################################
-    if(id.bic_loc!=0){
-        outbic.loc <- calcbounds(id.aic_loc, IC="bic", sim_superclust_loc, 
-                                 byloc = TRUE,Ex, YSIM, target="cluster", 
-                                 sparsemat = sparsematrix)
-        #outbic.loc <- calcbounds(id.bic_loc, IC="bic", sim_superclust_loc, bylocation = TRUE,outExp)
-    } else {
-        print("No clusters identified: BIC")
-    }
-    if(id.aic_loc!=0){
-        
-        if(id.bic_loc==id.aic_loc){
-            outaic.loc <- outbic.loc
-        } else {
-            outaic.loc <- calcbounds(id.aic_loc, IC="aic", sim_superclust_loc, 
-                                     byloc = TRUE,Ex, YSIM, target="cluster", 
-                                     sparsemat = sparsematrix)
-            #outaic.loc <- calcbounds(id.aic_loc, IC="aic", sim_superclust_loc, bylocation = TRUE,outExp)
-        }
-    } else {
-        print("No clusters identified: AIC")
-    }
     ##################################
     #FP and POWER
     ##################################
@@ -120,42 +109,62 @@ for (m in startsim:(startsim+4)){
     rrbin_inside <- ifelse(sparsematrix%*%t(clusteroverlap)!=0,1,0)
     
     ##############################
-    #BIC
-    ident.bic <- matrix(sim_superclust_loc$wtMAT[, sim_superclust_loc$selection.bic], ncol=sim_superclust_loc$selection.bic)
-    mat0.bic <- sapply(1:sim_superclust_loc$selection.bic, function(i) t(ident.bic[,i])%*%t(sparsematrix))
-    matSum.bic <- rowSums(sapply(1:sim_superclust_loc$selection.bic, function(i) ifelse(mat0.bic[[i]]>=0.1,1,0)))
-    mat.bic <- ifelse(matSum.bic!=0,1,0)
-    
-    #AIC
-    ident.aic <- matrix(sim_superclust_loc$wtMAT[, 1:sim_superclust_loc$selection.aic], ncol=sim_superclust_loc$selection.aic)
-    mat0.aic <- sapply(1:sim_superclust_loc$selection.aic, function(i) t(ident.aic[,i])%*%t(sparsematrix))
-    matSum.aic <- rowSums(sapply(1:sim_superclust_loc$selection.aic, function(i) ifelse(mat0.aic[[i]]>=0.1,1,0)))
-    mat.aic <- ifelse(matSum.aic!=0,1,0)
-    
-    #1) Did it find anything INSIDE the cluster?
-    #start here
-    incluster0.bic <- mat.bic%*%matrix(rrbin_inside, ncol=1)
-    incluster0.aic <- mat.aic%*%matrix(rrbin_inside, ncol=1)
-    
-    incluster.bic <- ifelse(incluster.bic!=0,1,0)
-    incluster.aic <- ifelse(incluster.aic!=0,1,0)
-    #2) Did it find anything OUTSIDE the cluster?
-    rrbin_outside <- ifelse(sparsematrix%*%t(clusteroverlap)==0,1,0)
-    #this should be everything that doesn't touch the cluster
-    outcluster0.bic <- mat.bic%*%matrix(rrbin_outside, ncol=1)
-    outcluster0.aic <- mat.aic%*%matrix(rrbin_outside, ncol=1)
-    outcluster.bic <- ifelse(outcluster0.bic!=0,1,0)
-    outcluster.aic <- ifelse(outcluster0.aic!=0,1,0)
+    if (sim_superclust_loc$selection.aic==0 ){
+        incluster.aic <- NULL
+        outcluster.aic <- NULL
+        
+    } else{
+        #AIC
+        ident.aic <- matrix(sim_superclust_loc$wtMAT[, 1:sim_superclust_loc$selection.aic], ncol=sim_superclust_loc$selection.aic)
+        mat0.aic <- sapply(1:sim_superclust_loc$selection.aic, function(i) t(ident.aic[,i])%*%t(sparsematrix))
+        matSum.aic <- rowSums(sapply(1:sim_superclust_loc$selection.aic, function(i) ifelse(mat0.aic[[i]]>=0.1,1,0)))
+        mat.aic <- ifelse(matSum.aic!=0,1,0)
+        
+        #1) Did it find anything INSIDE the cluster?
+        #start here
+        incluster0.aic <- mat.aic%*%matrix(rrbin_inside, ncol=1)
+        incluster.aic <- ifelse(incluster0.aic!=0,1,0)
+        #2) Did it find anything OUTSIDE the cluster?
+        rrbin_outside <- ifelse(sparsematrix%*%t(clusteroverlap)==0,1,0)
+        #this should be everything that doesn't touch the cluster
+        outcluster0.aic <- mat.aic%*%matrix(rrbin_outside, ncol=1)
+        outcluster.aic <- ifelse(outcluster0.aic!=0,1,0)
+    }  
+    if (sim_superclust_loc$selection.bic==0 ){
+        incluster.bic <- NULL
+        outcluster.bic <- NULL
+    } else{
+        #BIC
+        ident.bic <- matrix(sim_superclust_loc$wtMAT[, sim_superclust_loc$selection.bic], ncol=sim_superclust_loc$selection.bic)
+        mat0.bic <- sapply(1:sim_superclust_loc$selection.bic, function(i) t(ident.bic[,i])%*%t(sparsematrix))
+        matSum.bic <- rowSums(sapply(1:sim_superclust_loc$selection.bic, function(i) ifelse(mat0.bic[[i]]>=0.1,1,0)))
+        mat.bic <- ifelse(matSum.bic!=0,1,0)
+        #1) Did it find anything INSIDE the cluster?
+        #start here
+        incluster0.bic <- mat.bic%*%matrix(rrbin_inside, ncol=1)
+        incluster.bic <- ifelse(incluster0.bic!=0,1,0)
+        #2) Did it find anything OUTSIDE the cluster?
+        rrbin_outside <- ifelse(sparsematrix%*%t(clusteroverlap)==0,1,0)
+        #this should be everything that doesn't touch the cluster
+        outcluster0.bic <- mat.bic%*%matrix(rrbin_outside, ncol=1)
+        outcluster.bic <- ifelse(outcluster0.bic!=0,1,0)
+    }
+
     
     ##################################
     #Add sim results to table
     ##################################
     maxwLambda <- max(sim_superclust_loc$selection.bic, sim_superclust_loc$selection.aic)
-    if(length(as.vector(sim_superclust_loc$wLambda[sim_superclust_loc$selection.bic,]))==0){
+    if(length(as.vector(sim_superclust_loc$wLambda[sim_superclust_loc$selection.bic,]))==0 & length(as.vector(sim_superclust_loc$wLambda[sim_superclust_loc$selection.aic,]))==0){
         wLambda.bic <- rep(1, 1040)
     } else {
-        wLambda.bic <- sim_superclust_loc$wLambda[1:sim_superclust_loc$selection.bic,]
-        pad <-rep(NA, 1040*(maxwLambda-sim_superclust_loc$selection.bic), ncol=maxwLambda-sim_superclust_loc$selection.bic)
+        if(length(as.vector(sim_superclust_loc$wLambda[sim_superclust_loc$selection.bic,]))==0){
+            wLambda.bic <- rep(1, 1040)   
+            pad <-rep(NA, 1040*(maxwLambda-(sim_superclust_loc$selection.bic+1)), ncol=maxwLambda-(sim_superclust_loc$selection.bic+1))
+        } else {
+            wLambda.bic <- sim_superclust_loc$wLambda[1:sim_superclust_loc$selection.bic,]    
+            pad <-rep(NA, 1040*(maxwLambda-sim_superclust_loc$selection.bic), ncol=maxwLambda-sim_superclust_loc$selection.bic)
+        }
         wLambda.bic <- cbind(wLambda.bic, pad)
         
     }
@@ -175,6 +184,7 @@ for (m in startsim:(startsim+4)){
                         incluster.bic =  ifelse(length(incluster.bic)==0,0, incluster.bic),
                         outcluster.bic =  ifelse(length(outcluster.bic)==0,0, outcluster.bic),
                         iter=m,
+                        numclusters = sim_superclust_loc$selection.bic,
                         wLambda.bic),
                       c(IC="AIC",rad, risk, cent, theta,
                         timeperiod=as.numeric(paste(tim, collapse="")),
@@ -182,6 +192,7 @@ for (m in startsim:(startsim+4)){
                         incluster.aic =  ifelse(length(incluster.aic)==0,0, incluster.aic),
                         outcluster.aic = ifelse(length(outcluster.aic)==0,0, outcluster.aic),
                         iter=m,
+                        numclusters = sim_superclust_loc$selection.bic,
                         wLambda.aic))
     
     
@@ -201,7 +212,7 @@ for (m in startsim:(startsim+4)){
         offset_reg <- glm(YSIM ~ as.factor(rep(c("1","2","3","4","5"), 
                                                                   each=length(Ex)/Time)) + offset(log(Ex)),
                                              family=quasipoisson)
-        overdisp.est <- overdisp(offset_reg, sim = TRUE, overdispfloor = TRUE)
+        overdisp.est <- overdisp(offset_reg, overdispfloor = TRUE)
         
     }
     
@@ -217,25 +228,6 @@ for (m in startsim:(startsim+4)){
     id.aic_pc <- as.vector(unlist(sim_superclust_pc$selection.aic))
     #####################################################################################
     #####################################################################################
-    if(id.bic_pc!=0){
-        outbic.pc <- calcbounds(id.bic_pc, IC="bic", sim_superclust_pc, 
-                                 byloc = FALSE,Ex, YSIM, target="cluster", 
-                                 sparsemat = sparsematrix)
-    } else {
-        print("No clusters identified: BIC")
-    }
-    if(id.aic_pc!=0){
-        
-        if(id.bic_pc==id.aic_pc){
-            outaic.pc <- outbic.pc
-        } else {
-            outaic.pc <- calcbounds(id.aic_pc, IC="aic", sim_superclust_pc, 
-                                    byloc = FALSE,Ex, YSIM, target="cluster", 
-                                    sparsemat = sparsematrix)
-        }
-    } else {
-        print("No clusters identified: AIC")
-    }
     ##################################
     #FP and POWER
     ##################################
@@ -244,59 +236,74 @@ for (m in startsim:(startsim+4)){
     clusteroverlap<- rrbin_cluster%*%sparsematrix
     rrbin_inside <- ifelse(sparsematrix%*%t(clusteroverlap)!=0,1,0)
     
-    ##############################
-    ##############################
-    # #Which PCs overlap true cluster?
-    #what was identified in each sim by IC
-    #BIC 
-    ident.bic <- matrix(sim_superclust_pc$wtMAT[, sim_superclust_pc$selection.bic], ncol=sim_superclust_pc$selection.bic)
-    mat0.bic <- sapply(1:sim_superclust_pc$selection.bic, function(i) t(ident.bic[,i])%*%t(sparsematrix))
-    matSum.bic <- rowSums(sapply(1:sim_superclust_pc$selection.bic, function(i) ifelse(mat0.bic[[i]]>=0.1,1,0)))
-    mat.bic <- ifelse(matSum.bic!=0,1,0)
-    
-    #AIC
-    ident.aic <- matrix(sim_superclust_pc$wtMAT[, 1:sim_superclust_pc$selection.aic], ncol=sim_superclust_pc$selection.aic)
-    mat0.aic <- sapply(1:sim_superclust_pc$selection.aic, function(i) t(ident.aic[,i])%*%t(sparsematrix))
-    matSum.aic <- rowSums(sapply(1:sim_superclust_pc$selection.aic, function(i) ifelse(mat0.aic[[i]]>=0.1,1,0)))
-    mat.aic <- ifelse(matSum.aic!=0,1,0)
-    
-    
-    #1) Did it find anything INSIDE the cluster?
-    incluster0.bic <- mat.bic%*%matrix(rrbin_inside, ncol=1)
-    incluster0.aic <- mat.aic%*%matrix(rrbin_inside, ncol=1)
-    incluster.bic <- ifelse(incluster.bic!=0,1,0)
-    incluster.aic <- ifelse(incluster.aic!=0,1,0)
-    # 
-    
-    #2) Did it find anything OUTSIDE the cluster?
-    #this should be everything that doesn't touch the cluster
-    outcluster.bic <- mat.bic%*%matrix(rrbin_outside, ncol=1)
-    outcluster.aic <- mat.aic%*%matrix(rrbin_outside, ncol=1)
-    outcluster0.bic <- mat.bic%*%matrix(rrbin_outside, ncol=1)
-    outcluster0.aic <- mat.aic%*%matrix(rrbin_outside, ncol=1)
-    outcluster.bic <- ifelse(outcluster0.bic!=0,1,0)
-    outcluster.aic <- ifelse(outcluster0.aic!=0,1,0)
-    
-    
+    if (sim_superclust_pc$selection.aic==0 ){
+        incluster.aic <- NULL
+        outcluster.aic <- NULL
+        #print("a")
+        
+    } else{
+        #print("b")
+        #AIC
+        ident.aic <- matrix(sim_superclust_pc$wtMAT[, 1:sim_superclust_pc$selection.aic], ncol=sim_superclust_pc$selection.aic)
+        mat0.aic <- sapply(1:sim_superclust_pc$selection.aic, function(i) t(ident.aic[,i])%*%t(sparsematrix))
+        matSum.aic <- rowSums(sapply(1:sim_superclust_pc$selection.aic, function(i) ifelse(mat0.aic[[i]]>=0.1,1,0)))
+        mat.aic <- ifelse(matSum.aic!=0,1,0)
+        
+        #1) Did it find anything INSIDE the cluster?
+        #start here
+        incluster0.aic <- mat.aic%*%matrix(rrbin_inside, ncol=1)
+        incluster.aic <- ifelse(incluster0.aic!=0,1,0)
+        #2) Did it find anything OUTSIDE the cluster?
+        rrbin_outside <- ifelse(sparsematrix%*%t(clusteroverlap)==0,1,0)
+        #this should be everything that doesn't touch the cluster
+        outcluster0.aic <- mat.aic%*%matrix(rrbin_outside, ncol=1)
+        outcluster.aic <- ifelse(outcluster0.aic!=0,1,0)
+    }  
+    if (sim_superclust_pc$selection.bic==0 ){
+        incluster.bic <- NULL
+        outcluster.bic <- NULL
+    } else{
+        #BIC
+        ident.bic <- matrix(sim_superclust_pc$wtMAT[, sim_superclust_pc$selection.bic], ncol=sim_superclust_pc$selection.bic)
+        mat0.bic <- sapply(1:sim_superclust_pc$selection.bic, function(i) t(ident.bic[,i])%*%t(sparsematrix))
+        matSum.bic <- rowSums(sapply(1:sim_superclust_pc$selection.bic, function(i) ifelse(mat0.bic[[i]]>=0.1,1,0)))
+        mat.bic <- ifelse(matSum.bic!=0,1,0)
+        #1) Did it find anything INSIDE the cluster?
+        #start here
+        incluster0.bic <- mat.bic%*%matrix(rrbin_inside, ncol=1)
+        incluster.bic <- ifelse(incluster0.bic!=0,1,0)
+        #2) Did it find anything OUTSIDE the cluster?
+        rrbin_outside <- ifelse(sparsematrix%*%t(clusteroverlap)==0,1,0)
+        #this should be everything that doesn't touch the cluster
+        outcluster0.bic <- mat.bic%*%matrix(rrbin_outside, ncol=1)
+        outcluster.bic <- ifelse(outcluster0.bic!=0,1,0)
+    }
     ##################################
     #Add sim results to table
     ##################################
     ##################################
-    maxwLambda <- max(sim_superclust_loc$selection.bic, sim_superclust_loc$selection.aic)
-    if(length(as.vector(sim_superclust_pc$wLambda[sim_superclust_pc$selection.bic,]))==0){
+    maxwLambda <- max(sim_superclust_pc$selection.bic, sim_superclust_pc$selection.aic)
+    if(length(as.vector(sim_superclust_pc$wLambda[sim_superclust_pc$selection.bic,]))==0 & length(as.vector(sim_superclust_pc$wLambda[sim_superclust_pc$selection.aic,]))==0){
         wLambda.bic <- rep(1, 1040)
     } else {
-        wLambda.bic <- as.vector(sim_superclust_pc$wLambda[sim_superclust_pc$selection.bic,])
-        pad <-rep(NA, 1040*(maxwLambda-sim_superclust_pc$selection.bic), ncol=maxwLambda-sim_superclust_pc$selection.bic)
+        if(length(as.vector(sim_superclust_pc$wLambda[sim_superclust_pc$selection.bic,]))==0){
+            wLambda.bic <- rep(1, 1040)   
+            pad <-rep(NA, 1040*(maxwLambda-(sim_superclust_pc$selection.bic+1)), ncol=maxwLambda-(sim_superclust_pc$selection.bic+1))
+        } else {
+            wLambda.bic <- sim_superclust_pc$wLambda[1:sim_superclust_pc$selection.bic,]    
+            pad <-rep(NA, 1040*(maxwLambda-sim_superclust_pc$selection.bic), ncol=maxwLambda-sim_superclust_pc$selection.bic)
+        }
         wLambda.bic <- cbind(wLambda.bic, pad)
+        
     }
     if(length(as.vector(sim_superclust_pc$wLambda[sim_superclust_pc$selection.aic,]))==0){
         wLambda.aic <- rep(1, 1040)
     } else {
-        wLambda.aic <- as.vector(sim_superclust_pc$wLambda[sim_superclust_pc$selection.aic,])
+        wLambda.aic <- sim_superclust_pc$wLambda[1:sim_superclust_pc$selection.aic,]
         pad <-rep(NA, 1040*(maxwLambda-sim_superclust_pc$selection.aic), ncol=maxwLambda-sim_superclust_pc$selection.aic)
         wLambda.aic <- cbind(wLambda.aic, pad)
     }
+    
     
     
     tabn.pc <- rbind(c(IC="BIC",rad, risk, cent, theta,
@@ -305,6 +312,7 @@ for (m in startsim:(startsim+4)){
                        incluster.bic = ifelse(length(incluster.bic)==0,0, incluster.bic),
                        outcluster.bic = ifelse(length(outcluster.bic)==0,0, outcluster.bic),
                        iter = m,
+                       numclusters = sim_superclust_loc$selection.bic,
                        wLambda.bic),
                      
                      c(IC="AIC",rad, risk, cent, theta,
@@ -313,6 +321,7 @@ for (m in startsim:(startsim+4)){
                        incluster.aic = ifelse(length(incluster.aic)==0,0, incluster.aic),
                        outcluster.aic = ifelse(length(outcluster.aic)==0,0, outcluster.aic),
                        iter = m,
+                       numclusters = sim_superclust_loc$selection.aic,
                        wLambda.aic))
     
     
@@ -532,6 +541,7 @@ for (m in startsim:(startsim+4)){
                            incluster.bic = as.vector(listpow.bic.qp),
                            outcluster.bic = as.vector(listfp.bic.qp),
                            iter = m,
+                           numclusters = sim_clusso$lassoresult.qp.st$numclust.qbic,
                            rrest.bic.qp ),
                          c(IC="AIC",rad, risk, cent, theta,
                            timeperiod=as.numeric(paste(tim, collapse="")),
@@ -539,6 +549,7 @@ for (m in startsim:(startsim+4)){
                            incluster.aic = as.vector(listpow.aic.qp),
                            outcluster.aic = as.vector(listfp.aic.qp),
                            iter = m,
+                           numclusters = sim_clusso$lassoresult.qp.st$numclust.qaic,
                            rrest.aic.qp ),
                          c(IC="BIC",rad, risk, cent, theta,
                            timeperiod=as.numeric(paste(tim, collapse="")),
@@ -546,6 +557,7 @@ for (m in startsim:(startsim+4)){
                            incluster.bic = as.vector(listpow.bic.p),
                            outcluster.bic = as.vector(listfp.bic.p),
                            iter = m,
+                           numclusters = sim_clusso$lassoresult.p.st$numclust.qbic,
                            rrest.bic.p ),
                          c(IC="AIC",rad, risk, cent, theta,
                            timeperiod=as.numeric(paste(tim, collapse="")),
@@ -553,6 +565,7 @@ for (m in startsim:(startsim+4)){
                            incluster.aic = as.vector(listpow.aic.p),
                            outcluster.aic = as.vector(listfp.aic.p),
                            iter = m,
+                           numclusters = sim_clusso$lassoresult.p.st$numclust.qaic,
                            rrest.aic.p))
     
     print("Finished clusso")
@@ -592,6 +605,7 @@ for (m in startsim:(startsim+4)){
                        incluster.mc = as.vector(outpow.stepscan),
                        outcluster.mc = as.vector(outfp.stepscan),
                        iter = m,
+                       numclusters = numclustersid,
                        rrest.mc)
     print("Finished stepwise scan")
     
@@ -664,6 +678,7 @@ for (m in startsim:(startsim+4)){
                                incluster.bic = as.vector(outpow.stage.bic),
                                outcluster.bic = as.vector(outfp.stage.bic),
                                iter = m,
+                               numclustersid = sim_stage$n.bic,
                                as.vector(sim_stage$RRbic)),
                              c(IC="AIC",rad, risk, cent, theta,
                                timeperiod=as.numeric(paste(tim, collapse="")),
@@ -671,6 +686,7 @@ for (m in startsim:(startsim+4)){
                                incluster.bic = as.vector(outpow.stage.bic),
                                outcluster.bic = as.vector(outfp.stage.bic),
                                iter = m,
+                               numclustersid = sim_stage$n.aic,
                                as.vector(sim_stage$RRaic)))
     
     print("Finished forward stagewise")
@@ -682,7 +698,40 @@ for (m in startsim:(startsim+4)){
     #####################################################################################
     #####################################################################################
     #####################################################################################
-    out <- rbind(tabn.loc, tabn.pc, tabn.clusso, tabn.stepscan, tabn.fstagewise) 
+    maxcols <- max(ncol(tabn.loc), ncol(tabn.pc), ncol(tabn.clusso), ncol(tabn.fstagewise), ncol(tabn.stepscan))
+    mincols <- min(ncol(tabn.loc), ncol(tabn.pc), ncol(tabn.clusso), ncol(tabn.fstagewise), ncol(tabn.stepscan))
+    
+    padder <- function(maxcols, mincols, tabn){
+        #browser()
+        tabncols <- ncol(tabn)
+        if (is.null(tabncols)){
+            tabncols <- length(tabn)
+        }
+        pad <- rep(NA,maxcols-tabncols)
+        if(!is.vector(tabn)){
+            tabnrow <- nrow(tabn)
+            tabnout <- cbind(tabn, matrix(rep(pad, tabnrow), nrow=tabnrow))
+        }else{
+           tabnout <- c(tabn, pad)
+        }
+        return(tabnout)
+        
+    }
+    
+    #test <- padder(maxcols, mincols,tabn.stepscan)
+    #test <- padder(maxcols, mincols,tabn.pc)
+    #test <- padder(maxcols, mincols,tabn.loc)
+    #pad2 <- rep(NA,maxcols-mincols)
+    tabn.locpad <- padder(maxcols, mincols,tabn.loc)
+    tabn.pcpad <- padder(maxcols, mincols,tabn.pc)
+    tabn.clussopad <- padder(maxcols, mincols,tabn.clusso)
+    tabn.stepscanpad <- padder(maxcols, mincols,tabn.stepscan)
+    tabn.fstagewisepad <- padder(maxcols, mincols,tabn.fstagewise)
+    
+    out <- rbind(tabn.locpad, tabn.pcpad, tabn.clussopad, tabn.stepscanpad, tabn.fstagewisepad)
+    
+    
+    #out <- rbind(tabn.loc, cbind(tabn.pc, rbind(pad2, pad2)), tabn.clusso, c(tabn.stepscan, pad2), tabn.fstagewise) 
     if(mod=="space"){
         out <- cbind(stsmodel=rep("space", times=nrow(out)), out)
     }else{
