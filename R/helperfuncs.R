@@ -679,30 +679,39 @@ stepscan <- function(Yx, Ex, Time,sparsematrix, nsim, maxclust){
     maxLiks <- rep(NA, maxclust)
     #pval <- 0
     #while(pval <= 0.05){
-    for(m in 1:maxclust){
+    for(c in 1:maxclust){ 
         #identify first MLC
         yy  <- matrix(Yx, nrow=1) %*% sparsematrix[,1:66870]
         ee  <- matrix(Ex, nrow=1) %*% sparsematrix[,1:66870]
         LLRa <- yy@x*log(yy@x/ee@x) + (sum(Yx) - yy@x)*log((sum(Yx)- yy@x)/(sum(Ex)-ee@x))
         maxlL <- which.max(LLRa)
-        maxLiks[m] <- maxlL
+        maxLiks[c] <- maxlL
         LLRa_stat <- LLRa[maxlL]
         ixmaxL <- sparsematrix[,maxlL]
         RRmaxL <- yy@x[maxlL]/ee@x[maxlL]
         #MC test for cluster
         YSIM= rmultinom(nsim, sum(Yx), prob=Ex)
+        #YSIM= rmultinom(nsim, sum(Ex), prob=Ex)
         #under the null
         yy0 <- sapply(1:nsim, function(i) matrix(YSIM[,i], nrow=1)%*% sparsematrix[,1:66870])
         ee0 <- ee
+        #ee0 <- ee
+        #LLR0 <- sapply(1:nsim, function(i) yy0[[i]]@x*log(yy0[[i]]@x/ee0@x) + (sum(YSIM[,i]) - yy0[[i]]@x)*log((sum(YSIM[,i])- yy0[[i]]@x)/(sum(Ex)-ee0@x)))
+        
         LLR0 <- sapply(1:nsim, function(i) yy0[[i]]@x*log(yy0[[i]]@x/ee0@x) + (sum(YSIM[,i]) - yy0[[i]]@x)*log((sum(YSIM[,i])- yy0[[i]]@x)/(sum(Ex)-ee0@x)))
         #calculate pvalue
+        
+        #test <- apply(LLR0,2, function(x) which(x > LLRa_stat))
+        
+        
+        
         pval <- sum(apply(LLR0,2, function(x) ifelse(any(x>= LLRa_stat , na.rm = TRUE),1,0)))/nsim
         #print(pval)
-        mlc_pvals[m] <- pval
+        mlc_pvals[c] <- pval
         #remove cluster
         rr <- rep(1,1040)
         rr[which(ixmaxL!=0)] <- RRmaxL
-        mlc[,m] <- rr
+        mlc[,c] <- rr
         E.cur <- Ex*rr 
         Ex <- scales(matrix(E.cur,ncol=Time),matrix(Yx, ncol=Time), Time)    
         #str(Ex)

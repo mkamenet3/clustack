@@ -11,6 +11,22 @@ startsim <- as.numeric(args[1])
 setsims <- read.csv("setsims.csv")
 rrsims <- read.csv("rrsims.csv")
 utmJapan <- read.csv("utmJapan.csv")
+padder <- function(maxcols, mincols, tabn){
+    #browser()
+    tabncols <- ncol(tabn)
+    if (is.null(tabncols)){
+        tabncols <- length(tabn)
+    }
+    pad <- rep(NA,maxcols-tabncols)
+    if(!is.vector(tabn)){
+        tabnrow <- nrow(tabn)
+        tabnout <- cbind(tabn, matrix(rep(pad, tabnrow), nrow=tabnrow))
+    }else{
+        tabnout <- c(tabn, pad)
+    }
+    return(tabnout)
+    
+}
 #################################################################################################
 #################################################################################################
 #SIM
@@ -701,27 +717,6 @@ for (m in 1:(1+4)){
     maxcols <- max(ncol(tabn.loc), ncol(tabn.pc), ncol(tabn.clusso), ncol(tabn.fstagewise), ncol(tabn.stepscan))
     mincols <- min(ncol(tabn.loc), ncol(tabn.pc), ncol(tabn.clusso), ncol(tabn.fstagewise), ncol(tabn.stepscan))
     
-    padder <- function(maxcols, mincols, tabn){
-        #browser()
-        tabncols <- ncol(tabn)
-        if (is.null(tabncols)){
-            tabncols <- length(tabn)
-        }
-        pad <- rep(NA,maxcols-tabncols)
-        if(!is.vector(tabn)){
-            tabnrow <- nrow(tabn)
-            tabnout <- cbind(tabn, matrix(rep(pad, tabnrow), nrow=tabnrow))
-        }else{
-           tabnout <- c(tabn, pad)
-        }
-        return(tabnout)
-        
-    }
-    
-    #test <- padder(maxcols, mincols,tabn.stepscan)
-    #test <- padder(maxcols, mincols,tabn.pc)
-    #test <- padder(maxcols, mincols,tabn.loc)
-    #pad2 <- rep(NA,maxcols-mincols)
     tabn.locpad <- padder(maxcols, mincols,tabn.loc)
     tabn.pcpad <- padder(maxcols, mincols,tabn.pc)
     tabn.clussopad <- padder(maxcols, mincols,tabn.clusso)

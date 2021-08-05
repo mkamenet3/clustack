@@ -364,6 +364,7 @@ bucklandbounds.cells <- function(thetaa, res, w_q, outExp_out ,IC,transform="non
         LBa = exp(as.vector(log(thetaa)) - critval*sqrt(var_thetaa))
         
     } else {
+      #browser()
         if(!is.null(overdisp.est)){
             varthetai <- sapply(1:nrow(tsparsemat), function(k) overdisp.est*thetai[k,]/outExp_out)
         } else {
