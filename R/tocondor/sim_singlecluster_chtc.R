@@ -47,12 +47,12 @@ tim <- 3:5
 
 
 #
-setsims <- setsims[startsim:(startsim+4),]
+#setsims <- setsims[startsim:(startsim+4),]
 
 
 #Loop through batches of 10
-#for (m in startsim:(startsim+4)){
-for (m in 1:(1+4)){
+for (m in startsim:(startsim+4)){
+#for (m in 1:(1+4)){
     print(m)
 #for (m in startsim:(startsim+9)){
 #for (m in startsim:(startsim+1)){
@@ -151,7 +151,7 @@ for (m in 1:(1+4)){
         outcluster.bic <- NULL
     } else{
         #BIC
-        ident.bic <- matrix(sim_superclust_loc$wtMAT[, sim_superclust_loc$selection.bic], ncol=sim_superclust_loc$selection.bic)
+        ident.bic <- matrix(sim_superclust_loc$wtMAT[, 1:sim_superclust_loc$selection.bic], ncol=sim_superclust_loc$selection.bic)
         mat0.bic <- sapply(1:sim_superclust_loc$selection.bic, function(i) t(ident.bic[,i])%*%t(sparsematrix))
         matSum.bic <- rowSums(sapply(1:sim_superclust_loc$selection.bic, function(i) ifelse(mat0.bic[[i]]>=0.1,1,0)))
         mat.bic <- ifelse(matSum.bic!=0,1,0)
@@ -280,7 +280,7 @@ for (m in 1:(1+4)){
         outcluster.bic <- NULL
     } else{
         #BIC
-        ident.bic <- matrix(sim_superclust_pc$wtMAT[, sim_superclust_pc$selection.bic], ncol=sim_superclust_pc$selection.bic)
+        ident.bic <- matrix(sim_superclust_pc$wtMAT[, 1:sim_superclust_pc$selection.bic], ncol=sim_superclust_pc$selection.bic)
         mat0.bic <- sapply(1:sim_superclust_pc$selection.bic, function(i) t(ident.bic[,i])%*%t(sparsematrix))
         matSum.bic <- rowSums(sapply(1:sim_superclust_pc$selection.bic, function(i) ifelse(mat0.bic[[i]]>=0.1,1,0)))
         mat.bic <- ifelse(matSum.bic!=0,1,0)
@@ -550,39 +550,75 @@ for (m in 1:(1+4)){
         rrest.aic.p <- sim_clusso$lassoresult.p.st$E.qaic
     }
     
-    
-    tabn.clusso <- rbind(c(IC="BIC",rad, risk, cent, theta,
-                           timeperiod=as.numeric(paste(tim, collapse="")),
-                           mod=mod,  type = "QP",time=sim_clusso.time, method="clusso",
-                           incluster.bic = as.vector(listpow.bic.qp),
-                           outcluster.bic = as.vector(listfp.bic.qp),
-                           iter = m,
-                           numclusters = sim_clusso$lassoresult.qp.st$numclust.qbic,
-                           rrest.bic.qp ),
-                         c(IC="AIC",rad, risk, cent, theta,
-                           timeperiod=as.numeric(paste(tim, collapse="")),
-                           mod=mod,type = "QP",time=sim_clusso.time, method="clusso",
-                           incluster.aic = as.vector(listpow.aic.qp),
-                           outcluster.aic = as.vector(listfp.aic.qp),
-                           iter = m,
-                           numclusters = sim_clusso$lassoresult.qp.st$numclust.qaic,
-                           rrest.aic.qp ),
-                         c(IC="BIC",rad, risk, cent, theta,
-                           timeperiod=as.numeric(paste(tim, collapse="")),
-                           mod=mod, type = "Pois",time=sim_clusso.time, method="clusso",
-                           incluster.bic = as.vector(listpow.bic.p),
-                           outcluster.bic = as.vector(listfp.bic.p),
-                           iter = m,
-                           numclusters = sim_clusso$lassoresult.p.st$numclust.qbic,
-                           rrest.bic.p ),
-                         c(IC="AIC",rad, risk, cent, theta,
-                           timeperiod=as.numeric(paste(tim, collapse="")),
-                           mod=mod, type = "Pois",time=sim_clusso.time, method="clusso",
-                           incluster.aic = as.vector(listpow.aic.p),
-                           outcluster.aic = as.vector(listfp.aic.p),
-                           iter = m,
-                           numclusters = sim_clusso$lassoresult.p.st$numclust.qaic,
-                           rrest.aic.p))
+    if(mod == "spacetime"){
+        tabn.clusso <- rbind(c(IC="BIC",rad, risk, cent, theta,
+                               timeperiod=as.numeric(paste(tim, collapse="")),
+                               mod=mod,  type = "QP",time=sim_clusso.time, method="clusso",
+                               incluster.bic = as.vector(listpow.bic.qp),
+                               outcluster.bic = as.vector(listfp.bic.qp),
+                               iter = m,
+                               numclusters = sim_clusso$lassoresult.qp.st$numclust.qbic,
+                               rrest.bic.qp ),
+                             c(IC="AIC",rad, risk, cent, theta,
+                               timeperiod=as.numeric(paste(tim, collapse="")),
+                               mod=mod,type = "QP",time=sim_clusso.time, method="clusso",
+                               incluster.aic = as.vector(listpow.aic.qp),
+                               outcluster.aic = as.vector(listfp.aic.qp),
+                               iter = m,
+                               numclusters = sim_clusso$lassoresult.qp.st$numclust.qaic,
+                               rrest.aic.qp ),
+                             c(IC="BIC",rad, risk, cent, theta,
+                               timeperiod=as.numeric(paste(tim, collapse="")),
+                               mod=mod, type = "Pois",time=sim_clusso.time, method="clusso",
+                               incluster.bic = as.vector(listpow.bic.p),
+                               outcluster.bic = as.vector(listfp.bic.p),
+                               iter = m,
+                               numclusters = sim_clusso$lassoresult.p.st$numclust.qbic,
+                               rrest.bic.p ),
+                             c(IC="AIC",rad, risk, cent, theta,
+                               timeperiod=as.numeric(paste(tim, collapse="")),
+                               mod=mod, type = "Pois",time=sim_clusso.time, method="clusso",
+                               incluster.aic = as.vector(listpow.aic.p),
+                               outcluster.aic = as.vector(listfp.aic.p),
+                               iter = m,
+                               numclusters = sim_clusso$lassoresult.p.st$numclust.qaic,
+                               rrest.aic.p))
+        
+    } else{
+        tabn.clusso <- rbind(c(IC="BIC",rad, risk, cent, theta,
+                               timeperiod=as.numeric(paste(tim, collapse="")),
+                               mod=mod,  type = "QP",time=sim_clusso.time, method="clusso",
+                               incluster.bic = as.vector(listpow.bic.qp),
+                               outcluster.bic = as.vector(listfp.bic.qp),
+                               iter = m,
+                               numclusters = sim_clusso$lassoresult.qp.s$numclust.qbic,
+                               rrest.bic.qp ),
+                             c(IC="AIC",rad, risk, cent, theta,
+                               timeperiod=as.numeric(paste(tim, collapse="")),
+                               mod=mod,type = "QP",time=sim_clusso.time, method="clusso",
+                               incluster.aic = as.vector(listpow.aic.qp),
+                               outcluster.aic = as.vector(listfp.aic.qp),
+                               iter = m,
+                               numclusters = sim_clusso$lassoresult.qp.s$numclust.qaic,
+                               rrest.aic.qp ),
+                             c(IC="BIC",rad, risk, cent, theta,
+                               timeperiod=as.numeric(paste(tim, collapse="")),
+                               mod=mod, type = "Pois",time=sim_clusso.time, method="clusso",
+                               incluster.bic = as.vector(listpow.bic.p),
+                               outcluster.bic = as.vector(listfp.bic.p),
+                               iter = m,
+                               numclusters = sim_clusso$lassoresult.p.s$numclust.qbic,
+                               rrest.bic.p ),
+                             c(IC="AIC",rad, risk, cent, theta,
+                               timeperiod=as.numeric(paste(tim, collapse="")),
+                               mod=mod, type = "Pois",time=sim_clusso.time, method="clusso",
+                               incluster.aic = as.vector(listpow.aic.p),
+                               outcluster.aic = as.vector(listfp.aic.p),
+                               iter = m,
+                               numclusters = sim_clusso$lassoresult.p.s$numclust.qaic,
+                               rrest.aic.p))
+    }
+   
     
     print("Finished clusso")
     
