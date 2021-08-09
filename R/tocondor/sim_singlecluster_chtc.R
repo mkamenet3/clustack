@@ -730,7 +730,7 @@ for (m in startsim:(startsim+4)){
                                incluster.bic = as.vector(outpow.stage.bic),
                                outcluster.bic = as.vector(outfp.stage.bic),
                                iter = m,
-                               numclustersid = sim_stage$n.bic,
+                               numclustersid = sim_stage$K[sim_stage$n.bic],
                                as.vector(sim_stage$RRbic)),
                              c(IC="AIC",rad, risk, cent, theta,
                                timeperiod=as.numeric(paste(tim, collapse="")),
@@ -738,7 +738,7 @@ for (m in startsim:(startsim+4)){
                                incluster.bic = as.vector(outpow.stage.bic),
                                outcluster.bic = as.vector(outfp.stage.bic),
                                iter = m,
-                               numclustersid = sim_stage$n.aic,
+                               numclustersid = sim_stage$K[sim_stage$n.aic],
                                as.vector(sim_stage$RRaic)))
     
     print("Finished forward stagewise")
