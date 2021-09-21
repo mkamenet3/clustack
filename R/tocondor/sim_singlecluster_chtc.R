@@ -67,6 +67,10 @@ for (m in startsim:(startsim+4)){
     theta <- setsims[m, 2084]
     mod <- setsims[m, 2085]
     
+    if (theta==Inf){
+        threshold <- 0.04
+    } else { threshold <- 0.25}
+    
     #create set of potential clusters based on distances
     potentialclusters <- clusso::clusters2df(x,y,rMax, utm = TRUE, length(x))
     n_uniq <- length(unique(potentialclusters$center))
@@ -231,6 +235,7 @@ for (m in startsim:(startsim+4)){
         overdisp.est <- overdisp(offset_reg, overdispfloor = TRUE)
         
     }
+    
     
     sim_superclust_pc.time <- system.time(sim_superclust_pc<- detectclusters(sparsematrix, Ex, YSIM,numCenters, Time, maxclust,
                                                                              byloc = FALSE, model="poisson",
@@ -638,16 +643,17 @@ for (m in startsim:(startsim+4)){
     ########################################################################
     #power/FP
     ##########################################
-    numclustersid <- which(sim_stepscan$pvals>0.05)-1
-    ixids <- step_clusterix(sparsematrix, sim_stepscan, numclustersid=numclustersid)
+    #numclustersid <- which(sim_stepscan$pvals>0.05)-1
+    numclustersid <- which(sim_stepscan$pvals<=threshold)
+    ixids <- step_clusterix(sparsematrix, sim_stepscan, numclustersid=numclustersid, thresh = threshold)
     #pow/fp
     outpow.stepscan<- spatscanfs_prob_clusteroverlap(sim_stepscan,ixids, numclustersid ,sparsematrix, rr, risk,pow=TRUE)
     outfp.stepscan <- spatscanfs_prob_clusteroverlap(sim_stepscan,ixids, numclustersid ,sparsematrix, rr, risk,pow=FALSE)
     #cell detection
-    if(numclustersid==0){
+    if(length(numclustersid)==0){
         rrest.mc <- rep(1,1040)    
     } else{
-        rrest.mc <- sim_stepscan$clusters[, max(which(sim_stepscan$pvals<0.05))]
+        rrest.mc <- sim_stepscan$clusters[, max(which(sim_stepscan$pvals< threshold))]
     }
     
     
@@ -657,7 +663,7 @@ for (m in startsim:(startsim+4)){
                        incluster.mc = as.vector(outpow.stepscan),
                        outcluster.mc = as.vector(outfp.stepscan),
                        iter = m,
-                       numclusters = numclustersid,
+                       numclusters = max(numclustersid),
                        rrest.mc)
     print("Finished stepwise scan")
     
@@ -730,7 +736,7 @@ for (m in startsim:(startsim+4)){
                                incluster.bic = as.vector(outpow.stage.bic),
                                outcluster.bic = as.vector(outfp.stage.bic),
                                iter = m,
-                               numclustersid = sim_stage$K[sim_stage$n.bic],
+                               numclustersid = ifelse(length(sim_stage$K[sim_stage$n.bic])==0,0,sim_stage$K[sim_stage$n.bic]),
                                as.vector(sim_stage$RRbic)),
                              c(IC="AIC",rad, risk, cent, theta,
                                timeperiod=as.numeric(paste(tim, collapse="")),
@@ -738,7 +744,7 @@ for (m in startsim:(startsim+4)){
                                incluster.bic = as.vector(outpow.stage.bic),
                                outcluster.bic = as.vector(outfp.stage.bic),
                                iter = m,
-                               numclustersid = sim_stage$K[sim_stage$n.aic],
+                               numclustersid = ifelse(length(sim_stage$K[sim_stage$n.aic])==0,0,sim_stage$K[sim_stage$n.aic]),
                                as.vector(sim_stage$RRaic)))
     
     print("Finished forward stagewise")

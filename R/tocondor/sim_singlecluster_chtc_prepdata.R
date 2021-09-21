@@ -46,7 +46,7 @@ centers <- c(150,35)
 radii <- c(9,11,18)
 timeperiod <- c(3:5)
 #risk.ratios <- c(1.1, 1.5, 2, 0.5)
-risk.ratios <- c(1,1.1, 1.5, 2, 0.5)
+risk.ratios <- c(1.1, 1.5, 2, 0.5)
 models <- c("spacetime", "space")
 path.figures <- "./"
 path.tables <- "./"
@@ -58,8 +58,8 @@ eps <- 3
 #Set-Up for Condor
 #################################################################################################
 #################################################################################################
-#nsettings <-96
-nsettings <- 120
+nsettings <-96
+#nsettings <- 120
 #2085  = 1040 (Yx) + 1040 (Ex) + cent + rad +risk +theta +mod (each row)
 setsims <- matrix(rep(NA, 2085*nsettings*nsim), nrow=nsettings*nsim)
 rrsims <- matrix(rep(NA, 1040*nsettings*nsim), nrow=nsettings*nsim)
