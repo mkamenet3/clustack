@@ -45,13 +45,13 @@ create_plotFPR_stack <- function(res,IC, flav,Time, nsim, sim.i){
     } else {
         #find pc's that overlap maxloc
         if(flav=="loc"){
-            maxid <- sapply(1:nsim, function(i) res_loc[[i]]$maxid[selects[i]])    
+            maxid <- sapply(1:nsim, function(i) res[[i]]$maxid[selects[i]])    
             vec <- rep(0, 208 * Time)
             position <- list(vec)[rep(1, nsim)]
             simindicator <- mapply(reval, position, maxid)
             probs <- Matrix::rowSums(simindicator)/nsim
         } else{
-            maxid <- sapply(1:nsim, function(i) res_loc[[i]]$maxid[selects[i]])   
+            maxid <- sapply(1:nsim, function(i) res[[i]]$maxid[selects[i]])   
             ixout <- vector(mode = "list", length = nsim)
             #find pcs
             for(i in 1:length(maxid)){
@@ -679,30 +679,40 @@ stepscan <- function(Yx, Ex, Time,sparsematrix, nsim, maxclust){
     maxLiks <- rep(NA, maxclust)
     #pval <- 0
     #while(pval <= 0.05){
-    for(m in 1:maxclust){
+    for(c in 1:maxclust){ 
         #identify first MLC
         yy  <- matrix(Yx, nrow=1) %*% sparsematrix[,1:66870]
         ee  <- matrix(Ex, nrow=1) %*% sparsematrix[,1:66870]
-        LLRa <- yy@x*log(yy@x/ee@x) + (sum(Yx) - yy@x)*log((sum(Yx)- yy@x)/(sum(Ex)-ee@x))
+        LLRa <- yy@x*log(yy@x/ee@x) + (ee@x - yy@x) #cluster only likelihood
+        #LLRa <- yy@x*log(yy@x/ee@x) + (sum(Yx) - yy@x)*log((sum(Yx)- yy@x)/(sum(Ex)-ee@x))
         maxlL <- which.max(LLRa)
-        maxLiks[m] <- maxlL
+        maxLiks[c] <- maxlL
         LLRa_stat <- LLRa[maxlL]
         ixmaxL <- sparsematrix[,maxlL]
         RRmaxL <- yy@x[maxlL]/ee@x[maxlL]
         #MC test for cluster
         YSIM= rmultinom(nsim, sum(Yx), prob=Ex)
+        #YSIM= rmultinom(nsim, sum(Ex), prob=Ex)
         #under the null
         yy0 <- sapply(1:nsim, function(i) matrix(YSIM[,i], nrow=1)%*% sparsematrix[,1:66870])
         ee0 <- ee
-        LLR0 <- sapply(1:nsim, function(i) yy0[[i]]@x*log(yy0[[i]]@x/ee0@x) + (sum(YSIM[,i]) - yy0[[i]]@x)*log((sum(YSIM[,i])- yy0[[i]]@x)/(sum(Ex)-ee0@x)))
+        #ee0 <- ee
+        #LLR0 <- sapply(1:nsim, function(i) yy0[[i]]@x*log(yy0[[i]]@x/ee0@x) + (sum(YSIM[,i]) - yy0[[i]]@x)*log((sum(YSIM[,i])- yy0[[i]]@x)/(sum(Ex)-ee0@x)))
+        
+        #LLR0 <- sapply(1:nsim, function(i) yy0[[i]]@x*log(yy0[[i]]@x/ee0@x) + (sum(YSIM[,i]) - yy0[[i]]@x)*log((sum(YSIM[,i])- yy0[[i]]@x)/(sum(Ex)-ee0@x)))
         #calculate pvalue
+        
+        #test <- apply(LLR0,2, function(x) which(x > LLRa_stat))
+        LLR0 <-  sapply(1:nsim, function(i) yy0[[i]]@x*log(yy0[[i]]@x/ee0@x) + (ee0@x - yy0[[i]]@x))
+        
+        
         pval <- sum(apply(LLR0,2, function(x) ifelse(any(x>= LLRa_stat , na.rm = TRUE),1,0)))/nsim
         #print(pval)
-        mlc_pvals[m] <- pval
+        mlc_pvals[c] <- pval
         #remove cluster
         rr <- rep(1,1040)
         rr[which(ixmaxL!=0)] <- RRmaxL
-        mlc[,m] <- rr
+        mlc[,c] <- rr
         E.cur <- Ex*rr 
         Ex <- scales(matrix(E.cur,ncol=Time),matrix(Yx, ncol=Time), Time)    
         #str(Ex)
@@ -755,13 +765,24 @@ clusso_prob_clusteroverlap <- function(sparsematrix,lassoresult,selected,rr, ris
     }
 }
 
-
-step_clusterix <- function(sparsematrix, stepscan, numclustersid){
+step_clusterix <- function(sparsematrix, stepscan, numclustersid, thresh){
     ixids <- NULL
-    if(numclustersid!=0){
-        for(i in 1:numclustersid){
-            ixid_i <- which(sparsematrix[,stepscan$maxLiks[which(stepscan$pvals>0.05)-i]]==1)
-            ixids <- c(ixids, ixid_i)
+    #if(numclustersid!=0){
+    if(length(numclustersid)!=0){
+        #browser()
+        for(i in 1:length(numclustersid)){
+           # print(i)
+            #browser()
+            #for(j in 0:length(which(!is.na(stepscan$pvals)))){
+            #for(j in 0:(length(which(!is.na(stepscan$pvals)))-1)){
+            for(j in 0:length(which(stepscan$pvals < thresh))){
+                #browser()
+                #print(j)
+                #ixid_i <- which(sparsematrix[,stepscan$maxLiks[which(stepscan$pvals>thresh)-(i+j)]]==1)
+                #ixid_i <- which(sparsematrix[,stepscan$maxLiks[which(stepscan$pvals>thresh)-(j+1)]]==1)
+                ixid_i <- which(sparsematrix[,stepscan$maxLiks[max(which(stepscan$pvals < thresh))-j]]==1)
+                ixids <- c(ixids, ixid_i)
+            }
         }
     } else{
         ixids <-0
@@ -770,6 +791,35 @@ step_clusterix <- function(sparsematrix, stepscan, numclustersid){
     return(unique(ixids))
     
 }
+# step_clusterix <- function(sparsematrix, stepscan, numclustersid, thresh){
+#     ixids <- NULL
+#     #if(numclustersid!=0){
+#     if(length(numclustersid)!=0){
+#         for(i in 1:numclustersid){
+#             ixid_i <- which(sparsematrix[,stepscan$maxLiks[which(stepscan$pvals>thresh)-i]]==1)
+#             ixids <- c(ixids, ixid_i)
+#         }
+#     } else{
+#         ixids <-0
+#     }
+#     
+#     return(unique(ixids))
+#     
+# }
+# step_clusterix <- function(sparsematrix, stepscan, numclustersid){
+#     ixids <- NULL
+#     if(numclustersid!=0){
+#         for(i in 1:numclustersid){
+#             ixid_i <- which(sparsematrix[,stepscan$maxLiks[which(stepscan$pvals>0.05)-i]]==1)
+#             ixids <- c(ixids, ixid_i)
+#         }
+#     } else{
+#         ixids <-0
+#     }
+#     
+#     return(unique(ixids))
+#     
+# }
 
 spatscanfs_prob_clusteroverlap <- function(res_stepsscan, ixids,numclustersid ,sparsematrix,rr,risk,pow){
     #DEFINE TRUTH
