@@ -63,36 +63,36 @@ poisLik <-function(Ex, Yx, sparsemat){
                 Lambda_dense=Lambda_dense))
 }
 
-#'@title binomLik
-#'@description Binomial-based likelihood LRT comparing cluster model to null model.
-#'@param Ex Vector of expected counts.
-#'@param Yx Vector of observed counts.
-#'@param sparsemat Large sparsematrix where rows are potential clusters and columns are space-time locations.
-#'@export
-#'@return Likelihood for each potential cluster.
-binomLik <-function(nx, Yx, sparsemat){
-    #outExp <- sparsemat%*%Ex
-    outnx <- sparsemat%*%nx
-    outObs <- sparsemat%*%Yx
-    #calc Lambda
-    lambdahat <- outObs/outExp
-    Lambda <- as.vector(lambdahat)*sparsemat #big Lambda matrix
-    Lambda_dense <- as.matrix(Lambda)
-    Lambda_dense[Lambda_dense == 0] <- 1
-    #Get scaled likelihood
-    
-    #Lik <- (((outObs/nx)/(sum(outObs)/sum(nx)))^(outobs))*(((sum(outObs)-outObs)/(sum(nx)-nx))/(sum(outObs)/sum(nx)))^(sum(outObs)-outObs)
-    #((outObs/outExp)/(sum(outObs)/sum(outExp)))^outObs #TODO CHECK THIS
-    outnt <- sum(outnx)
-    outObst <- sum(outObs)
-    Lik <- (((outObs/outnx)^outObs)*(1-(outObs/outnx))^(outnx-outObs))*(((outObst - outObs)/(outnt-outnx))^(outObst-outObs))*(1-((outObst-outObs)/(outnt - outnx)))^(outnt - outnx - outObst+outObs)
-    
-    outlogLik <- log(Lik)
-    outlogLik_scaled <- outlogLik-max(outlogLik)
-    Lik <- exp(outlogLik_scaled)
-    return(list(Lik=Lik,
-                Lambda_dense=Lambda_dense))
-}
+#' #'@title binomLik
+#' #'@description Binomial-based likelihood LRT comparing cluster model to null model.
+#' #'@param Ex Vector of expected counts.
+#' #'@param Yx Vector of observed counts.
+#' #'@param sparsemat Large sparsematrix where rows are potential clusters and columns are space-time locations.
+#' #'@export
+#' #'@return Likelihood for each potential cluster.
+#' binomLik <-function(nx, Yx, sparsemat){
+#'     #outExp <- sparsemat%*%Ex
+#'     outnx <- sparsemat%*%nx
+#'     outObs <- sparsemat%*%Yx
+#'     #calc Lambda
+#'     lambdahat <- outObs/outExp
+#'     Lambda <- as.vector(lambdahat)*sparsemat #big Lambda matrix
+#'     Lambda_dense <- as.matrix(Lambda)
+#'     Lambda_dense[Lambda_dense == 0] <- 1
+#'     #Get scaled likelihood
+#'     
+#'     #Lik <- (((outObs/nx)/(sum(outObs)/sum(nx)))^(outobs))*(((sum(outObs)-outObs)/(sum(nx)-nx))/(sum(outObs)/sum(nx)))^(sum(outObs)-outObs)
+#'     #((outObs/outExp)/(sum(outObs)/sum(outExp)))^outObs #TODO CHECK THIS
+#'     outnt <- sum(outnx)
+#'     outObst <- sum(outObs)
+#'     Lik <- (((outObs/outnx)^outObs)*(1-(outObs/outnx))^(outnx-outObs))*(((outObst - outObs)/(outnt-outnx))^(outObst-outObs))*(1-((outObst-outObs)/(outnt - outnx)))^(outnt - outnx - outObst+outObs)
+#'     
+#'     outlogLik <- log(Lik)
+#'     outlogLik_scaled <- outlogLik-max(outlogLik)
+#'     Lik <- exp(outlogLik_scaled)
+#'     return(list(Lik=Lik,
+#'                 Lambda_dense=Lambda_dense))
+#' }
 
 #'@title bylocation
 #'@description Cluster detection based on maximum location.
