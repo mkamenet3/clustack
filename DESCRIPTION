@@ -11,6 +11,7 @@ Depends:
     R (>= 4.0),
     Matrix (>= 1.2-17)
 Imports:
+    clusso (>= 0.1),
     ggplot2 (>= 3.2.1),
     dplyr (>= 0.8.3),
     tidyr (>= 1.0.0),

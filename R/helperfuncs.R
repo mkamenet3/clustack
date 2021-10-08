@@ -1,9 +1,3 @@
-#Move helper functions to here
-
-########################################
-#Functions
-########################################
-
 colorsgrey <- function (x) {
     y = colorRamp(RColorBrewer::brewer.pal(9, "Greys")[1:9])(x)
     rgb(y[, 1], y[, 2], y[, 3], maxColorValue = 255)
@@ -791,35 +785,7 @@ step_clusterix <- function(sparsematrix, stepscan, numclustersid, thresh){
     return(unique(ixids))
     
 }
-# step_clusterix <- function(sparsematrix, stepscan, numclustersid, thresh){
-#     ixids <- NULL
-#     #if(numclustersid!=0){
-#     if(length(numclustersid)!=0){
-#         for(i in 1:numclustersid){
-#             ixid_i <- which(sparsematrix[,stepscan$maxLiks[which(stepscan$pvals>thresh)-i]]==1)
-#             ixids <- c(ixids, ixid_i)
-#         }
-#     } else{
-#         ixids <-0
-#     }
-#     
-#     return(unique(ixids))
-#     
-# }
-# step_clusterix <- function(sparsematrix, stepscan, numclustersid){
-#     ixids <- NULL
-#     if(numclustersid!=0){
-#         for(i in 1:numclustersid){
-#             ixid_i <- which(sparsematrix[,stepscan$maxLiks[which(stepscan$pvals>0.05)-i]]==1)
-#             ixids <- c(ixids, ixid_i)
-#         }
-#     } else{
-#         ixids <-0
-#     }
-#     
-#     return(unique(ixids))
-#     
-# }
+
 
 spatscanfs_prob_clusteroverlap <- function(res_stepsscan, ixids,numclustersid ,sparsematrix,rr,risk,pow){
     #DEFINE TRUTH
