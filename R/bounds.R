@@ -375,7 +375,7 @@ nonma.cells <- function(thetaa, res,id_ic, outExp_out,IC, transform, byloc=FALSE
 #'@param thetaa Stacked relative risk estimate for the cluster(s)
 #'@param res Resultant object from \code{detectclusters()}.
 #'@param id_ic The number of clusters identified either by BIC (QBIC) or AIC (QAIC).
-#'@param outExp_out Expected counts for each potential cluster.
+#'@param outYx_out Observed counts for each potential cluster.
 #'@param IC Information criterion used. Currently available for BIC (QBIC) and AIC (QAIC). This should match \code{id_ic} argument.
 #'@param transform If a transformation is used. Default is \code{"none"}. Other transformation currently available is \code{"log"}.
 #'@param byloc Boolean. Use \code{TRUE} when stacking by location. Use \code{FALSE} when stacking by potential cluster.
@@ -385,7 +385,7 @@ nonma.cells <- function(thetaa, res,id_ic, outExp_out,IC, transform, byloc=FALSE
 #'@return List: lower bound estimate, stacked cluster relative risk estimate, upper bound estimate.
 #'@export
 #'
-nonma_asymp.cells <-function(thetaa, res, id_ic, outExp_out,IC, transform, byloc=TRUE, cellrisk_wt_out, cellsix_out, conf.level=0.95){
+nonma_asymp.cells <-function(thetaa, res, id_ic, outYx_out,IC, transform, byloc=TRUE, cellrisk_wt_out, cellsix_out, conf.level=0.95){
     thetai <- res$Lambda_dense
     critval <- qnorm(1-(1-conf.level)/2)
     if(byloc==FALSE){
@@ -596,18 +596,18 @@ calcbounds.cells <- function(id_ic, IC, res, byloc=FALSE, Ex, Yx,w, thetaa,theta
             cellrisk_wt_out <- NULL
         }    
         
-        outnonma.time <- system.time(outnonma <- nonma.cells(thetaa, thetai,res, w, id_ic,
+        outnonma.time <- system.time(outnonma <- nonma.cells(thetaa, res, id_ic,
                                                              outExp_out, IC=IC, transform="none", byloc, 
                                                              cellrisk_wt_out, cellsix_out,
                                                              conf.level))
-        outnonmaTlog.time <- system.time(outnonmaTlog <- nonma.cells(thetaa, thetai,res, w, id_ic,
+        outnonmaTlog.time <- system.time(outnonmaTlog <- nonma.cells(thetaa, res, id_ic,
                                                                      outExp_out, IC=IC, transform="log", byloc, 
                                                                      cellrisk_wt_out, cellsix_out,
                                                                      conf.level))
         
-        outnonma_asymp.time <- system.time(outnonma_asymp <- nonma_asymp.cells(thetaa, thetai,res, w, id_ic,
+        outnonma_asymp.time <- system.time(outnonma_asymp <- nonma_asymp.cells(thetaa, res, id_ic,
                                                                                outYx_out, IC=IC, transform="none", byloc, cellrisk_wt_out, cellsix_out))
-        outnonma_asympTlog.time <- system.time(outnonma_asympTlog <- nonma_asymp.cells(thetaa, thetai, res, w, id_ic,
+        outnonma_asympTlog.time <- system.time(outnonma_asympTlog <- nonma_asymp.cells(thetaa,  res,  id_ic,
                                                                                        outYx_out, IC=IC, transform="log", byloc, 
                                                                                        cellrisk_wt_out, cellsix_out, conf.level))
         message("Non-model averaged bounds finished")

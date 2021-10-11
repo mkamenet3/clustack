@@ -1,0 +1,165 @@
+---
+title: "Introduction to clustack"
+author: "M.Kamenetsky"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+fig_caption: yes
+vignette: >
+  %\VignetteIndexEntry{Introduction to clustack}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+First, we load the `R` packages we will be using. We will need `clustack`, and also `clusso`, `MASS`, and `dplyr`.
+
+```{r}
+source("../R/clustack.R")
+source("../R/bounds.R")
+source("../R/helperfuncs.R")
+library(clusso)
+library(MASS)
+library(dplyr)
+```
+
+# Cluster Identification and Estimation
+
+Next, we load the data set:
+
+```{r}
+
+```
+
+
+
+```{r}
+
+#load data --
+load("../data/jbc.RData")
+load("../data/utmJapan.RData")
+load("../data/japan.poly2.RData")
+load("../data/japan.prefect2.RData")
+str(jbc)
+
+
+#load("data/japanbreastcancer.RData")
+cases <- jbc$death
+expected <- jbc$expdeath
+x <- utmJapan$utmx/1000
+y <- utmJapan$utmy/1000
+
+
+# set global params --
+maxclust <- 15
+rMax <- 20 
+Time <- 5
+
+```
+
+
+```{r}
+
+locLambdas <- vector("list", maxclust)
+#create set of potential clusters based on distances
+potentialclusters <- clusso::clusters2df(x,y,rMax, utm = TRUE, length(x))
+n <- length(x)
+init <- clusso::setVectors(jbc$period, jbc$expdeath, jbc$death,covars=NULL, Time=Time)
+E1 <- init$E0
+Ex <- clusso::scale(init, Time)
+Yx <- init$Y.vec
+vectors <- list(Period = init$Year, Ex=Ex, E0_0=init$E0, Y.vec=init$Y.vec, covars = NULL)    
+n_uniq <- length(unique(potentialclusters$center))
+numCenters <- n_uniq
+#create giant sparse design matrix (single potential clusters)
+sparseMAT <- spacetimeMat(potentialclusters, numCenters, Time) 
+```
+
+```{r}
+#calculate overdispersion estimate
+offset_reg <- glm(Yx ~ as.factor(rep(c("1","2","3","4","5"),  each=length(Ex)/Time)) + offset(log(Ex)),
+                  family=quasipoisson)
+overdisp.est <- clusso::overdisp(offset_reg, sim=FALSE, overdispfloor = TRUE)
+```
+
+```{r}
+#run clustack by Pc
+clustack_pc <-detectclusters(sparseMAT, Ex, Yx, numCenters, Time, maxclust, 
+                              byloc = FALSE, model="poisson", overdisp.est = overdisp.est)
+```
+
+
+
+```{r}
+#BIC
+plotmap(clustack_pc$wLambda[clustack_pc$selection.bic,],genpdf = FALSE, maxrr=1.5)
+#plotmap(clustack_pc$wLambda[clustack_pc$selection.bic,],genpdf = TRUE,maxrr=1.5,
+ #       pdfname = "../../results/RealDataExample/clustack_pc_qp_BIC.pdf")
+summary(clustack_pc$wLambda[clustack_pc$selection.bic,])
+table(round(clustack_pc$wLambda[clustack_pc$selection.bic,],2))
+
+```
+
+```{r}
+### Make table ----
+bicsum_pc <- as.data.frame(round(clustack_pc$wLambda[clustack_pc$selection.bic,],2)) %>% 
+    mutate(bic=`round(clustack_pc$wLambda[clustack_pc$selection.bic, ], 2)`) %>%
+    filter(round(bic,2) >1) %>%
+    summarize(min = min(bic),
+              max = max(bic),
+              median= median(bic),
+              mean=round(mean(bic),2))
+aicsum_pc <- as.data.frame(round(clustack_pc$wLambda[clustack_pc$selection.aic,],2)) %>% 
+    mutate(aic=`round(clustack_pc$wLambda[clustack_pc$selection.aic, ], 2)`) %>%
+    filter(round(aic,2) >1) %>%
+    summarize(min = min(aic),
+              max = max(aic),
+              median= median(aic),
+              mean=round(mean(aic),2))
+
+
+as.data.frame(round(clustack_pc$wLambda[clustack_pc$selection.bic,],2)) %>% 
+    mutate(bic=`round(clustack_pc$wLambda[clustack_pc$selection.bic, ], 2)`) %>%
+    filter(round(bic,2) >1) %>% summary()
+
+rbind.data.frame(bic=bicsum_pc,aic=aicsum_pc) %>%
+    tibble::rownames_to_column('IC') %>%
+    gt() %>%
+    tab_header(title= md("Clustack - Pc: Cluster Only Results")) 
+```
+
+# Estimate cell-specific bounds
+
+```{r}
+#take period 3 only
+p3 <- matrix(clustack_pc$wLambda[clustack_pc$selection.bic,], ncol=5)[,3]
+#139=center; 138 = borderinside; 150 =border outside; 123= near center; 55=far outside
+cells <- c(139, 123, 138,  150,55)
+colors <- rep("white", 208)
+library(RColorBrewer)
+colors[cells] <- c(brewer.pal(4, "Dark2"), "goldenrod")
+# colors[cells] <- "black"
+
+a <- as.data.frame(round(clustack_pc$wLambda[clustack_pc$selection.bic,],2)) %>% 
+    mutate(bic=`round(clustack_pc$wLambda[clustack_pc$selection.bic, ], 2)`) #%>%
+    #filter(round(bic,2) >1) 
+ix <- which(a$bic[625:832]>1)
+colors2 <- rep("white", 208)
+colors2[ix] <- "grey60"
+
+
+id.bic_pc <- as.vector(unlist(clustack_pc$selection.bic))
+
+outcells.pc.bic <- calcbounds(id.bic_pc, IC="bic", 
+                                     clustack_pc, byloc = FALSE,
+                                     Ex, Yx,  cellsix = cells,
+                                     sparsemat = sparseMAT[,1:66870])
+    
+
+```
+
