@@ -59,7 +59,7 @@ bucklandbounds.cells <- function(thetaa, res, w, outExp_out ,IC,transform="none"
 }
 
 
-#'@title maw2.cells
+#'@title ba2.cells
 #'@description Calculate confidence bounds for stacked cluster relative risk estimates based on Burnham and Anderson for specific cells (given by \code{cellsix_out}) 
 #'@param thetaa Stacked relative risk estimate for the cluster(s).
 #'@param res Resultant object from \code{detectclusters()}.
@@ -74,7 +74,7 @@ bucklandbounds.cells <- function(thetaa, res, w, outExp_out ,IC,transform="none"
 #'@return List: lower bound estimate, stacked cluster relative risk estimate, upper bound estimate for each of the cells in \code{cellsix_out}
 #'@export
 #'
-maw2.cells <- function(thetaa,res, w, outExp, IC, transform,tsparsemat, overdisp.est, cellsix_out, conf.level=0.95){
+ba2.cells <- function(thetaa,res, w, outExp, IC, transform,tsparsemat, overdisp.est, cellsix_out, conf.level=0.95){
     thetai <- res$Lambda_dense
     critval <- qnorm(1-(1-conf.level)/2)
     if(IC=="aic"){
@@ -107,9 +107,9 @@ maw2.cells <- function(thetaa,res, w, outExp, IC, transform,tsparsemat, overdisp
         UBa = as.vector(thetaa) + critval*sqrt(var_thetaa)
         LBa = as.vector(thetaa) - critval*sqrt(var_thetaa)
     }
-    return(list(maw2.LB = LBa,
+    return(list(ba2.LB = LBa,
                 clusterstack= thetaa,
-                maw2.UB = UBa))
+                ba2.UB = UBa))
 }
 
 #' @title mata_tailareazcore
@@ -321,9 +321,9 @@ nonstack.cells <- function(thetaa, res,id_ic, outExp_out,IC, transform, byloc=FA
                 se_thetai <- sqrt(1/(thetai*outExp_out))
                 clusterstack<- res$wLambda[res$selection.bic,][cellsix_out]
             }
-            nonstack.theta.time <- system.time(nonstack.theta <- cbind(lb=exp(log(clusterMA)-critval*se_thetai), 
-                                                                 clusterstack= clusterMA,
-                                                                 ub=exp(log(clusterMA)+critval*se_thetai)))
+            nonstack.theta.time <- system.time(nonstack.theta <- cbind(lb=exp(log(clusterstack)-critval*se_thetai), 
+                                                                 clusterstack= clusterstack,
+                                                                 ub=exp(log(clusterstack)+critval*se_thetai)))
         }else {
             if(IC=="aic") {
                 thetai <- res$Lambda_dense[res$maxid[res$selection.aic],][cellsix_out]
@@ -334,9 +334,9 @@ nonstack.cells <- function(thetaa, res,id_ic, outExp_out,IC, transform, byloc=FA
                 se_thetai <- sqrt(thetai/outExp_out)
                 clusterstack<- res$wLambda[res$selection.bic,][cellsix_out]
             }
-            nonstack.theta.time <- system.time(nonstack.theta <- cbind(lb=clusterMA-critval*se_thetai, 
-                                                                 clusterstack= clusterMA,
-                                                                 ub=clusterMA+critval*se_thetai))
+            nonstack.theta.time <- system.time(nonstack.theta <- cbind(lb=clusterstack-critval*se_thetai, 
+                                                                 clusterstack= clusterstack,
+                                                                 ub=clusterstack+critval*se_thetai))
         } 
         
         
@@ -401,9 +401,9 @@ nonstack_asymp.cells <-function(thetaa, res, id_ic, outYx_out,IC, transform, byl
                 se_thetai <- sqrt(1/(thetai*outYx_out))
                 clusterstack<- res$wLambda[res$selection.bic,][cellsix_out]
             }
-            nonstack_asymp.theta.time <- system.time(nonstack_asymp.theta <- cbind(lb=exp(log(clusterMA)-critval*se_thetai), 
-                                                                             clusterstack= clusterMA,
-                                                                             ub=exp(log(clusterMA)+critval*se_thetai)))
+            nonstack_asymp.theta.time <- system.time(nonstack_asymp.theta <- cbind(lb=exp(log(clusterstack)-critval*se_thetai), 
+                                                                             clusterstack= clusterstack,
+                                                                             ub=exp(log(clusterstack)+critval*se_thetai)))
         }else {
             if(IC=="aic") {
                 thetai <- res$Lambda_dense[res$maxid[res$selection.aic],][cellsix_out]
@@ -414,9 +414,9 @@ nonstack_asymp.cells <-function(thetaa, res, id_ic, outYx_out,IC, transform, byl
                 se_thetai <- sqrt(thetai/outYx_out)
                 clusterstack<- res$wLambda[res$selection.bic,][cellsix_out]
             }
-            nonstack_asymp.theta.time <- system.time(nonstack_asymp.theta <- cbind(lb=clusterMA-critval*se_thetai, 
-                                                                             clusterstack= clusterMA,
-                                                                             ub=clusterMA+critval*se_thetai))
+            nonstack_asymp.theta.time <- system.time(nonstack_asymp.theta <- cbind(lb=clusterstack-critval*se_thetai, 
+                                                                             clusterstack= clusterstack,
+                                                                             ub=clusterstack+critval*se_thetai))
         } 
     }else {
         if(transform=="log"){
@@ -477,8 +477,8 @@ selectuniqRR <- function(uniqRRs){
 #'\item \code{nonstack_asympTlog}: Non-stacked (assumes the cluster was known \textit{a priori}) assuming asymptotic sampling distribution; natural log-transformed.
 #'\item \code{buck}: Stacked confidence bounds based on Buckland et al.
 #'\item \code{buckTlog}: Stacked confidence bounds based on Buckland et al.; natural log-transformed.
-#'\item \code{maw}: Model-average weighted confidence bounds based on Burnham and Anderson
-#'\item \code{mawTlog}: Model-average weighted confidence bounds based on Burnham and Anderson.
+#'\item \code{ba}: Model-average weighted confidence bounds based on Burnham and Anderson
+#'\item \code{baTlog}: Model-average weighted confidence bounds based on Burnham and Anderson.
 #'\item \code{mata}: Model-average tail area (MATA) intervals based on Turek et al.
 #'\item \code{mataTlog}: Model-average tail area (MATA) intervals based on Turek et al.; natural log-transformed.
 #'
@@ -551,8 +551,8 @@ calcbounds.cells <- function(id_ic, IC, res, byloc=FALSE, Ex, Yx,w, thetaa,theta
             outnonstack_asympTlog = outnonstack_asympTlog,
             outbuck.theta = list(as.vector(rep(0, length(cellsix))), as.vector(rep(0, length(cellsix))), as.vector(rep(0, length(cellsix)))),
             outbuckTlog.theta = list(as.vector(rep(0, length(cellsix))), as.vector(rep(0, length(cellsix))), as.vector(rep(0, length(cellsix)))),
-            outmaw2.theta = list(as.vector(rep(0, length(cellsix))), as.vector(rep(0, length(cellsix))), as.vector(rep(0, length(cellsix)))),
-            outmaw2Tlog.theta = list(as.vector(rep(0, length(cellsix))), as.vector(rep(0, length(cellsix))), as.vector(rep(0, length(cellsix)))),
+            outba2.theta = list(as.vector(rep(0, length(cellsix))), as.vector(rep(0, length(cellsix))), as.vector(rep(0, length(cellsix)))),
+            outba2Tlog.theta = list(as.vector(rep(0, length(cellsix))), as.vector(rep(0, length(cellsix))), as.vector(rep(0, length(cellsix)))),
             outmata.theta = list(as.vector(rep(0, length(cellsix))), as.vector(rep(0, length(cellsix))), as.vector(rep(0, length(cellsix)))),
             outmataTlog.theta = list(as.vector(rep(0, length(cellsix))), as.vector(rep(0, length(cellsix))), as.vector(rep(0, length(cellsix)))),
             
@@ -562,8 +562,8 @@ calcbounds.cells <- function(id_ic, IC, res, byloc=FALSE, Ex, Yx,w, thetaa,theta
             outnonstack_asympTlog.time = 000,
             outbuck.theta.time = 000,
             outbuckTlog.theta.time = 000,
-            outmaw2.theta.time = 000,
-            outmaw2Tlog.theta.time = 000,
+            outba2.theta.time = 000,
+            outba2Tlog.theta.time = 000,
             outmata.theta.time = 000,
             outmataTlog.theta.time = 000
         ))
@@ -631,7 +631,7 @@ calcbounds.cells <- function(id_ic, IC, res, byloc=FALSE, Ex, Yx,w, thetaa,theta
                                                                                         overdisp.est, cellsix_out,
                                                                                         conf.level))
         message("Buckland bounds finished")
-        outmaw2.theta.time <- system.time(outmaw2.theta <- maw2.cells(thetaa,
+        outba2.theta.time <- system.time(outba2.theta <- ba2.cells(thetaa,
                                                                       res,
                                                                       w=w,
                                                                       Ex,
@@ -641,7 +641,7 @@ calcbounds.cells <- function(id_ic, IC, res, byloc=FALSE, Ex, Yx,w, thetaa,theta
                                                                       overdisp.est,
                                                                       cellsix_out,
                                                                       conf.level))
-        outmaw2Tlog.theta.time <- system.time(outmaw2Tlog.theta <- maw2.cells(thetaa,
+        outba2Tlog.theta.time <- system.time(outba2Tlog.theta <- ba2.cells(thetaa,
                                                                               res,
                                                                               w=w,
                                                                               Ex,
@@ -683,8 +683,8 @@ calcbounds.cells <- function(id_ic, IC, res, byloc=FALSE, Ex, Yx,w, thetaa,theta
             outnonstack_asympTlog = outnonstack_asympTlog,
             outbuck.theta = outbuck.theta,
             outbuckTlog.theta = outbuckTlog.theta,
-            outmaw2.theta = outmaw2.theta,
-            outmaw2Tlog.theta = outmaw2Tlog.theta,
+            outba2.theta = outba2.theta,
+            outba2Tlog.theta = outba2Tlog.theta,
             outmata.theta = outmata.theta,
             outmataTlog.theta = outmataTlog.theta,
             
@@ -694,8 +694,8 @@ calcbounds.cells <- function(id_ic, IC, res, byloc=FALSE, Ex, Yx,w, thetaa,theta
             outnonstack_asympTlog.time = outnonstack_asympTlog.time[[3]],
             outbuck.theta.time = outbuck.theta.time[[3]],
             outbuckTlog.theta.time = outbuckTlog.theta.time[[3]],
-            outmaw2.theta.time = outmaw2.theta.time[[3]],
-            outmaw2Tlog.theta.time = outmaw2Tlog.theta.time[[3]],
+            outba2.theta.time = outba2.theta.time[[3]],
+            outba2Tlog.theta.time = outba2Tlog.theta.time[[3]],
             outmata.theta.time = outmata.theta.time[[3]],
             outmataTlog.theta.time = outmataTlog.theta.time[[3]]
         ))

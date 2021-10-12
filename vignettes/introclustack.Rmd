@@ -38,11 +38,12 @@ library("devtools")
 devtools::install_github("mkamenet3/clustack")
 ```
 
-We will also need the  `clusso`, `MASS`, and `dplyr` packages.
+We will also need the  `clusso`, `MASS`,`RColorBrewer`, and `dplyr` packages.
 
 ```{r}
 library(clusso) #can also be installed with devtools::install_github("mkamenet3/clusso")
 library(MASS)
+library(RColorBrewer)
 library(dplyr)
 ```
 
@@ -286,31 +287,91 @@ rbind.data.frame(bic=bicsum_pc,aic=aicsum_pc) %>%
 
 # Estimate cell-specific bounds
 
+With `clustack`, we are also able to calculate confidence bounds for specific cells using 5 methods:
+
+- `outnonstack`: Confidence bounds that do not take into consideration the model selection uncertainty from stacking. Wald-type bounds.
+- `outnonstack_asymp`:  Confidence bounds that do not take into consideration the model selection uncertainty from stacking, assuming asymptotic Wald-type bounds.
+- `outbuck`: Confidence bounds based on Buckland et al.
+- `outmaw2`: Confidence bounds based on Burnham and Anderson.
+- `outMATA`: Confidence bounds based on model-averaged tail intervals (Turek et al.)
+
+For each of these methods, natural-log transformed and non-transformed bounds and estimates are available, as well as timings.
+
+For this example, we will explore confidence bounds for 5 cells in period 3: the cluster center cell (139), the near center cell (123), the border inside cell (138), the border outside cell (150), and the far outside cell 55.
+
+
+
 ```{r}
 #take period 3 only
 p3 <- matrix(clustack_pc$wLambda[clustack_pc$selection.bic,], ncol=5)[,3]
 #139=center; 138 = borderinside; 150 =border outside; 123= near center; 55=far outside
 cells <- c(139, 123, 138,  150,55)
+```
+
+First, we visualize these cells in the study region in period 3:
+
+```{r}
 colors <- rep("white", 208)
-library(RColorBrewer)
-colors[cells] <- c(brewer.pal(4, "Dark2"), "goldenrod")
-# colors[cells] <- "black"
+colors[cells] <- c(brewer.pal(4, "Dark2"), "goldenrod") #select colors
 
+#extract stacked RR estimates
 a <- as.data.frame(round(clustack_pc$wLambda[clustack_pc$selection.bic,],2)) %>% 
-    mutate(bic=`round(clustack_pc$wLambda[clustack_pc$selection.bic, ], 2)`) #%>%
-    #filter(round(bic,2) >1) 
-ix <- which(a$bic[625:832]>1)
-colors2 <- rep("white", 208)
-colors2[ix] <- "grey60"
+    mutate(bic=`round(clustack_pc$wLambda[clustack_pc$selection.bic, ], 2)`)
+ix <- which(a$bic[625:832]>1) #identify cells in cluster
+colors2[ix] <- "grey60" #other cells in cluster are grey
+colors2 <- rep("white", 208) #all other cells in the study region are white
 
 
+plot(japan.poly2,type='n',asp=1,axes=F,xlab='',ylab='', main="Cells Selected for Confidence Bounds")
+polygon(japan.poly2,col=adjustcolor(colors2,alpha.f=1)  ,border="white")
+polygon(japan.poly2,col=adjustcolor(colors,alpha.f=0.5)  ,border="white")
+segments(japan.prefect2$x1,japan.prefect2$y1,japan.prefect2$x2,japan.prefect2$y2)
+legend("bottomright", inset=-0.01,c("Center", "Near-Center", "Border-Inside",
+                                    "Border-Outside", "Far-Outside", "Cluster Cells"),
+       fill=c(brewer.pal(4, "Dark2"), "goldenrod", "grey60"), box.lty=0)
+```
+
+
+We are ready to calculate confidence bounds for our selected cells in time period 3. First, we create the object `id.bic_pc`, which is the number of clusters selected:
+
+```{r}
 id.bic_pc <- as.vector(unlist(clustack_pc$selection.bic))
+```
 
-outcells.pc.bic <- calcbounds(id.bic_pc, IC="bic", 
-                                     clustack_pc, byloc = FALSE,
-                                     Ex, Yx,  cellsix = cells,
-                                     sparsemat = sparseMAT[,1:66870])
-    
+Next, we use the function `calcbounds()` and specify the following arguments: we set `id_ic` to `id.bic_pc`, which is the number of clusters identified by (Q)BIC with stacking by potential cluster; `IC = "bic"` specifies the information criterion used and should correspond to `id_ic`; `res` corresponds to the object created by the stacking step, `clustack_pc`; `byloc` should be set to `FALSE` if stacking by potential cluster and to `TRUE` if stacking by location; `Ex` are the expected counts, `Yx` are the observed counts; `cellsix` is set to `cells` which are the indices of the selected cells for which we want to calculate confidence bounds; `sparsemat` is set to the large sparse matrix, `sparseMAT`.
+
+```{r}
+outcells.pc.bic <- calcbounds(id_ic = id.bic_pc, 
+                              IC="bic",
+                              res = clustack_pc, 
+                              byloc = FALSE,
+                              Ex = Ex, 
+                              Yx = Yx,
+                              cellsix = cells,
+                              sparsemat = sparseMAT)
+```
+
+We recommend using the log-transformed confidence bounds so they are well bounded above zero. If multiple clusters are identified, then there will be multiple elements to the list, corresponding to each identified cluster. Since in this example only one cluster as identified, we can extract the bounds and other information for this one cluster with `outcells.pc.bic[[1]]`:
+
+
+
+```{r}
+#non-stacked confidence bounds:
+outcells.pc.bic[[1]]$outnonstackTlog$nonstack.theta
+#non-stacked asymptotic confidence bounds:
+outcells.pc.bic[[1]]$outnonstack_asympTlog$nonstack_asymp.theta
+#Buckland bounds:
+cbind(outcells.pc.bic[[1]]$outbuckTlog.theta$buckland.LB,
+      outcells.pc.bic[[1]]$outbuckTlog.theta$clusterstack,
+      outcells.pc.bic[[1]]$outbuckTlog.theta$buckland.UB)
+#burnham and anderson bounds:
+cbind(outcells.pc.bic[[1]]$outba2Tlog.theta$ba2.LB,
+      outcells.pc.bic[[1]]$outba2Tlog.theta$clusterstack,
+      outcells.pc.bic[[1]]$outba2Tlog.theta$ba2.UB)
+#MATA bounds:
+cbind(outcells.pc.bic[[1]]$outmataTlog.theta$matalog.LB,
+      outcells.pc.bic[[1]]$outmataTlog.theta$clusterstack,
+      outcells.pc.bic[[1]]$outmataTlog.theta$matalog.UB)
 
 ```
 
