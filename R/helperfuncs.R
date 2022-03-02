@@ -1,9 +1,3 @@
-#Move helper functions to here
-
-########################################
-#Functions
-########################################
-
 colorsgrey <- function (x) {
     y = colorRamp(RColorBrewer::brewer.pal(9, "Greys")[1:9])(x)
     rgb(y[, 1], y[, 2], y[, 3], maxColorValue = 255)
@@ -73,7 +67,9 @@ create_plotFPR_stack <- function(res,IC, flav,Time, nsim, sim.i){
 
 plotmeanrr_stack <- function(ric, Time, sim.i,ic, flav, greys){
     if(greys==TRUE){
-        color.ic <- sapply(1:Time, function(i) greys(ric[,i]))
+        g.ramp <- gray.colors(26, start=1, end =0)
+        #color.ic <- sapply(1:Time, function(i) greys(ric[,i]))
+        color.ic <- sapply(1:Time, function(i) g.ramp[100*ric[,i]])
         pdf(paste0(sim.i,"_fpr_",flav, "_",ic,".pdf"), height=11, width=10)
         
     } else {
@@ -453,22 +449,22 @@ plotmapAllIC <- function(res.bic, res.aic, oracle ,pdfname=NULL, genpdf=TRUE, ma
 #'@param maxrr For the color ramp, what is the maximum relative risk color. Default is for the ramp to be between 0 and 2. 
 #'@param minrr For the color ramp, what is the minimum relative risk color. Default is for the ramp to be between 0 and 2. 
 #'@return Maps for central region of Japan for each time period.
-plotmap <- function(res, pdfname=NULL, genpdf=TRUE, maxrr=2, minrr=0){
+plotmap <- function(res, pdfname=NULL, genpdf=TRUE, maxrr=2){
     if(!is.null(maxrr)){
         maxrr=maxrr
     }
     else{
         maxrr=2
     }
-    if(!is.null(minrr)){
-        minrr=minrr
-    }
-    else{
-        minrr=0
-    }
+    # if(!is.null(minrr)){
+    #     minrr=minrr
+    # }
+    # else{
+    #     minrr=0
+    # }
     #cluster_ix <- redblue(log(2 *  pmax(1/2, pmin(res, 2)))/log(4))
     #cluster_ix <- redblue(log(maxrr *  pmax(1/maxrr, pmin(res, maxrr)))/log(maxrr^2))
-    cluster_ix <- redblue(log(maxrr *  pmax(minrr, pmin(res, maxrr)))/log(maxrr^2))
+    cluster_ix <- redblue(log(maxrr *  pmax(1/maxrr, pmin(res, maxrr)))/log(maxrr^2))
     colors_0 <- matrix(cluster_ix, ncol=5, byrow = FALSE)
     if(genpdf==TRUE){
         pdf(pdfname, height=11, width=10)    
@@ -506,9 +502,14 @@ plotmap <- function(res, pdfname=NULL, genpdf=TRUE, maxrr=2, minrr=0){
     #legend
     par(fig=c(.35,.75,0,0.2), new=T)
     plot(1, xlim=c(0.6,1.5), ylim=c(0.2,1), axes=F, type='n',  xlab="", ylab="")
-    rect(seq(.6,1.4,length=50)[-50],.5,seq(.65,1.4,length=50)[-1],.62,col=redblue(0:50/50),border=F)
-    #text(seq(.6,1.4,length=5),rep(.45,5),seq(0,maxrr,length.out=5),srt=330,adj=0)
-    text(seq(.6,1.4,length=5),rep(.45,5),seq(minrr,maxrr,length.out=5),srt=330,adj=0)
+    len <- length(redblue(15:50/50))
+    rect(seq(.6,1.4,length=len)[-len],.5,seq(.65,1.4,length=len)[-1],.62,col=redblue(15:50/50),border=F)
+    text(seq(.6,1.4,length=7),rep(.45,5),seq(1/maxrr,maxrr,length.out=7),srt=330,adj=0)   
+    
+    # plot(1, xlim=c(0.6,1.5), ylim=c(0.2,1), axes=F, type='n',  xlab="", ylab="")
+    # rect(seq(.6,1.4,length=50)[-50],.5,seq(.65,1.4,length=50)[-1],.62,col=redblue(0:50/50),border=F)
+    # #text(seq(.6,1.4,length=5),rep(.45,5),seq(0,maxrr,length.out=5),srt=330,adj=0)
+    # text(seq(.6,1.4,length=5),rep(.45,5),seq(minrr,maxrr,length.out=5),srt=330,adj=0)
     
     if(genpdf==TRUE){
         dev.off()    
@@ -791,35 +792,7 @@ step_clusterix <- function(sparsematrix, stepscan, numclustersid, thresh){
     return(unique(ixids))
     
 }
-# step_clusterix <- function(sparsematrix, stepscan, numclustersid, thresh){
-#     ixids <- NULL
-#     #if(numclustersid!=0){
-#     if(length(numclustersid)!=0){
-#         for(i in 1:numclustersid){
-#             ixid_i <- which(sparsematrix[,stepscan$maxLiks[which(stepscan$pvals>thresh)-i]]==1)
-#             ixids <- c(ixids, ixid_i)
-#         }
-#     } else{
-#         ixids <-0
-#     }
-#     
-#     return(unique(ixids))
-#     
-# }
-# step_clusterix <- function(sparsematrix, stepscan, numclustersid){
-#     ixids <- NULL
-#     if(numclustersid!=0){
-#         for(i in 1:numclustersid){
-#             ixid_i <- which(sparsematrix[,stepscan$maxLiks[which(stepscan$pvals>0.05)-i]]==1)
-#             ixids <- c(ixids, ixid_i)
-#         }
-#     } else{
-#         ixids <-0
-#     }
-#     
-#     return(unique(ixids))
-#     
-# }
+
 
 spatscanfs_prob_clusteroverlap <- function(res_stepsscan, ixids,numclustersid ,sparsematrix,rr,risk,pow){
     #DEFINE TRUTH

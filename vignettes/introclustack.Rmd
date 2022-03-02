@@ -1,0 +1,375 @@
+---
+title: "Introduction to clustack"
+author: "M.Kamenetsky"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+fig_caption: yes
+vignette: >
+  %\VignetteIndexEntry{Introduction to clustack}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+# Introduction
+
+Please report any issues [here](https://github.com/mkamenet3/clustack/issues).
+
+First, we load the `R` packages we will be using. We will need `clustack`:
+
+```{r}
+# source("../R/clustack.R")
+# source("../R/bounds.R")
+# source("../R/helperfuncs.R")
+library(clustack)
+```
+
+
+If you haven't already, you can install `clustack` directly from GitHub:
+
+```{r, eval=FALSE}
+library("devtools")
+devtools::install_github("mkamenet3/clustack")
+```
+
+We will also need the  `clusso`, `MASS`,`RColorBrewer`, and `dplyr` packages.
+
+```{r}
+library(clusso) #can also be installed with devtools::install_github("mkamenet3/clusso")
+library(MASS)
+library(RColorBrewer)
+library(dplyr)
+```
+
+## Using `clustack`
+
+In this example, we will use simulated data of breast cancer incidence counts across 208 prefects (municipalities) in Japan across 5 time periods. These data are based on original incidence counts, but we have added noise to these data.
+
+
+### Prepare Data
+
+We load four data sets that come with the `clustack` package (these are the same data available from the `clusso` package):
+
+
+```{r}
+#load data
+data("jbc")
+data("utmJapan")
+```
+
+
+To explore the 4 data sets, we apply the `head()` function to each of the data sets.
+
+1. `utmJapan`: data set containing a unique identifier for each prefect centroid (*id*), x-coordinate in UTM (*utmx*), and y-coordinate in UTM (*utmy*).
+1. `jbc`: data set containing a unique identifier for each centroid (*id*), period of observation (categorical variable with 5 levels, *period*), death count (*death*), expected death count (*expdeath*). These data are simulated (with some noise) based on observed data.
+
+
+
+```{r}
+#inspect
+head(utmJapan)
+head(jbc)
+```
+
+
+### Set Global Parameters
+
+```{r}
+# 
+# #load data --
+# load("../data/jbc.RData")
+# load("../data/utmJapan.RData")
+# load("../data/japan.poly2.RData")
+# load("../data/japan.prefect2.RData")
+# str(jbc)
+#load("data/japanbreastcancer.RData")
+```
+
+```{r}
+cases <- jbc$death
+expected <- jbc$expdeath
+x <- utmJapan$utmx/1000
+y <- utmJapan$utmy/1000
+
+maxclust <- 15 #maximum number of clusters in the study region
+rMax <- 20 #maximum radius for each potential cluster
+Time <- 5 #number of time periods in the data
+
+```
+
+# Stacking by Potential Cluster
+
+
+## Cluster Identification and Estimation
+
+<!-- The main function for cluster detection using stacking is `detectclusters()`. -->
+
+We first need to set up several objects. First, we need to create the set of potential clusters using the `clusters2df()` function from `clusso`:
+
+```{r}
+potentialclusters <- clusso::clusters2df(x,y,rMax, utm = TRUE, length(x))
+str(potentialclusters)
+```
+
+`potentialclusters` is a data frame where each row is a potential cluster.
+
+
+Next we create `Ex`, which are the expected counts and `Yx` which are the observed counts.
+
+```{r}
+Ex <- as.vector(matrix(jbc$expdeath, ncol=Time, byrow=TRUE))
+Yx <- as.vector(matrix(jbc$death, ncol=Time, byrow=TRUE))
+```
+
+Importantly, we create a large sparse matrix of single potential clusters (`sparseMAT`), which the rows are the space-time locations and columns are the respective potential clusters.
+
+```{r}
+#create giant sparse design matrix (single potential clusters)
+sparseMAT <- spacetimeMat(potentialclusters, numCenters, Time) 
+```
+
+In this example, we are going to assume overdispersion and estimate it separately:
+
+```{r}
+#calculate overdispersion estimate
+offset_reg <- glm(Yx ~ as.factor(rep(c("1","2","3","4","5"),  each=length(Ex)/Time)) + offset(log(Ex)),
+                  family=quasipoisson)
+overdisp.est <- clusso::overdisp(offset_reg, sim=FALSE, overdispfloor = TRUE)
+overdisp.est
+```
+
+
+We are next ready to use `detectclusters()`. The arguments the function are: the large sparse matrix `sparseMAT`, expected counts `Ex`, observed counts `Yx`, the number of unique locations (`length(x)=208`), Time periods, and maximum number of clusters to be considered; `byloc=FALSE` gives us detection by potential cluster. To detect by location, set `byloc=TRUE`. We set `model="poisson"` and `overdisp.est` equal to our overdispersion estimate calculated above.
+
+
+```{r}
+#run clustack by Pc
+clustack_pc <-detectclusters(sparseMAT, Ex, Yx, numCenters = 208, Time, maxclust, 
+                              byloc = FALSE, model="poisson", overdisp.est = overdisp.est)
+```
+
+
+The output of `detectclusters()` prints out the type of model specified. If `overdisp.est=NULL`, then this would correspond to a Poisson model. The cluster IDs (which correspond to the columns of `sparseMAT`) are then printed in the order that they are detected, followed by the overdispersion estimate. Finally, the number of clusters selected by BIC, AIC, and AICc are printed.
+
+The object `clustack_pc` is a large list of 11 elements:
+
+```{r}
+str(clustack_pc)
+```
+
+
+The elements for `clustack_pc` are:
+
+- `wLambda`: a matrix of stacked relative risk estimates. Rows correspond to each 1 through `maxclust` cluster and columns are each space-time location.
+- `LRT`: is a vector of loglikelihoods starting with the null model (first element) followed by each cluster up to `maxclust`.
+- `selection.bic`, `selection.aic`,`selection.aicc`: the number of clusters identified by each respective selection criterion.
+- `selection.bic_forceid`, `selection.aic_forceid`,`selection.aicc_forcie`: the number of clusters identified by each respective selection criterion when clustack is forced to identify a cluster.
+- `wtMAT`: a matrix of likelihood-based weights. Rows correspond to each potential cluster and columns correspond to each cluster identified from 1 to `maxclust`.
+- `maxid`: The ID of either the potential cluster (if using detection by potential cluster) or location (if using detection by location).
+- `Lambda_dense`: Large matrix of single cluster estimates. Rows correspond to each potential cluster and columns correspond to each space-time location.
+
+
+
+### Plotting
+
+
+There are several ways to visualize our results. Because we already have the boundary and map data, we create a quick function called `plotmap()`:
+
+```{r}
+plotmap <- function(res, pdfname=NULL, genpdf=TRUE, maxrr=2, minrr=0){
+    if(!is.null(maxrr)){
+        maxrr=maxrr
+    }
+    else{
+        maxrr=2
+    }
+    if(!is.null(minrr)){
+        minrr=minrr
+    }
+    else{
+        minrr=0
+    }
+    cluster_ix <- redblue(log(maxrr *  pmax(minrr, pmin(res, maxrr)))/log(maxrr^2))
+    colors_0 <- matrix(cluster_ix, ncol=5, byrow = FALSE)
+    if(genpdf==TRUE){
+        pdf(pdfname, height=11, width=10)    
+    }
+    #Time 1
+    par(fig=c(0,.2,.6,1), mar=c(.5,0.5,0.5,0))
+    plot(japan.poly2,type='n',asp=1,axes=F,xlab='',ylab='')
+    polygon(japan.poly2,col=colors_0[,1] ,border=F)
+    segments(japan.prefect2$x1,japan.prefect2$y1,japan.prefect2$x2,japan.prefect2$y2)
+    
+    #Time 2
+    par(fig=c(0.2,.4,.6,1), mar=c(.5,0.5,0.5,0), new=T)
+    plot(japan.poly2,type='n',asp=1,axes=F,xlab='',ylab='')
+    polygon(japan.poly2,col=colors_0[,2] ,border=F)
+    segments(japan.prefect2$x1,japan.prefect2$y1,japan.prefect2$x2,japan.prefect2$y2)
+    
+    #Time 3
+    par(fig=c(0.4,.6,.6,1), mar=c(.5,0.5,0.5,0), new=T)
+    plot(japan.poly2,type='n',asp=1,axes=F,xlab='',ylab='')
+    polygon(japan.poly2,col=colors_0[,3] ,border=F)
+    segments(japan.prefect2$x1,japan.prefect2$y1,japan.prefect2$x2,japan.prefect2$y2)
+    
+    #Time 4
+    par(fig=c(0.6,.8,.6,1), mar=c(.5,0.5,0.5,0), new=T)
+    plot(japan.poly2,type='n',asp=1,axes=F,xlab='',ylab='')
+    polygon(japan.poly2,col=colors_0[,4] ,border=F)
+    segments(japan.prefect2$x1,japan.prefect2$y1,japan.prefect2$x2,japan.prefect2$y2)
+    
+    #Time 5
+    par(fig=c(0.8,1,.6,1), mar=c(.5,0.5,0.5,0), new=T)
+    plot(japan.poly2,type='n',asp=1,axes=F,xlab='',ylab='')
+    polygon(japan.poly2,col=colors_0[,5] ,border=F)
+    segments(japan.prefect2$x1,japan.prefect2$y1,japan.prefect2$x2,japan.prefect2$y2)
+    
+    #legend
+    par(fig=c(.35,.75,0,0.2), new=T)
+    plot(1, xlim=c(0.6,1.5), ylim=c(0.2,1), axes=F, type='n',  xlab="", ylab="")
+    rect(seq(.6,1.4,length=50)[-50],.5,seq(.65,1.4,length=50)[-1],.62,col=redblue(0:50/50),border=F)
+    text(seq(.6,1.4,length=5),rep(.45,5),seq(minrr,maxrr,length.out=5),srt=330,adj=0)
+    if(genpdf==TRUE){
+        dev.off()    
+    }
+}
+```
+
+We visualize the detection by (Q)BIC by plotting the stacked relative risk estimates (`wLambda`) for the number of selected clusters. We set `genpdf=FALSE` to not generate a pdf and set the maximum relative risk on the map to be 1.5 and the minimum relative risk to be 0.5:
+
+
+```{r}
+#Detection by (Q)BIC
+plotmap(clustack_pc$wLambda[clustack_pc$selection.bic,],genpdf = FALSE, maxrr=1.5, minrr = 0.5)
+```
+
+
+We can extract summaries of the stacked relative risk estimates for detection by (Q)BIC:
+
+```{r}
+summary(clustack_pc$wLambda[clustack_pc$selection.bic,])
+table(round(clustack_pc$wLambda[clustack_pc$selection.bic,],2))
+
+```
+
+Next, we create a table of the stacked relative risk estimates as detected by (Q)BIC and (Q)AIC:
+
+```{r}
+### Make table ----
+bicsum_pc <- as.data.frame(round(clustack_pc$wLambda[clustack_pc$selection.bic,],2)) %>% 
+    mutate(bic=`round(clustack_pc$wLambda[clustack_pc$selection.bic, ], 2)`) %>%
+    filter(round(bic,2) >1) %>%
+    summarize(min = min(bic),
+              max = max(bic),
+              median= median(bic),
+              mean=round(mean(bic),2))
+aicsum_pc <- as.data.frame(round(clustack_pc$wLambda[clustack_pc$selection.aic,],2)) %>% 
+    mutate(aic=`round(clustack_pc$wLambda[clustack_pc$selection.aic, ], 2)`) %>%
+    filter(round(aic,2) >1) %>%
+    summarize(min = min(aic),
+              max = max(aic),
+              median= median(aic),
+              mean=round(mean(aic),2))
+
+
+rbind.data.frame(bic=bicsum_pc,aic=aicsum_pc) %>%
+    tibble::rownames_to_column('IC') %>%
+    kbl(caption="Clustack - by Potential Cluster: Stacked Relative Risk Estimates") %>%
+    kable_paper("hover", full_width = F) 
+
+```
+
+# Estimate cell-specific bounds
+
+With `clustack`, we are also able to calculate confidence bounds for specific cells using 5 methods:
+
+- `outnonstack`: Confidence bounds that do not take into consideration the model selection uncertainty from stacking. Wald-type bounds.
+- `outnonstack_asymp`:  Confidence bounds that do not take into consideration the model selection uncertainty from stacking, assuming asymptotic Wald-type bounds.
+- `outbuck`: Confidence bounds based on Buckland et al.
+- `outmaw2`: Confidence bounds based on Burnham and Anderson.
+- `outMATA`: Confidence bounds based on model-averaged tail intervals (Turek et al.)
+
+For each of these methods, natural-log transformed and non-transformed bounds and estimates are available, as well as timings.
+
+For this example, we will explore confidence bounds for 5 cells in period 3: the cluster center cell (139), the near center cell (123), the border inside cell (138), the border outside cell (150), and the far outside cell 55.
+
+
+
+```{r}
+#take period 3 only
+p3 <- matrix(clustack_pc$wLambda[clustack_pc$selection.bic,], ncol=5)[,3]
+#139=center; 138 = borderinside; 150 =border outside; 123= near center; 55=far outside
+cells <- c(139, 123, 138,  150,55)
+```
+
+First, we visualize these cells in the study region in period 3:
+
+```{r}
+colors <- rep("white", 208)
+colors[cells] <- c(brewer.pal(4, "Dark2"), "goldenrod") #select colors
+
+#extract stacked RR estimates
+a <- as.data.frame(round(clustack_pc$wLambda[clustack_pc$selection.bic,],2)) %>% 
+    mutate(bic=`round(clustack_pc$wLambda[clustack_pc$selection.bic, ], 2)`)
+ix <- which(a$bic[625:832]>1) #identify cells in cluster
+colors2[ix] <- "grey60" #other cells in cluster are grey
+colors2 <- rep("white", 208) #all other cells in the study region are white
+
+
+plot(japan.poly2,type='n',asp=1,axes=F,xlab='',ylab='', main="Cells Selected for Confidence Bounds")
+polygon(japan.poly2,col=adjustcolor(colors2,alpha.f=1)  ,border="white")
+polygon(japan.poly2,col=adjustcolor(colors,alpha.f=0.5)  ,border="white")
+segments(japan.prefect2$x1,japan.prefect2$y1,japan.prefect2$x2,japan.prefect2$y2)
+legend("bottomright", inset=-0.01,c("Center", "Near-Center", "Border-Inside",
+                                    "Border-Outside", "Far-Outside", "Cluster Cells"),
+       fill=c(brewer.pal(4, "Dark2"), "goldenrod", "grey60"), box.lty=0)
+```
+
+
+We are ready to calculate confidence bounds for our selected cells in time period 3. First, we create the object `id.bic_pc`, which is the number of clusters selected:
+
+```{r}
+id.bic_pc <- as.vector(unlist(clustack_pc$selection.bic))
+```
+
+Next, we use the function `calcbounds()` and specify the following arguments: we set `id_ic` to `id.bic_pc`, which is the number of clusters identified by (Q)BIC with stacking by potential cluster; `IC = "bic"` specifies the information criterion used and should correspond to `id_ic`; `res` corresponds to the object created by the stacking step, `clustack_pc`; `byloc` should be set to `FALSE` if stacking by potential cluster and to `TRUE` if stacking by location; `Ex` are the expected counts, `Yx` are the observed counts; `cellsix` is set to `cells` which are the indices of the selected cells for which we want to calculate confidence bounds; `sparsemat` is set to the large sparse matrix, `sparseMAT`.
+
+```{r}
+outcells.pc.bic <- calcbounds(id_ic = id.bic_pc, 
+                              IC="bic",
+                              res = clustack_pc, 
+                              byloc = FALSE,
+                              Ex = Ex, 
+                              Yx = Yx,
+                              cellsix = cells,
+                              sparsemat = sparseMAT)
+```
+
+We recommend using the log-transformed confidence bounds so they are well bounded above zero. If multiple clusters are identified, then there will be multiple elements to the list, corresponding to each identified cluster. Since in this example only one cluster as identified, we can extract the bounds and other information for this one cluster with `outcells.pc.bic[[1]]`:
+
+
+
+```{r}
+#non-stacked confidence bounds:
+outcells.pc.bic[[1]]$outnonstackTlog$nonstack.theta
+#Buckland bounds:
+cbind(outcells.pc.bic[[1]]$outbuckTlog.theta$buckland.LB,
+      outcells.pc.bic[[1]]$outbuckTlog.theta$clusterstack,
+      outcells.pc.bic[[1]]$outbuckTlog.theta$buckland.UB)
+#burnham and anderson bounds:
+cbind(outcells.pc.bic[[1]]$outba2Tlog.theta$ba2.LB,
+      outcells.pc.bic[[1]]$outba2Tlog.theta$clusterstack,
+      outcells.pc.bic[[1]]$outba2Tlog.theta$ba2.UB)
+#MATA bounds:
+cbind(outcells.pc.bic[[1]]$outmataTlog.theta$matalog.LB,
+      outcells.pc.bic[[1]]$outmataTlog.theta$clusterstack,
+      outcells.pc.bic[[1]]$outmataTlog.theta$matalog.UB)
+
+```
+
