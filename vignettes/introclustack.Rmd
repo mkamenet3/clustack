@@ -358,8 +358,6 @@ We recommend using the log-transformed confidence bounds so they are well bounde
 ```{r}
 #non-stacked confidence bounds:
 outcells.pc.bic[[1]]$outnonstackTlog$nonstack.theta
-#non-stacked asymptotic confidence bounds:
-outcells.pc.bic[[1]]$outnonstack_asympTlog$nonstack_asymp.theta
 #Buckland bounds:
 cbind(outcells.pc.bic[[1]]$outbuckTlog.theta$buckland.LB,
       outcells.pc.bic[[1]]$outbuckTlog.theta$clusterstack,
