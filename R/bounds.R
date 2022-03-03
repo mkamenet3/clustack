@@ -29,14 +29,17 @@ bucklandbounds.cells <- function(thetaa, res, w, outObs_out,outExp_out,IC,transf
     if(transform=="log"){
         #print("transform")
         if(!is.null(overdisp.est)){
-            varthetai <- sapply(1:nrow(tsparsemat), function(k) overdisp.est*(1/outObs_out))
-            #varthetai <- sapply(1:nrow(tsparsemat), function(k) overdisp.est*(1/(thetai[k,]*outExp_out )))
+            varthetai_1 <- as.matrix(as.vector(outYx)*sparsemat)
+            varthetai_1[varthetai_1==0] <- Inf
+            varthetai <- overdisp.est*(1/varthetai_1)
         } else {
-            #varthetai <- sapply(1:nrow(tsparsemat), function(k) 1/(thetai[k,]*outExp_out))
+            varthetai_1 <- as.matrix(as.vector(outYx)*sparsemat)
+            varthetai_1[varthetai_1==0] <- Inf
+            varthetai <- 1/varthetai_1
         }
         withintheta <- sapply(1:length(cellsix_out), function(j) (log(thetai[,cellsix_out][,j]) - log(thetaa[j])))^2
-        wtnbtn <- sapply(1:nrow(tsparsemat), function(k) sqrt(varthetai[cellsix_out,k] + withintheta[k,]))
-        varthetas_w <- matrix(w, nrow = 1)%*%t(wtnbtn)
+        wtnbtn <- sapply(1:length(cellsix_out), function(k) sqrt(varthetai[k] + withintheta[,k]))
+        varthetas_w <- matrix(w, nrow = 1)%*%wtnbtn
         var_thetaa <- (as.vector(varthetas_w))^2
         UBa = exp(as.vector(log(thetaa)) + critval*sqrt(var_thetaa))
         LBa = exp(as.vector(log(thetaa)) - critval*sqrt(var_thetaa))
@@ -493,6 +496,8 @@ calcbounds <- function(id_ic, IC, res, byloc, Ex, Yx, cellsix=NULL, sparsemat, c
 #'@param conf.level Confidence level for the interval. Default is 0.95. 
 #'@return Returns large list of confidence bounds and stacked estimates in addition to timings for each of the confidence bounds methods.    
 calcbounds.cells <- function(id_ic, IC, res, byloc=FALSE, Ex, Yx,w, thetaa,thetai, sparsemat, cellsix, conf.level=0.95){
+    browser()
+    if(is.null(conf.level)){conf.level <- 0.95}
     if(id_ic==0){
         # emptynonstack<- vector(mode = "list", length = 2)
         # emptynonstack[[1]] <- 0
@@ -546,11 +551,12 @@ calcbounds.cells <- function(id_ic, IC, res, byloc=FALSE, Ex, Yx,w, thetaa,theta
         }
         else if (byloc==FALSE){
             #print(paste0("byloc: ", byloc))
-            outExp <- t(sparsemat)%*%Ex
-            outYx <- t(sparsemat)%*%Yx
-            #print(paste0("cellsix: ", cellsix))
-            outExp_out <- outExp@x[cellsix]
-            outYx_out <- outYx@x[cellsix]
+            outExp <- t(sparsemat)%*%Ex #66870 x 1
+            outYx <- t(sparsemat)%*%Yx #66870 x 1
+            outExp_out <- rep(outExp@x[res$maxid[id_ic]], times=length(cellsix))
+            outObs_out <- rep(outYx@x[res$maxid[id_ic]], times=length(cellsix))
+            # outExp_out <- outExp@x[cellsix] #vector of 5 expected counts
+            # outYx_out <- outYx@x[cellsix] #vector of 5 observed counts
             cellrisk_wt_out <- NULL
         }    
         
@@ -573,7 +579,9 @@ calcbounds.cells <- function(id_ic, IC, res, byloc=FALSE, Ex, Yx,w, thetaa,theta
         outbuck.theta.time <- system.time(outbuck.theta <- bucklandbounds.cells(thetaa,
                                                                                 res,
                                                                                 w=w,
-                                                                                Ex,
+                                                                                #Ex,
+                                                                                outObs_out,
+                                                                                outExp_out,
                                                                                 IC=IC,
                                                                                 transform="none",
                                                                                 tsparsemat=t(sparsemat),
@@ -582,7 +590,9 @@ calcbounds.cells <- function(id_ic, IC, res, byloc=FALSE, Ex, Yx,w, thetaa,theta
         outbuckTlog.theta.time <- system.time(outbuckTlog.theta <- bucklandbounds.cells(thetaa,
                                                                                         res,
                                                                                         w=w,
-                                                                                        Ex,
+                                                                                        #Ex,
+                                                                                        outObs_out,
+                                                                                        outExp_out,
                                                                                         IC=IC,
                                                                                         transform="log",
                                                                                         tsparsemat=t(sparsemat),
@@ -592,7 +602,9 @@ calcbounds.cells <- function(id_ic, IC, res, byloc=FALSE, Ex, Yx,w, thetaa,theta
         outba2.theta.time <- system.time(outba2.theta <- ba2.cells(thetaa,
                                                                       res,
                                                                       w=w,
-                                                                      Ex,
+                                                                      #Ex,
+                                                                   outObs_out,
+                                                                   outExp_out,
                                                                       IC,
                                                                       transform="none",
                                                                       tsparsemat=t(sparsemat),
@@ -602,7 +614,9 @@ calcbounds.cells <- function(id_ic, IC, res, byloc=FALSE, Ex, Yx,w, thetaa,theta
         outba2Tlog.theta.time <- system.time(outba2Tlog.theta <- ba2.cells(thetaa,
                                                                               res,
                                                                               w=w,
-                                                                              Ex,
+                                                                              #Ex,
+                                                                           outObs_out,
+                                                                           outExp_out,
                                                                               IC,
                                                                               transform="log",
                                                                               tsparsemat=t(sparsemat),
@@ -614,7 +628,9 @@ calcbounds.cells <- function(id_ic, IC, res, byloc=FALSE, Ex, Yx,w, thetaa,theta
         outmata.theta.time <- system.time(outmata.theta <- matabounds.cells(thetaa,
                                                                             res,
                                                                             w=w,
-                                                                            Ex,
+                                                                            #Ex,
+                                                                            outObs_out,
+                                                                            outExp_out,
                                                                             IC,
                                                                             transform="none",
                                                                             tsparsemat=t(sparsemat),
@@ -624,7 +640,9 @@ calcbounds.cells <- function(id_ic, IC, res, byloc=FALSE, Ex, Yx,w, thetaa,theta
         outmataTlog.theta.time <- system.time(outmataTlog.theta <- matabounds.cells(thetaa,
                                                                                     res,
                                                                                     w=w,
-                                                                                    Ex,
+                                                                                    #Ex,
+                                                                                    outObs_out,
+                                                                                    outExp_out,
                                                                                     IC,
                                                                                     transform="log",
                                                                                     tsparsemat=t(sparsemat),
