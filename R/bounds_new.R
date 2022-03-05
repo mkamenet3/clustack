@@ -29,6 +29,7 @@ selectuniq <- function(uniqRRs, background){
 #'
 #'}
 calcbounds <- function(id_ic, IC, res, byloc, Ex, Yx, cellsix=NULL, sparsemat, conf.level=0.95){
+    #browser()
     IC <- tolower(IC)
     if(!is.null(cellsix) & is.null(sparsemat)){
         stop("You must provide the sparsemat when calculating rates for each cell.")
@@ -38,7 +39,7 @@ calcbounds <- function(id_ic, IC, res, byloc, Ex, Yx, cellsix=NULL, sparsemat, c
     } 
     thetai_uniq <- sapply(1:nrow(res$Lambda_dense), function(k) unique(res$Lambda_dense[k,]))
     thetai_uniqi <- as.matrix(do.call(rbind, thetai_uniq), ncol=2)
-    thetai <- selectuniq(thetai_uniqi)
+    thetai <- selectuniq(thetai_uniqi,1)
     if(IC=="aic"){
         out <- vector(mode = "list", length = res$selection.aic)
         w <- matrix(res$wtMAT[,1:res$selection.aic], ncol=res$selection.aic)
@@ -75,7 +76,7 @@ calcbounds <- function(id_ic, IC, res, byloc, Ex, Yx, cellsix=NULL, sparsemat, c
 #'@param conf.level Confidence level for the interval. Default is 0.95. 
 #'@return Returns large list of confidence bounds and stacked estimates in addition to timings for each of the confidence bounds methods.    
 calcbounds.cells <- function(id_ic, IC, res, byloc=FALSE, Ex, Yx,w, thetaa,thetai, sparsemat, cellsix, conf.level=0.95){
-   # browser()
+    #browser()
     if(is.null(conf.level)){conf.level <- 0.95}
     critval <- qnorm(1-(1-conf.level)/2)
     if(id_ic==0){
@@ -83,34 +84,35 @@ calcbounds.cells <- function(id_ic, IC, res, byloc=FALSE, Ex, Yx,w, thetaa,theta
             outbuckTlog.theta = list(as.vector(rep(0, length(cellsix))), as.vector(rep(0, length(cellsix))), as.vector(rep(0, length(cellsix)))),
             outba2Tlog.theta = list(as.vector(rep(0, length(cellsix))), as.vector(rep(0, length(cellsix))), as.vector(rep(0, length(cellsix)))),
             outmataTlog.theta = list(as.vector(rep(0, length(cellsix))), as.vector(rep(0, length(cellsix))), as.vector(rep(0, length(cellsix)))),
-
+            
             outbuckTlog.theta.time = 000,
             outba2Tlog.theta.time = 000,
             outmataTlog.theta.time = 000
         ))
     } else {
-        cellrisk_wt_out <- rep(NA, length(cellsix))
-        if(byloc==TRUE){
-            outExp <- t(sparsemat)%*%Ex
-            outYx <- t(sparsemat)%*%Yx
-            for(i in 1:length(cellsix)){
-                cellsixvec <- rep(0,dim(res$wLambda)[2])
-                cellsixvec[cellsix[i]] <-1
-                overlapid <- matrix(cellsixvec, nrow=1)%*%t(res$Lambda_dense)
-                cellrisk_wt <- overlapid%*%w 
-                cellrisk_wt_out[[i]] <- cellrisk_wt
-            }
-        }
-        else if (byloc==FALSE){
-            cellrisk_wt_out <- NULL
-        }    
+        # cellrisk_wt_out <- rep(NA, length(cellsix))
+        # if(byloc==TRUE){
+        #     outExp <- t(sparsemat)%*%Ex
+        #     outYx <- t(sparsemat)%*%Yx
+        #     for(i in 1:length(cellsix)){
+        #         cellsixvec <- rep(0,dim(res$wLambda)[2])
+        #         cellsixvec[cellsix[i]] <-1
+        #         overlapid <- matrix(cellsixvec, nrow=1)%*%t(res$Lambda_dense)
+        #         cellrisk_wt <- overlapid%*%w 
+        #         cellrisk_wt_out[[i]] <- cellrisk_wt
+        #     }
+        # }
+        # else if (byloc==FALSE){
+        #     cellrisk_wt_out <- NULL
+        
         ###########################
         #Calculate key matrices
         ###########################
         thetai <- res$Lambda_dense
-        thetai_uniqvals <- apply(thetai,1, function(x) unique)
+        thetai_uniqvals <- apply(thetai,1, unique)
+        #browser()
         thetai_uniqmat <- data.matrix(as.data.frame(thetai_uniqvals))
-        thetai_uniq <- selectuniqRR(t(thetai_uniqmat), 1) #66870
+        thetai_uniq <- selectuniq(t(thetai_uniqmat), 1) #66870
         
         
         thetaa <- res$wLambda[res$selection.bic,][cellsix]
@@ -124,7 +126,7 @@ calcbounds.cells <- function(id_ic, IC, res, byloc=FALSE, Ex, Yx,w, thetaa,theta
         }
         
         var_thetai_uniqvals <- apply(var_thetai, MARGIN=2, unique)
-        var_thetai_uniqmat <- data.matrix(as.data.frame(moo2))
+        var_thetai_uniqmat <- data.matrix(as.data.frame(var_thetai_uniqvals))
         var_thetai_uniq <- selectuniq(t(var_thetai_uniqmat),0)
         
         
@@ -142,7 +144,7 @@ calcbounds.cells <- function(id_ic, IC, res, byloc=FALSE, Ex, Yx,w, thetaa,theta
                                                                                         sparsemat,
                                                                                         cellsix,
                                                                                         critval))
- 
+        
         message("Buckland bounds finished")
         outba2Tlog.theta.time <- system.time(outba2Tlog.theta <- ba2.cells(thetaa, 
                                                                            var_thetai_uniq, 
@@ -175,8 +177,8 @@ calcbounds.cells <- function(id_ic, IC, res, byloc=FALSE, Ex, Yx,w, thetaa,theta
             outmataTlog.theta.time = outmataTlog.theta.time[[3]]
         ))
     }
-    
-}
+} 
+
 
 
 
