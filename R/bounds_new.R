@@ -18,7 +18,7 @@ selectuniq <- function(uniqRRs, background){
 #'@param byloc Boolean. Use \code{TRUE} when stacking by location. Use \code{FALSE} when stacking by potential cluster.
 #'@param Ex Expected counts (unstandardized) for each cell.
 #'@param Yx Observed counts for each cell.
-#'@param cellsix_out Indices of the cells to calculate bounds for. 
+#'@param cellsix Indices of the cells to calculate bounds for. 
 #'@param sparsemat Large sparsematrix where rows are potential clusters and columns are space-time locations.
 #'@param conf.level Confidence level for the interval. Default is 0.95. 
 #'@details The confidence bounds methods returned are:
@@ -75,7 +75,7 @@ calcbounds <- function(id_ic, IC, res, byloc, Ex, Yx, cellsix=NULL, sparsemat, c
 #'@param conf.level Confidence level for the interval. Default is 0.95. 
 #'@return Returns large list of confidence bounds and stacked estimates in addition to timings for each of the confidence bounds methods.    
 calcbounds.cells <- function(id_ic, IC, res, byloc=FALSE, Ex, Yx,w, thetaa,thetai, sparsemat, cellsix, conf.level=0.95){
-    browser()
+   # browser()
     if(is.null(conf.level)){conf.level <- 0.95}
     critval <- qnorm(1-(1-conf.level)/2)
     if(id_ic==0){
@@ -107,10 +107,10 @@ calcbounds.cells <- function(id_ic, IC, res, byloc=FALSE, Ex, Yx,w, thetaa,theta
         ###########################
         #Calculate key matrices
         ###########################
-        thetaw <- res$Lambda_dense
-        thetaw_uniqvals <- apply(thetaw,1, function(x) unique)
-        thetaw_uniqmat <- data.matrix(as.data.frame(test3c))
-        thetaw_uniq <- selectuniqRR(t(thetaw_uniqmat), 1) #66870
+        thetai <- res$Lambda_dense
+        thetai_uniqvals <- apply(thetai,1, function(x) unique)
+        thetai_uniqmat <- data.matrix(as.data.frame(thetai_uniqvals))
+        thetai_uniq <- selectuniqRR(t(thetai_uniqmat), 1) #66870
         
         
         thetaa <- res$wLambda[res$selection.bic,][cellsix]
@@ -123,17 +123,12 @@ calcbounds.cells <- function(id_ic, IC, res, byloc=FALSE, Ex, Yx,w, thetaa,theta
             var_thetai <- 1/Yx_pcloc    
         }
         
-        uniq_thetai <- apply(thetaw,1, function(x) unique(x))
-        uniq_thetai_mat<- data.matrix(as.data.frame(uniq_thetai))
-        thetai_uniq <- selectuniq(t(uniq_thetai_mat)) #66870
-        
-        
         var_thetai_uniqvals <- apply(var_thetai, MARGIN=2, unique)
         var_thetai_uniqmat <- data.matrix(as.data.frame(moo2))
         var_thetai_uniq <- selectuniq(t(var_thetai_uniqmat),0)
         
         
-        withinvar <- sapply(1:length(cellsix), function(i) (log(thetaw_uniq) - log(thetaa[i]))^2)
+        withinvar <- sapply(1:length(cellsix), function(i) (log(thetai_uniq) - log(thetaa[i]))^2)
         
         
         
@@ -149,32 +144,22 @@ calcbounds.cells <- function(id_ic, IC, res, byloc=FALSE, Ex, Yx,w, thetaa,theta
                                                                                         critval))
  
         message("Buckland bounds finished")
-        outba2Tlog.theta.time <- system.time(outba2Tlog.theta <- ba2.cells(thetaa,
-                                                                           res,
-                                                                           w=w,
-                                                                           #Ex,
-                                                                           outObs_out,
-                                                                           outExp_out,
-                                                                           IC,
-                                                                           transform="log",
-                                                                           tsparsemat=t(sparsemat),
-                                                                           overdisp.est,
-                                                                           cellsix_out,
-                                                                           conf.level))
+        outba2Tlog.theta.time <- system.time(outba2Tlog.theta <- ba2.cells(thetaa, 
+                                                                           var_thetai_uniq, 
+                                                                           withinvar, 
+                                                                           w, 
+                                                                           sparsemat,
+                                                                           cellsix, 
+                                                                           critval))
         
         message("Burnham & Anderson bounds finished")
-        outmataTlog.theta.time <- system.time(outmataTlog.theta <- matabounds.cells(thetaa,
-                                                                                    res,
-                                                                                    w=w,
-                                                                                    #Ex,
-                                                                                    outObs_out,
-                                                                                    outExp_out,
-                                                                                    IC,
-                                                                                    transform="log",
-                                                                                    tsparsemat=t(sparsemat),
-                                                                                    overdisp.est,
-                                                                                    cellsix_out,
-                                                                                    conf.level))
+        outmataTlog.theta.time <- system.time(outmataTlog.theta <- matabounds_log.cells(log(thetaa),
+                                                                                        log(thetai),
+                                                                                        var_thetai_uniq, 
+                                                                                        w, 
+                                                                                        sparsemat,
+                                                                                        cellsix, 
+                                                                                        conf.level))
         message("MATA bounds finished")
         
         ###########################
@@ -196,7 +181,7 @@ calcbounds.cells <- function(id_ic, IC, res, byloc=FALSE, Ex, Yx,w, thetaa,theta
 
 
 #'@title bucklandbounds.cells
-#'@description Calculate confidence bounds for stacked cluster relative risk estimates based on Buckland et al. for specific cells (given by \code{cellsix_out}) 
+#'@description Calculate confidence bounds for stacked cluster relative risk estimates based on Buckland et al. for specific cells (given by \code{cellsix}) 
 #'@param thetaa Stacked relative risk estimates for each cell.
 #'@param var_thetai_uniq Unique values of variance for each unique individual cell relative risk estimate.
 #'@param withinvar Within estimate variablility (between each unique thetai and the stacked estimate for the cell)
@@ -204,7 +189,7 @@ calcbounds.cells <- function(id_ic, IC, res, byloc=FALSE, Ex, Yx,w, thetaa,theta
 #'@param sparsemat Large sparse matrix where columns are potential clusters and rows are space-time locations.
 #'@param cellsix Indices of the cells to calculate bounds for.
 #'@param conf.level Confidence level for the interval. Default is 0.95. 
-#'@return List: lower bound estimate, stacked cluster relative risk estimate, upper bound estimate for each of the cells in \code{cellsix_out}
+#'@return List: lower bound estimate, stacked cluster relative risk estimate, upper bound estimate for each of the cells in \code{cellsix}
 #'@export
 bucklandbounds.cells <- function(thetaa, var_thetai_uniq, withinvar, w, sparsemat,cellsix, critval){
     combo <- sapply(1:length(cellsix), function(i) var_thetai_uniq+withinvar[,i])
@@ -230,6 +215,52 @@ ba2.cells <- function(thetaa, var_thetai_uniq, withinvar, w, sparsemat,cellsix, 
     return(list(ba2.LB = LBa,
                 clusterstack= thetaa,
                 ba2.UB = UBa))
-        
+}
+
+###########################
+
+#'@title matabounds_log.cells
+#'@description Calculate confidence bounds for stacked cluster relative risk estimates based on MATA (model-averaged tail area) intervals based on Turek et al. for specific cells (given by \code{cellsix}) with natural log transformation(\code{transform="log"}).
+#'@param thetaa Stacked relative risk estimate for the cluster(s).
+#'@param res Resultant object from \code{detectclusters()}.
+#'@param w Likelihood-weights for all Q<K potential clusters.
+#'@param outObs_out Observed counts for each potential cluster.
+#'@param outExp_out Expected counts for each potential cluster.
+#'@param IC Information criterion used. Currently available for BIC (QBIC) and AIC (QAIC).
+#'@param tsparsemat Transpose of large sparse matrix where columns are potential clusters and rows are space-time locations.
+#'@param overdisp.est Estimate of overdispersion (or underdispersion).
+#'@param cellsix Indices of the cells to calculate bounds for.
+#'@param conf.level Confidence level for the interval. Default is 0.95. 
+#'@return List: lower bound estimate, stacked cluster relative risk estimate, upper bound estimate
+#'@export
+#'
+matabounds_log.cells<- function(thetaa, thetai,var_thetai_uniq, w, sparsemat,cellsix, conf.level) {
+    alpha <- (1-conf.level)/2
+    mataLB <- sapply(1:length(cellsix),
+                     function(k) uniroot(f=mata_tailareazscore, interval=c(-10, 10),
+                                         thetai= thetai[,cellsix[k]],
+                                         sd.thetai=sqrt(var_thetai_uniq),
+                                         w=w, alpha=alpha, tol=1e-8)$root)
+    mataUB <- sapply(1:length(cellsix),
+                     function(k) uniroot(f=mata_tailareazscore, interval=c(-10, 10),
+                                         thetai= thetai[,cellsix[k]],
+                                         sd.thetai=sqrt(var_thetai_uniq),
+                                         w=w, alpha=1-alpha, tol=1e-8)$root)
+    return(list(matalog.LB = exp(mataLB),
+                clusterstack= exp(thetaa),
+                matalog.UB = exp(mataUB)))
+}
+
+#' @title mata_tailareazcore
+#' @description Calculate MATA tail area weighted z-score based on Turek et al.
+#' @param thetaa Stacked relative risk estimate.
+#' @param thetai Each individual cluster relative risk.
+#' @param sd.thetai Standard deviation of estimated variance for each individual cluster relative risk.
+#' @param w Likelihood-weights for all Q<K potential clusters.
+#' @param alpha \eqn{\alpha}, probability of rejecting the null hypothesis when it is true.
+mata_tailareazscore <- function(thetaa,thetai, sd.thetai, w, alpha){
+    zval <- (thetaa - thetai)/sd.thetai
+    zpnorm <- pnorm(zval)
+    w_zpnorm <- sum((w*zpnorm))-alpha
 }
 
