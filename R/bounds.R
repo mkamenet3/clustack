@@ -107,8 +107,8 @@ UBa = exp(log(thetaa[5])+critval*(test3a[cellsix_out[5]]))
 #'@param thetaa Stacked relative risk estimate for the cluster(s)
 #'@param res Resultant object from \code{detectclusters()}.
 #'@param w Likelihood-weights for potential clusters.
-#'@param outObs Observed counts for each potential cluster.
-#'@param outExp Expected counts for each potential cluster.
+#'@param Yx Observed counts.
+#'@param Exp Expected counts.
 #'@param IC Information criterion used. Currently available for BIC (QBIC) and AIC (QAIC).
 #'@param transform If a transformation is used. Default is \code{"none"}. Other transformation currently available is \code{"log"}.
 #'@param tsparsemat Transpose of large sparse matrix where columns are potential clusters and rows are space-time locations.
@@ -117,57 +117,7 @@ UBa = exp(log(thetaa[5])+critval*(test3a[cellsix_out[5]]))
 #'@param conf.level Confidence level for the interval. Default is 0.95. 
 #'@return List: lower bound estimate, stacked cluster relative risk estimate, upper bound estimate for each of the cells in \code{cellsix_out}
 #'@export
-#'
-# bucklandbounds.cells <- function(thetaa, res, w, outObs,outExp,IC,transform="none",tsparsemat,overdisp.est, cellsix_out, conf.level) {
-#     thetai <- res$Lambda_dense
-#     critval <- qnorm(1-(1-conf.level)/2)
-#     #print(critval)
-#     if(IC=="aic"){
-#         thetaa <- res$wLambda[res$selection.aic,][cellsix_out]
-#     } else {
-#         thetaa <- res$wLambda[res$selection.bic,][cellsix_out]
-#     }
-#     #print(str(thetaa))
-#     if(transform=="log"){
-#         #print("transform")
-#         if(!is.null(overdisp.est)){
-#             varthetai_1 <- as.matrix(as.vector(outYx)*sparsemat)
-#             varthetai_1[varthetai_1==0] <- Inf
-#             varthetai <- overdisp.est*(1/varthetai_1)
-#         } else {
-#             varthetai_1 <- as.matrix(as.vector(outYx)*sparsemat)
-#             varthetai_1[varthetai_1==0] <- Inf
-#             varthetai <- 1/varthetai_1
-#         }
-#         withintheta <- sapply(1:length(cellsix_out), function(j) (log(thetai[,cellsix_out][,j]) - log(thetaa[j])))^2
-#         wtnbtn <- sapply(1:length(cellsix_out), function(k) sqrt(varthetai[k] + withintheta[,k]))
-#         varthetas_w <- matrix(w, nrow = 1)%*%wtnbtn
-#         var_thetaa <- (as.vector(varthetas_w))^2
-#         UBa = exp(as.vector(log(thetaa)) + critval*sqrt(var_thetaa))
-#         LBa = exp(as.vector(log(thetaa)) - critval*sqrt(var_thetaa))
-#         
-#     } else {
-#         #browser()
-#         if(!is.null(overdisp.est)){
-#             varthetai_1 <- as.matrix(as.vector(outExp)*sparsemat)
-#             varthetai_1[varthetai_1==0] <- Inf
-#             varthetai <- overdisp.est*(thetai/t(varthetai_1))
-#         } else {
-#             varthetai <- (thetai/t(varthetai_1))#sapply(1:nrow(tsparsemat), function(k) thetai[k,]/outExp_out )
-#         }
-#         withintheta <- sapply(1:length(cellsix_out), function(j) (thetai[,cellsix_out][,j] - thetaa[j]))^2
-#         wtnbtn <- sapply(1:nrow(tsparsemat), function(k) sqrt(varthetai[k,cellsix_out] + withintheta[k,]))
-#         varthetas_w <- matrix(w, nrow = 1)%*%t(wtnbtn)
-#         var_thetaa <- (as.vector(varthetas_w))^2
-#         UBa = as.vector(thetaa) + critval*sqrt(var_thetaa)
-#         LBa = as.vector(thetaa) - critval*sqrt(var_thetaa)
-#     }
-#     return(list(buckland.LB = LBa,
-#                 clusterstack= thetaa,
-#                 buckland.UB = UBa))
-# }
-
-bucklandbounds.cells <- function(thetaa, res, w, outObs,outExp,IC,transform="none",tsparsemat,overdisp.est, cellsix_out, conf.level) {
+bucklandbounds.cells <- function(thetaa, res, w, Yx, Exp,IC,transform="none",tsparsemat,overdisp.est, cellsix_out, conf.level) {
     thetai <- res$Lambda_dense
     critval <- qnorm(1-(1-conf.level)/2)
     #print(critval)
@@ -180,27 +130,25 @@ bucklandbounds.cells <- function(thetaa, res, w, outObs,outExp,IC,transform="non
     if(transform=="log"){
         #print("transform")
         if(!is.null(overdisp.est)){
-            varthetai_1 <- as.matrix(as.vector(outYx)*sparsemat)
-            varthetai_1[varthetai_1==0] <- Inf
-            varthetai <- overdisp.est*(1/varthetai_1)
+            #TODO 
         } else {
-            varthetai_1 <- as.matrix(as.vector(outYx)*sparsemat)
-            varthetai_1[varthetai_1==0] <- Inf
-            varthetai <- 1/varthetai_1
+            Yx_pc <- t(sparsemat)%*%Yx #these are all the total counts in each PC. These then need to be expanded out to
+            #each cell, so each cell will have the same number
+            Yx_pcmat<- as.matrix(sweep(sparsemat, MARGIN=2, Yx_pc@x, `*`))
+            Yx_pcmat[Yx_pcmat==0] <- Inf
+            varthetai<- 1/Yx_pcmat
         }
-        bb <- sapply(1:nrow(res$Lambda_dense), function(k) log(res$Lambda_dense[k,]) - log(round(res$wLambda[1,],3)))
-        se_thetaa <- as.vector(sqrt(varthetai + bb^2)%*%matrix(w, ncol = 1))
-        #
-        #tmp[,j]=log(as.matrix(model_estimates)[,j])-log(as.matrix(model_estimates)%*%c(example_clusters$wgt2))
-        #
-        # withintheta <- sapply(1:length(cellsix_out), function(j) (log(thetai[,cellsix_out][,j]) - log(thetaa[j])))^2
-        # wtnbtn <- sapply(1:length(cellsix_out), function(k) sqrt(varthetai[k] + withintheta[,k]))
-        # varthetas_w <- matrix(w, nrow = 1)%*%wtnbtn
-        # var_thetaa <- (as.vector(varthetas_w))^2
-        LBa = exp(round(log(res$wLambda[1,],3)) -critval*(se_thetaa))
-        UBa = exp(round(log(res$wLambda[1,],3)) +critval*(se_thetaa))
-        # UBa = exp(as.vector(log(thetaa)) + critval*(se_thetaa))
-        # LBa = exp(as.vector(log(thetaa)) - critval*(se_thetaa))
+        btwn <- (log(thetai[,cellsix[1]]) - log(thetaa[1]))^2
+        var_thetaa <- (sqrt(varthetai+ btwn))%*%w
+        LBa = exp(log(thetaa[1])-critval*(var_thetaa[cellsix_out[1]]))
+        UBa = exp(log(thetaa[1])+critval*(var_thetaa[cellsix_out[1]]))
+        
+        
+        # btwn <- sapply(1:length(cellsix), function(i) (log(thetai[,cellsix[i]]) - log(thetaa[i]))^2)
+        # var_thetaa <- sapply(1:length(cellsix), function(i) (sqrt(varthetai + btwn[,i]))%*%w)
+        # LBa = exp(log(thetaa[5])-critval*(test3a[cellsix_out[5]]))
+        # UBa = exp(log(thetaa[5])+critval*(test3a[cellsix_out[5]]))
+        # 
         
     } else {
         #browser()
