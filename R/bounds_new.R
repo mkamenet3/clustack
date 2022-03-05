@@ -218,4 +218,18 @@ bucklandbounds.cells <- function(thetaa, var_thetai_uniq, withinvar, w, sparsema
                 buckland.UB = UBa))
 }
 
+#'@title ba2.cells
+#'@description Calculate confidence bounds for stacked cluster relative risk estimates based on Burnham and Anderson for specific cells (given by \code{cellsix}) 
+ba2.cells <- function(thetaa, var_thetai_uniq, withinvar, w, sparsemat,cellsix, critval){
+    combo <- sapply(1:length(cellsix), function(i) var_thetai_uniq+withinvar[,i])
+    var_est<- sapply(1:length(cellsix), function(i) t(t(sparsemat)*combo[,i]))
+    var_estw <- sapply(1:length(cellsix), function(i) var_est[[i]]%*%w)
+    LBa = sapply(1:length(cellsix), function(i) exp(log(thetaa[i])-critval*(sqrt(var_estw[[i]][cellsix[i]]))))
+    UBa = sapply(1:length(cellsix), function(i) exp(log(thetaa[i])+critval*(sqrt(var_estw[[i]][cellsix[i]]))))
+    
+    return(list(ba2.LB = LBa,
+                clusterstack= thetaa,
+                ba2.UB = UBa))
+        
+}
 
