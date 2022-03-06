@@ -79,6 +79,7 @@ calcbounds.cells <- function(id_ic, IC, res, byloc=FALSE, Ex, Yx,w, thetaa,theta
     #browser()
     if(is.null(conf.level)){conf.level <- 0.95}
     critval <- qnorm(1-(1-conf.level)/2)
+    alpha2 <-(1-conf.level)/2
     if(id_ic==0){
         return(list(
             outbuckTlog.theta = list(as.vector(rep(0, length(cellsix))), as.vector(rep(0, length(cellsix))), as.vector(rep(0, length(cellsix)))),
@@ -116,7 +117,7 @@ calcbounds.cells <- function(id_ic, IC, res, byloc=FALSE, Ex, Yx,w, thetaa,theta
         
         
         thetaa <- res$wLambda[res$selection.bic,][cellsix]
-        Yx_pc <- t(sparsemat)%*%Yx 
+        Yx_pcloc <- t(sparsemat)%*%Yx 
         
         # Yx_pcloc <- as.matrix(sweep(sparsemat, MARGIN=2, Yx_pc@x, `*`)) 
         # Yx_pcloc[Yx_pcloc==0] <- Inf
@@ -133,13 +134,16 @@ calcbounds.cells <- function(id_ic, IC, res, byloc=FALSE, Ex, Yx,w, thetaa,theta
         
         withinvar <- sapply(1:length(cellsix), function(i) (log(thetai_uniq) - log(thetaa[i])))
         ses <- sapply(1:length(cellsix), function(i) (se_thetai)^2 + (withinvar[,i])^2)
-        
+        var_est<- sapply(1:length(cellsix), function(i) t(t(sparsemat)*as.vector(ses[[i]])))
+        #browser()
+        message("Finished calculating SEs")
         
         ###########################
         #Calculate Bounds by Method
         ###########################
+        #thetaa, ses, w, sparsemat,cellsix, critval
         outbuckTlog.theta.time <- system.time(outbuckTlog.theta <- bucklandbounds.cells(thetaa, 
-                                                                                        ses, 
+                                                                                        var_est, 
                                                                                         w, 
                                                                                         sparsemat,
                                                                                         cellsix,
@@ -147,20 +151,14 @@ calcbounds.cells <- function(id_ic, IC, res, byloc=FALSE, Ex, Yx,w, thetaa,theta
         
         message("Buckland bounds finished")
         outba2Tlog.theta.time <- system.time(outba2Tlog.theta <- ba2.cells(thetaa, 
-                                                                           ses, 
+                                                                           var_est, 
                                                                            w, 
                                                                            sparsemat,
                                                                            cellsix, 
                                                                            critval))
         
         message("Burnham & Anderson bounds finished")
-        outmataTlog.theta.time <- system.time(outmataTlog.theta <- matabounds_log.cells(log(thetaa),
-                                                                                        log(thetai),
-                                                                                        var_thetai_uniq, 
-                                                                                        w, 
-                                                                                        sparsemat,
-                                                                                        cellsix, 
-                                                                                        conf.level))
+        outmataTlog.theta.time <- system.time(outmataTlog.theta <- matabounds_log.cells(ses, thetai, thetaa, cellsix,alpha2))
         message("MATA bounds finished")
         
         ###########################
@@ -192,9 +190,9 @@ calcbounds.cells <- function(id_ic, IC, res, byloc=FALSE, Ex, Yx,w, thetaa,theta
 #'@param conf.level Confidence level for the interval. Default is 0.95. 
 #'@return List: lower bound estimate, stacked cluster relative risk estimate, upper bound estimate for each of the cells in \code{cellsix}
 #'@export
-bucklandbounds.cells <- function(thetaa, ses, w, sparsemat,cellsix, critval){
+bucklandbounds.cells <- function(thetaa, var_est, w, sparsemat,cellsix, critval){
     #combo <- sapply(1:length(cellsix), function(i) var_thetai_uniq+withinvar[,i])
-    var_est<- sapply(1:length(cellsix), function(i) t(t(sparsemat)*as.vector(ses[,i])))
+    #var_est<- sapply(1:length(cellsix), function(i) t(t(sparsemat)*as.vector(ses[[i]])))
     var_estw <- sapply(1:length(cellsix), function(i) sqrt(var_est[[i]])%*%w)
     LBa = sapply(1:length(cellsix), function(i) exp(log(thetaa[i])-critval*(var_estw[[i]][cellsix[i]])))
     UBa = sapply(1:length(cellsix), function(i) exp(log(thetaa[i])+critval*(var_estw[[i]][cellsix[i]])))
@@ -206,9 +204,9 @@ bucklandbounds.cells <- function(thetaa, ses, w, sparsemat,cellsix, critval){
 
 #'@title ba2.cells
 #'@description Calculate confidence bounds for stacked cluster relative risk estimates based on Burnham and Anderson for specific cells (given by \code{cellsix}) 
-ba2.cells <- function(thetaa, ses, w, sparsemat,cellsix, critval){
+ba2.cells <- function(thetaa, var_est, w, sparsemat,cellsix, critval){
     #combo <- sapply(1:length(cellsix), function(i) var_thetai_uniq+withinvar[,i])
-    var_est<- sapply(1:length(cellsix), function(i) t(t(sparsemat)*as.vector(ses[,i])))
+    #var_est<- sapply(1:length(cellsix), function(i) t(t(sparsemat)*as.vector(ses[[i]])))
     var_estw <- sapply(1:length(cellsix), function(i) var_est[[i]]%*%w)
     LBa = sapply(1:length(cellsix), function(i) exp(log(thetaa[i])-critval*(sqrt(var_estw[[i]][cellsix[i]]))))
     UBa = sapply(1:length(cellsix), function(i) exp(log(thetaa[i])+critval*(sqrt(var_estw[[i]][cellsix[i]]))))
@@ -218,58 +216,7 @@ ba2.cells <- function(thetaa, ses, w, sparsemat,cellsix, critval){
                 ba2.UB = UBa))
 }
 
-#' ###########################
-#' 
-#' #'@title matabounds_log.cells
-#' #'@description Calculate confidence bounds for stacked cluster relative risk estimates based on MATA (model-averaged tail area) intervals based on Turek et al. for specific cells (given by \code{cellsix}) with natural log transformation(\code{transform="log"}).
-#' #'@param thetaa Stacked relative risk estimate for the cluster(s).
-#' #'@param res Resultant object from \code{detectclusters()}.
-#' #'@param w Likelihood-weights for all Q<K potential clusters.
-#' #'@param outObs_out Observed counts for each potential cluster.
-#' #'@param outExp_out Expected counts for each potential cluster.
-#' #'@param IC Information criterion used. Currently available for BIC (QBIC) and AIC (QAIC).
-#' #'@param tsparsemat Transpose of large sparse matrix where columns are potential clusters and rows are space-time locations.
-#' #'@param overdisp.est Estimate of overdispersion (or underdispersion).
-#' #'@param cellsix Indices of the cells to calculate bounds for.
-#' #'@param conf.level Confidence level for the interval. Default is 0.95. 
-#' #'@return List: lower bound estimate, stacked cluster relative risk estimate, upper bound estimate
-#' #'@export
-#' #'
-#' matabounds_log.cells<- function(thetaa, thetai,var_thetai_uniq, w, sparsemat,cellsix, conf.level) {
-#'     alpha <- (1-conf.level)/2
-#'     mataLB <- sapply(1:length(cellsix),
-#'                      function(k) uniroot(f=mata_tailareazscore, interval=c(-10, 10),
-#'                                          thetai= thetai[,cellsix[k]],
-#'                                          sd.thetai=sqrt(var_thetai_uniq),
-#'                                          w=w, alpha=alpha, tol=1e-8)$root)
-#'     mataUB <- sapply(1:length(cellsix),
-#'                      function(k) uniroot(f=mata_tailareazscore, interval=c(-10, 10),
-#'                                          thetai= thetai[,cellsix[k]],
-#'                                          sd.thetai=sqrt(var_thetai_uniq),
-#'                                          w=w, alpha=1-alpha, tol=1e-8)$root)
-#'     return(list(matalog.LB = exp(mataLB),
-#'                 clusterstack= exp(thetaa),
-#'                 matalog.UB = exp(mataUB)))
-#' }
-#' 
-#' #' @title mata_tailareazcore
-#' #' @description Calculate MATA tail area weighted z-score based on Turek et al.
-#' #' @param thetaa Stacked relative risk estimate.
-#' #' @param thetai Each individual cluster relative risk.
-#' #' @param sd.thetai Standard deviation of estimated variance for each individual cluster relative risk.
-#' #' @param w Likelihood-weights for all Q<K potential clusters.
-#' #' @param alpha \eqn{\alpha}, probability of rejecting the null hypothesis when it is true.
-#' mata_tailareazscore <- function(thetaa,thetai, sd.thetai, w, alpha){
-#'     zval <- (thetaa - thetai)/sd.thetai
-#'     zpnorm <- pnorm(zval)
-#'     w_zpnorm <- sum((w*zpnorm))-alpha
-#' }
-#' 
-
-# mata_ZLB <- function(theta, ses,thetai){
-#     #sapply(1:length(cellsix), function(i) sum(w*(1-pnorm((log(thetai[,i])-theta)/(ses[i,]+(log(thetai[,i])-theta==0))))))
-#     sum(w*(1-pnorm((log(thetai[,139])-theta)/(ses[139,]+(log(thetai[,139])-theta==0)))))
-# }
+#########MATA Bounds
 mata_ZLB <- function(theta, sesi,thetaii){
     resLB <-sum(w*(1-pnorm((log(thetaii)-theta)/(sesi+(log(thetaii)-theta==0)))))
     
@@ -278,37 +225,26 @@ mata_ZLB <- function(theta, sesi,thetaii){
 mata_ZUB <- function(theta,sesi, thetaii){
     1-mata_ZLB(theta,sesi, thetaii)
 }
-f_LB<-function(theta,sesi,thetaii){
-    mata_ZLB(theta, sesi,thetaii)-.025  
+f_LB<-function(theta,sesi,thetaii, alpha2){
+    mata_ZLB(theta, sesi,thetaii)-alpha2  
 } 
-f_UB<-function(theta,sesi,thetaii){
-    mata_ZUB(theta,sesi, thetaii)-.025  
+f_UB<-function(theta,sesi,thetaii,alpha2){
+    mata_ZUB(theta,sesi, thetaii)-alpha2  
 } 
 
-matabounds_log.cells <- function(ses,thetai, thetaa, cellsix){
+matabounds_log.cells <- function(ses,thetai, thetaa, cellsix,alpha2){
     LBa <- sapply(1:length(cellsix), function(i) exp(uniroot(f_LB,c(-3,3),
                                                              sesi=ses[cellsix[i],],
-                                                             thetaii=thetai[,cellsix[i]])$root))
+                                                             thetaii=thetai[,cellsix[i]],
+                                                             alpha2=alpha2)$root))
     UBa <- sapply(1:length(cellsix), function(i) exp(uniroot(f_UB,c(-3,3),
                                                              sesi=ses[cellsix[i],],
-                                                             thetaii=thetai[,cellsix[i]])$root))
+                                                             thetaii=thetai[,cellsix[i]],
+                                                             alpha2=alpha2)$root))
     return(list(mata.LB = LBa,
             clusterstack= thetaa,
                 mata.UB = UBa))
 
 }
-test <- matabounds_log.cells(ses, thetai, thetaa, cellsix)   
  
-# matabounds_log.cells <- function(ses,thetai, thetaa){
-#     f_LB<-function(theta) mata_ZLB(theta, ses,thetai)-.025
-#     f_UB<-function(theta) mata_ZUB(theta, ses,thetai)-.025
-#     
-#     LBa <- exp(uniroot(f_LB,c(-3,3), ses=ses, thetai=thetai)$root)
-#     UBa <-exp(uniroot(f_UB,c(-3,3), ses=ses, thetai=thetai)$root)
-#     
-#     return(list(mata.LB = LBa,
-#                 clusterstack= thetaa,
-#                 mata.UB = UBa))
-# }
-# 
-# test <- matabounds_log.cells(ses, thetai, thetaa)
+ 
