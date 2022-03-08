@@ -41,17 +41,31 @@ calcbounds <- function(id_ic, IC, res, byloc, Ex, Yx, cellsix=NULL, sparsemat, c
     thetai_uniqi <- as.matrix(do.call(rbind, thetai_uniq), ncol=2)
     thetai <- selectuniq(thetai_uniqi,1)
     if(IC=="aic"){
-        out <- vector(mode = "list", length = res$selection.aic)
-        w <- matrix(res$wtMAT[,1:res$selection.aic], ncol=res$selection.aic)
-        for(i in 1:res$selection.aic){
+        select.aic <- max(1, res$selection.aic)
+        out <- vector(mode = "list", length = select.aic)
+        if(id_ic==0){
+            out <- poisLik(Ex, Yx, t(sparsemat))
+            Lik <- out$Lik
+            w <- matrix(likweights(Lik),ncol=select.aic)
+        } else{
+            w <- matrix(res$wtMAT[,1:select.aic], ncol=select.aic)  
+        }
+        for(i in 1:select.aic){
             thetaa <- sum(thetai*w[,i])
             out[[i]] <- calcbounds.cells(id_ic, IC, res, byloc, Ex, Yx,as.vector(w[,i]), thetaa,thetai, sparsemat, cellsix, conf.level,overdisp.est)
             
         }
     } else {
-        out <- vector(mode = "list", length = res$selection.bic)
-        w <- matrix(res$wtMAT[,1:res$selection.bic], ncol=res$selection.bic)
-        for(i in 1:res$selection.bic){
+        select.bic <- max(1, res$selection.bic)
+        out <- vector(mode = "list", length = select.bic)
+        if(id_ic==0){
+            out <- poisLik(Ex, Yx, t(sparsemat))
+            Lik <- out$Lik
+            w <- matrix(likweights(Lik), ncol=select.bic)
+        }else{
+            w <- matrix(res$wtMAT[,1:select.bic], ncol=select.bic) 
+        }
+        for(i in 1:select.bic){
             thetaa <- sum(thetai*w[,i])
             out[[i]] <-calcbounds.cells(id_ic, IC, res, byloc, Ex, Yx,as.vector(w[,i]), thetaa,thetai, sparsemat, cellsix, conf.level,overdisp.est)
         }
@@ -104,19 +118,26 @@ calcbounds.cells <- function(id_ic, IC, res, byloc=FALSE, Ex, Yx,w, thetaa,theta
         
         thetaa <- res$wLambda[res$selection.bic,][cellsix]
         Yx_pcloc <- t(sparsemat)%*%Yx 
-
+        
         if(!is.null(overdisp.est)){
             se_thetai <- sqrt(overdisp.est*(1/Yx_pcloc))
         }else{
             se_thetai <- sqrt(1/Yx_pcloc)
         }
-
+        #replace Inf with 0
+        ixinf <- which(is.infinite(se_thetai))
+        se_thetai[ixinf] <-0
+        
+        
         withinvar <- sapply(1:length(cellsix), function(i) (log(thetai_uniq) - log(thetaa[i])))
         ses <- sapply(1:length(cellsix), function(i) (se_thetai)^2 + (withinvar[,i])^2)
         var_est<- sapply(1:length(cellsix), function(i) sparsemat %*% Diagonal(length(as.vector(ses[[i]])),
-                                                                                         as.vector(ses[[i]])))
+                                                                               as.vector(ses[[i]])))
+        
+        
         message("Finished calculating SEs")
         
+        #browser()
         ###########################
         #Calculate Bounds by Method
         ###########################
