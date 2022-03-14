@@ -1,4 +1,7 @@
-####################################################
+#'@title selectuniq
+#'@description Selects unique elements from a matrix that are different from the background by row
+#'@param uniqRRs Matrix from which to select unique elements.
+#'@param background Background from which elements will be different (typically 1 or zero)
 selectuniq <- function(uniqRRs, background){
     clusterRR_i <- rep(NA, nrow(uniqRRs))
     flag1 <- sapply(1:nrow(uniqRRs), function(k) length(unique(uniqRRs[k,])))
@@ -17,18 +20,18 @@ selectuniq <- function(uniqRRs, background){
 #'@param byloc Boolean. Use \code{TRUE} when stacking by location. Use \code{FALSE} when stacking by potential cluster.
 #'@param Ex Expected counts (unstandardized) for each cell.
 #'@param Yx Observed counts for each cell.
-#'@param cellsix Indices of the cells to calculate bounds for. 
+#'@param cellsix Indices of the cells to calculate bounds for. If you you want to calculate bounds for all cells, then enter these as a vector (ex: 1:208). 
 #'@param sparsemat Large sparsematrix where rows are potential clusters and columns are space-time locations.
 #'@param conf.level Confidence level for the interval. Default is 0.95. 
+#'@param overdisp.est Overdispersion estimate.
 #'@details The confidence bounds methods returned are:
 #'\itemize{
 #'\item \code{buckTlog}: Stacked confidence bounds based on Buckland et al.; natural log-transformed.
-#'\item \code{baTlog}: Model-average weighted confidence bounds based on Burnham and Anderson.
+#'\item \code{baTlog}: Model-average weighted confidence bounds based on Burnham and Anderson; natural log-transformed.
 #'\item \code{mataTlog}: Model-average tail area (MATA) intervals based on Turek et al.; natural log-transformed.
 #'
 #'}
 calcbounds <- function(id_ic, IC, res, byloc, Ex, Yx, cellsix=NULL, sparsemat, conf.level=0.95, overdisp.est=NULL){
-    #browser()
     if(is.null(overdisp.est)){overdisp.est<-NULL}
     IC <- tolower(IC)
     if(!is.null(cellsix) & is.null(sparsemat)){
@@ -83,11 +86,12 @@ calcbounds <- function(id_ic, IC, res, byloc, Ex, Yx, cellsix=NULL, sparsemat, c
 #'@param Ex Expected counts (unstandardized) for each cell.
 #'@param Yx Observed counts for each cell.
 #'@param w Likelihood-weights for all potential clusters.
-#'@param thetaa Stacked relative risk estimate for the cluster(s)
+#'@param thetaa Stacked relative risk estimate for the cluster(s).
 #'@param thetai Individual relative risk estimates for each potential cluster.
 #'@param sparsemat Large sparse matrix where rows are potential clusters and columns are space-time locations.
 #'@param cellsix Indices of the cells to calculate bounds for. 
 #'@param conf.level Confidence level for the interval. Default is 0.95. 
+#'@param overdisp.est Overdispersion estimate.
 #'@return Returns large list of confidence bounds and stacked estimates in addition to timings for each of the confidence bounds methods.    
 calcbounds.cells <- function(id_ic, IC, res, byloc=FALSE, Ex, Yx,w, thetaa,thetai, sparsemat, cellsix, conf.level=0.95, overdisp.est){
     #browser()
@@ -183,12 +187,11 @@ calcbounds.cells <- function(id_ic, IC, res, byloc=FALSE, Ex, Yx,w, thetaa,theta
 #'@title bucklandbounds.cells
 #'@description Calculate confidence bounds for stacked cluster relative risk estimates based on Buckland et al. for specific cells (given by \code{cellsix}) 
 #'@param thetaa Stacked relative risk estimates for each cell.
-#'@param var_thetai_uniq Unique values of variance for each unique individual cell relative risk estimate.
-#'@param withinvar Within estimate variablility (between each unique thetai and the stacked estimate for the cell)
+#'@param var_est Variances for each single cluster model.
 #'@param w Likelihood-weights for potential clusters.
 #'@param sparsemat Large sparse matrix where columns are potential clusters and rows are space-time locations.
 #'@param cellsix Indices of the cells to calculate bounds for.
-#'@param conf.level Confidence level for the interval. Default is 0.95. 
+#'@param critval Critical value associated with the conf.level.
 #'@return List: lower bound estimate, stacked cluster relative risk estimate, upper bound estimate for each of the cells in \code{cellsix}
 #'@export
 bucklandbounds.cells <- function(thetaa, var_est, w, sparsemat,cellsix, critval){
@@ -203,6 +206,14 @@ bucklandbounds.cells <- function(thetaa, var_est, w, sparsemat,cellsix, critval)
 
 #'@title ba2.cells
 #'@description Calculate confidence bounds for stacked cluster relative risk estimates based on Burnham and Anderson for specific cells (given by \code{cellsix}) 
+#'@param thetaa Stacked relative risk estimates for each cell.
+#'@param var_est Variances for each single cluster model.
+#'@param w Likelihood-weights for potential clusters.
+#'@param sparsemat Large sparse matrix where columns are potential clusters and rows are space-time locations.
+#'@param cellsix Indices of the cells to calculate bounds for.
+#'@param critval Critical value associated with the conf.level.
+#'@return List: lower bound estimate, stacked cluster relative risk estimate, upper bound estimate for each of the cells in \code{cellsix}
+#'@export
 ba2.cells <- function(thetaa, var_est, w, sparsemat,cellsix, critval){
     var_estw <- sapply(1:length(cellsix), function(i) var_est[[i]]%*%w)
     LBa = sapply(1:length(cellsix), function(i) exp(log(thetaa[i])-critval*(sqrt(var_estw[[i]][cellsix[i]]))))
@@ -213,22 +224,54 @@ ba2.cells <- function(thetaa, var_est, w, sparsemat,cellsix, critval){
                 ba2.UB = UBa))
 }
 
-#########MATA Bounds
+#'@titile mata_ZLB
+#'@description Calculates lower bound using MATA confidence bounds for a given theta.
+#'@param theta The parameter to be optimized.
+#'@param sesi Standard error for each cell.
+#'@param thetaii Model estimated relative risk for each cell.
+#'@param w Likelihood-weights for potential clusters.
 mata_ZLB <- function(theta, sesi,thetaii,w){
     resLB <-sum(w*(1-pnorm((log(thetaii)-theta)/(sesi+(log(thetaii)-theta==0)))))
-    
 }
-
+#'@titile mata_ZUB
+#'@description Calculates upper bound using MATA confidence bounds for a given theta
+#'@param theta The parameter to be optimized.
+#'@param sesi Standard error for each cell.
+#'@param thetaii Model estimated relative risk for each cell.
+#'@param w Likelihood-weights for potential clusters.
 mata_ZUB <- function(theta,sesi, thetaii,w){
     1-mata_ZLB(theta,sesi, thetaii,w)
 }
+
+#'@title f_LB
+#'@description Function over which the lower bound root is sought for MATA bounds
+#'@param theta The parameter to be optimized.
+#'@param sesi Standard error for each cell.
+#'@param thetaii Model estimated relative risk for each cell.
+#'@param w Likelihood-weights for potential clusters.
+#'@param alpha2 Alpha value/2
 f_LB<-function(theta,sesi,thetaii,w, alpha2){
     mata_ZLB(theta, sesi,thetaii,w)-alpha2  
 } 
+#'@title f_UB
+#'@description Function over which the upper bound root is sought for MATA bounds
+#'@param theta The parameter to be optimized.
+#'@param sesi Standard error for each cell.
+#'@param thetaii Model estimated relative risk for each cell.
+#'@param w Likelihood-weights for potential clusters.
+#'@param alpha2 Alpha value/2
 f_UB<-function(theta,sesi,thetaii,w,alpha2){
     mata_ZUB(theta,sesi, thetaii,w)-alpha2  
 } 
 
+#'@title matabounds_log.cells
+#'@descripton Calculate confidence bounds for stacked cluster relative risk estimates using MATA (model-averaged tail area) bounds for specific cells (given by \code{cellsix}) 
+#'@param var_est Variances for each single cluster model.
+#'@param thetai Large matrix of model estimates and background relative risks (set to 1) where rows are correspond to each single cluster model and columns correspond to each cell in space (and/or time).
+#'@param thetaa Stacked relative risk estimate for the cluster(s).
+#'@param w Likelihood-weights for potential clusters.
+#'@param cellsix Indices of the cells to calculate bounds for. 
+#'@param alpha2 Alpha value/2
 matabounds_log.cells <- function(var_est,thetai, thetaa,w, cellsix,alpha2){
     #browser()
     se_est <- lapply(1:length(cellsix), function(i) sqrt(var_est[[i]]))
