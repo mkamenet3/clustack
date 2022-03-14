@@ -81,7 +81,7 @@ bylocation <- function(Lik, Lambda_dense,sparsemat, maxclust){
         locmax <- rep(0,numCenters*Time); 
         locmax[maxloc] <-1;
         locmax <- matrix(locmax,ncol=1)
-        pclocmax <- as.vector(t(locmax)%*%t(sparsemat))
+        pclocmax <- as.vector(t(locmax)%*%Matrix::t(sparsemat))
         ix <- which(pclocmax!=0) #indices of all PCs that overlap max location
         #upweight Lik* to 1 in all Pcs that overlap max cluster
         #reweight everything inside cluster to sum to 1
@@ -132,7 +132,7 @@ bycluster <-  function(Lik, Lambda_dense, sparsemat,maxclust){
             wtMAT0[,i] <- wtmp
             #find all potential clusters that overlap that PC
             pcmax <- rep(0,length(wtmp)); pcmax[maxpc] <-1; pcmax <- matrix(pcmax,ncol=1)
-            pcpcmax <- t(t(sparsemat)%*%pcmax)%*%t(sparsemat); pcpcmax <- ifelse(pcpcmax!=0,1,0)
+            pcpcmax <- t(Matrix::t(sparsemat)%*%pcmax)%*%Matrix::t(sparsemat); pcpcmax <- ifelse(pcpcmax!=0,1,0)
             ix <- which(pcpcmax!=0)
             wtmp[ix] <- likweights(Lik[ix]) 
             wtMAT[,i] <- wtmp
