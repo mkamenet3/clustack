@@ -31,6 +31,7 @@ selectuniq <- function(uniqRRs, background){
 #'\item \code{mataTlog}: Model-average tail area (MATA) intervals based on Turek et al.; natural log-transformed.
 #'
 #'}
+#'@export
 calcbounds <- function(id_ic, IC, res, byloc, Ex, Yx, cellsix=NULL, sparsemat, conf.level=0.95, overdisp.est=NULL){
     if(is.null(overdisp.est)){overdisp.est<-NULL}
     IC <- tolower(IC)
@@ -193,7 +194,6 @@ calcbounds.cells <- function(id_ic, IC, res, byloc=FALSE, Ex, Yx,w, thetaa,theta
 #'@param cellsix Indices of the cells to calculate bounds for.
 #'@param critval Critical value associated with the conf.level.
 #'@return List: lower bound estimate, stacked cluster relative risk estimate, upper bound estimate for each of the cells in \code{cellsix}
-#'@export
 bucklandbounds.cells <- function(thetaa, var_est, w, sparsemat,cellsix, critval){
     var_estw <- sapply(1:length(cellsix), function(i) sqrt(var_est[[i]])%*%w)
     LBa = sapply(1:length(cellsix), function(i) exp(log(thetaa[i])-critval*(var_estw[[i]][cellsix[i]])))
@@ -213,7 +213,6 @@ bucklandbounds.cells <- function(thetaa, var_est, w, sparsemat,cellsix, critval)
 #'@param cellsix Indices of the cells to calculate bounds for.
 #'@param critval Critical value associated with the conf.level.
 #'@return List: lower bound estimate, stacked cluster relative risk estimate, upper bound estimate for each of the cells in \code{cellsix}
-#'@export
 ba2.cells <- function(thetaa, var_est, w, sparsemat,cellsix, critval){
     var_estw <- sapply(1:length(cellsix), function(i) var_est[[i]]%*%w)
     LBa = sapply(1:length(cellsix), function(i) exp(log(thetaa[i])-critval*(sqrt(var_estw[[i]][cellsix[i]]))))

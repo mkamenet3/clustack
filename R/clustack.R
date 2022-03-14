@@ -132,7 +132,7 @@ bycluster <-  function(Lik, Lambda_dense, sparsemat,maxclust){
             wtMAT0[,i] <- wtmp
             #find all potential clusters that overlap that PC
             pcmax <- rep(0,length(wtmp)); pcmax[maxpc] <-1; pcmax <- matrix(pcmax,ncol=1)
-            pcpcmax <- t(Matrix::t(sparsemat)%*%pcmax)%*%Matrix::t(sparsemat); pcpcmax <- ifelse(pcpcmax!=0,1,0)
+            pcpcmax <- Matrix::t(Matrix::t(sparsemat)%*%pcmax)%*%Matrix::t(sparsemat); pcpcmax <- ifelse(pcpcmax!=0,1,0)
             ix <- which(pcpcmax!=0)
             wtmp[ix] <- likweights(Lik[ix]) 
             wtMAT[,i] <- wtmp

@@ -111,8 +111,8 @@ str(potentialclusters)
 Next we create `Ex`, which are the expected counts and `Yx` which are the observed counts.
 
 ```{r}
-Ex <- as.vector(matrix(jbc2$expdeath, ncol=Time, byrow=FALSE))
-Yx <- as.vector(matrix(jbc2$death, ncol=Time, byrow=FALSE))
+Ex <- as.vector(matrix(jbc2$Expected, ncol=Time, byrow=FALSE))
+Yx <- as.vector(matrix(jbc2$Observed, ncol=Time, byrow=FALSE))
 ```
 
 ```{r, eval=FALSE, echo=FALSE}
@@ -129,6 +129,7 @@ Importantly, we create a large sparse matrix of single potential clusters (`spar
 #create giant sparse design matrix (single potential clusters)
 (numCenters <- length(unique(potentialclusters$center)))
 sparseMAT <- clusso::spacetimeMat(potentialclusters, numCenters, Time) 
+dim(sparseMAT)
 ```
 
 In this example, we are going to assume overdispersion and estimate it separately:
@@ -259,7 +260,9 @@ bicsum_pc <- as.data.frame(round(clustack_pc$wLambda[clustack_pc$selection.bic,]
     filter(round(bic,2) !=1) %>%
     summarize(min = min(bic),
               max = max(bic),
+              Q1 = round(quantile(bic, probs=0.25),2),
               median= median(bic),
+              Q3 = round(quantile(bic, probs=0.75),2),
               mean=round(mean(bic),2))
 
 
@@ -292,7 +295,7 @@ For this example, we will explore confidence bounds for 5 cells in periods 1 and
 p3 <- matrix(clustack_pc$wLambda[clustack_pc$selection.bic,], ncol=5)[,3]
 #150=center; 138 = near-center; 139 = border-inside; 123=border-outside; 55= far-outside
 cellsT1 <- c(150, 138, 139, 123,55)
-cellsT3 <- cells + (208*2)
+cellsT3 <- cellsT1 + (208*2)
 cells <- c(cellsT1, cellsT3)
 
 ```
@@ -325,7 +328,7 @@ legend("bottomright", inset=-0.01,c("Center", "Near-Center", "Border-Inside",
 We are ready to calculate confidence bounds for our selected cells in time period 3. First, we create the object `id.bic_pc`, which is the number of clusters selected:
 
 ```{r}
-id.bic_pc <- as.vector(unlist(clustack_pc$selection.bic))
+(id.bic_pc <- as.vector(unlist(clustack_pc$selection.bic)))
 ```
 
 Next, we use the function `calcbounds()` and specify the following arguments: we set `id_ic` to `id.bic_pc`, which is the number of clusters identified by (Q)BIC with stacking by potential cluster; `IC = "bic"` specifies the information criterion used and should correspond to `id_ic`; `res` corresponds to the object created by the stacking step, `clustack_pc`; `byloc` should be set to `FALSE` if stacking by potential cluster and to `TRUE` if stacking by location; `Ex` are the expected counts, `Yx` are the observed counts; `cellsix` is set to `cells` which are the indices of the selected cells for which we want to calculate confidence bounds; `sparsemat` is set to the large sparse matrix, `sparseMAT`.
@@ -344,9 +347,11 @@ outcells.pc.bic <- calcbounds(id_ic = id.bic_pc,
 All calculations for confidence bounds are performed on the natural log scale. If multiple clusters are identified, then there will be multiple elements to the list, corresponding to each identified cluster. Since in this example only one cluster as identified, we can extract the bounds and other information for this one cluster with `outcells.pc.bic[[1]]`:
 
 
+We use the `tidyr` and `dplyr` packages to create the dataframe and `kableExtra` to format the table.
 
 ```{r}
 library(tidyr)
+library(dplyr)
 
     #Buckland bounds:
 outbuck <- cbind(outcells.pc.bic[[1]]$outbuckTlog.theta$buckland.LB,
