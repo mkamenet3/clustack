@@ -12,7 +12,7 @@ clusterselect(
   maxclust,
   numCenters,
   Time,
-  quasi,
+  isoverdisp,
   overdisp.est
 )
 }
@@ -31,7 +31,7 @@ clusterselect(
 
 \item{Time}{Number of time periods.}
 
-\item{quasi}{Boolean. \code{TRUE} indicates a quasi-Poisson or quasi-binomial model that accounts for overdispersion. \code{FALSE} indicates a Poisson or binomial model without adjustment for overdispersion or underdispersion.}
+\item{isoverdisp}{Boolean. \code{TRUE} indicates a quasi-Poisson or quasi-binomial model that accounts for overdispersion. \code{FALSE} indicates a Poisson or binomial model without adjustment for overdispersion or underdispersion.}
 
 \item{overdisp.est}{Overdispersion (or underdispersion) parameter estimate.}
 }
