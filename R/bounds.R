@@ -224,7 +224,7 @@ ba2.cells <- function(thetaa, var_est, w, sparsemat,cellsix, critval){
                 ba2.UB = UBa))
 }
 
-#'@titile mata_ZLB
+#'@title mata_ZLB
 #'@description Calculates lower bound using MATA confidence bounds for a given theta.
 #'@param theta The parameter to be optimized.
 #'@param sesi Standard error for each cell.
@@ -233,7 +233,8 @@ ba2.cells <- function(thetaa, var_est, w, sparsemat,cellsix, critval){
 mata_ZLB <- function(theta, sesi,thetaii,w){
     resLB <-sum(w*(1-pnorm((log(thetaii)-theta)/(sesi+(log(thetaii)-theta==0)))))
 }
-#'@titile mata_ZUB
+
+#'@title mata_ZUB
 #'@description Calculates upper bound using MATA confidence bounds for a given theta
 #'@param theta The parameter to be optimized.
 #'@param sesi Standard error for each cell.
@@ -253,6 +254,7 @@ mata_ZUB <- function(theta,sesi, thetaii,w){
 f_LB<-function(theta,sesi,thetaii,w, alpha2){
     mata_ZLB(theta, sesi,thetaii,w)-alpha2  
 } 
+
 #'@title f_UB
 #'@description Function over which the upper bound root is sought for MATA bounds
 #'@param theta The parameter to be optimized.
@@ -265,7 +267,7 @@ f_UB<-function(theta,sesi,thetaii,w,alpha2){
 } 
 
 #'@title matabounds_log.cells
-#'@descripton Calculate confidence bounds for stacked cluster relative risk estimates using MATA (model-averaged tail area) bounds for specific cells (given by \code{cellsix}) 
+#'@description Calculate confidence bounds for stacked cluster relative risk estimates using MATA (model-averaged tail area) bounds for specific cells (given by \code{cellsix}) 
 #'@param var_est Variances for each single cluster model.
 #'@param thetai Large matrix of model estimates and background relative risks (set to 1) where rows are correspond to each single cluster model and columns correspond to each cell in space (and/or time).
 #'@param thetaa Stacked relative risk estimate for the cluster(s).
