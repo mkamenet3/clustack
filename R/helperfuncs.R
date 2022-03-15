@@ -160,8 +160,8 @@ clusso_prob_clusteroverlap <- function(sparseMAT,lassoresult,selected,rr, risk.r
 
 #'@title probplotmapAllIC
 #'@param res.bic result bic
-#'#'@param res.aic result aic
-#'@param oracle
+#'@param res.aic result aic
+#'@param oracle Truth
 #'@param pdfname String for name of pdf to be generated.
 #'@param genpdf Boolean. If results should be generated to console, set to \code{FALSE}. Default is \code{TRUE} for pdf to be generated.
 #'@return Maps for central region of Japan for each time period.
@@ -291,8 +291,8 @@ probplotmapAllIC <- function(colprob, pdfname=NULL, genpdf=TRUE, obs=NULL){
 
 #'@title plotmapAllIC
 #'@param res.bic result bic
-#'#'@param res.aic result aic
-#'@param oracle
+#'@param res.aic result aic
+#'@param oracle Truth
 #'@param pdfname String for name of pdf to be generated.
 #'@param genpdf Boolean. If results should be generated to console, set to \code{FALSE}. Default is \code{TRUE} for pdf to be generated.
 #'@param maxrr For the color ramp, what is the maximum relative risk color. Default is for the ramp to be between 0 and 2. 

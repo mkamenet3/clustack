@@ -1,7 +1,7 @@
 #' @title 
-#' Japanese Breast Cancer Data (JBC)
+#' Japanese Breast Cancer Data 2 (JBC2)
 #' @description 
-#' Data on breast cancer incidence in prefects in Japan across 5 time periods. 
+#' Data on breast cancer incidence in prefects in Japan across 5 time periods. A fake cluster has been placed in center 150, with a radius of < 15km, in periods 3 through 5. A relative risk of 2 was used to create this cluster.
 #' 
 #' @docType data
 #' 
@@ -9,22 +9,16 @@
 #' 
 #' @format An object of class "data.frame" with 1040 rows and 9 variables:
 #' \itemize{
-#'     \item id: identifier for each centroid location.
-#'     \item period: time period at which each centroid location was measured (there are 5 total time periods, coded).
-#'     \item death: count of the number of observed incident breast cancer deaths in each centroid-time period.
-#'     \item expdeath: expected number of incident breast cancer deaths in each centroid-time period (age-standardized).
-#'     \item covar1: simulated covariate 1 (will be unpenalized in model).
-#'     \item covar2: simulated covariate 2 (will be unpenalized in model).
-#'     \item covar3: simulated covariate 3 (will be unpenalized in model).
-#'     \item covar4: simulated covariate 4 (will be unpenalized in model).
-#'     \item covar5: simulated covariate 5 (will be unpenalized in model).
+#'     \item Observed: count of the number of observed incident breast cancer deaths in each centroid-time period.
+#'     \item Expected: expected number of incident breast cancer deaths in each centroid-time period (age-standardized).
+#'     \item Time: time period at which each centroid location was measured (there are 5 total time periods, factor).
 #' }
 #' 
 #' @keywords datasets
 #' 
 #' @examples 
-#' data(jbc)
-"jbc"
+#' data(jbc2)
+"jbc2"
 
 
 #' @title 

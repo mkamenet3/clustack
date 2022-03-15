@@ -1,10 +1,9 @@
 Package: clustack
 Title: A Stacking Approach to Spatial and Spatio-Temporal Cluster Detection
-Version: 0.0.0.9000
+Version: 0.0.1
 Authors@R: 
-    person("Maria", "Kamenetsky", , "maria.kamenetsky@gmail.com", role = c("aut", "cre"),
-           comment = c(ORCID = "YOUR-ORCID-ID"))
-Description: `clustack` is an R package basedthat implements a stacking approach to spatial cluster detection. Based on the Poisson-likelihood, single-cluster models are combined using likelihood-based weights, resulting in cell-wise stacked relative risk estimates.  Adjustment for overdispersion is available. The number of clusters is selected using (quasi-) information criteria. Methods for calculating cell-wise confidence bounds for stacked estimates are also provided.
+    person("Maria", "Kamenetsky", , "maria.kamenetsky@gmail.com", role = c("aut", "cre"))
+Description: `clustack` is an R package that implements a stacking approach to spatial cluster detection. Based on the Poisson-likelihood, single-cluster models are combined using likelihood-based weights, resulting in cell-wise stacked relative risk estimates.  Adjustment for overdispersion is available. The number of clusters is selected using (quasi-) information criteria. Methods for calculating cell-wise confidence bounds for stacked estimates are also provided.
 License: GPL (>= 3)
 Encoding: UTF-8
 Depends:
@@ -23,6 +22,9 @@ Imports:
     Rcpp (>= 1.0.3),
     SOAR (>= 0.99-11),
     stringi (>= 1.4.3),
+    rmarkdown (>= 2.11),
+    kableExtra (>= 1.3.4),
+    tibble (>= 3.1.6),
     stats,
     grDevices,
     methods,
@@ -33,4 +35,4 @@ Suggests: testthat
 VignetteBuilder: knitr    
 LazyData: true
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.0.0
+RoxygenNote: 7.1.2

@@ -16,9 +16,10 @@ likweights <- function(liki){
 #' @param offset_reg Object of class glm or lm.
 #' @param overdispfloor Boolean. When \code{TRUE}, overdispersion parameter (\eqn{\phi}) is limited to not be less than 1. If \code{FALSE}, underdispersion can be estimated. 
 #' @return An estimate of \eqn{\phi} (overdispersion or underdispersion)
+#' @importFrom stats deviance df.residual
 overdisp <- function(offset_reg, overdispfloor = TRUE) {
     stopifnot(inherits(offset_reg, c("glm", "lm")))
-    phi <- max(unlist(deviance(offset_reg)/df.residual(offset_reg)))
+    phi <- max(unlist(stats::deviance(offset_reg)/stats::df.residual(offset_reg)))
     if(overdispfloor == TRUE & phi < 1){
         message(paste("Underdispersion detected (", phi,"). Setting phi to 1"))
         phi <- 1
@@ -60,9 +61,11 @@ poisLik <-function(Ex, Yx, sparsemat){
 #'@param Lambda_dense Initial estimates for relative risk for each potential cluster;\eqn{\Lambda}.
 #'@param sparsemat Large sparse matrix where rows are potential clusters and columns are space-time locations.
 #'@param maxclust Maximum number of clusters to be detected.
+#'@param numCenters Number of centroids.
+#'@param Time Number of time periods.
 #'@return List. First element is a Weighted relative risks for identified locations; second element is a large matrix of weights for each iteration; third element are the maximum location IDs.
-#'
-bylocation <- function(Lik, Lambda_dense,sparsemat, maxclust){
+#'@import Matrix
+bylocation <- function(Lik, Lambda_dense,sparsemat, maxclust, numCenters, Time){
     wtMAT <- matrix(rep(NA, maxclust*nrow(sparsemat)), ncol=maxclust)
     wt0 <- likweights(Lik)
     ixall <- NULL
@@ -81,7 +84,7 @@ bylocation <- function(Lik, Lambda_dense,sparsemat, maxclust){
         locmax <- rep(0,numCenters*Time); 
         locmax[maxloc] <-1;
         locmax <- matrix(locmax,ncol=1)
-        pclocmax <- as.vector(t(locmax)%*%t(sparsemat))
+        pclocmax <- as.vector(t(locmax)%*%Matrix::t(sparsemat))
         ix <- which(pclocmax!=0) #indices of all PCs that overlap max location
         #upweight Lik* to 1 in all Pcs that overlap max cluster
         #reweight everything inside cluster to sum to 1
@@ -111,10 +114,11 @@ bylocation <- function(Lik, Lambda_dense,sparsemat, maxclust){
 #'@title bycluster
 #'@description Cluster detection based on maximum potential cluster.
 #'@param Lik Likelihood for each potential cluster.
-#'#'@param Lambda_dense Initial estimates for relative risk for each potential cluster;\eqn{\Lambda}.
+#'@param Lambda_dense Initial estimates for relative risk for each potential cluster;\eqn{\Lambda}.
 #'@param sparsemat Large sparse matrix where rows are potential clusters and columns are space-time locations.
 #'@param maxclust Maximum number of clusters to be detected.
 #'@return List. First element is a Weighted relative risks for identified locations; second element is a large matrix of weights for each iteration; third element are the maximum potential cluster IDs.
+#'@import Matrix
 bycluster <-  function(Lik, Lambda_dense, sparsemat,maxclust){
     wtMAT <- matrix(rep(NA, maxclust*nrow(sparsemat)), ncol=maxclust)
     wtMAT0 <- matrix(rep(NA, maxclust*nrow(sparsemat)), ncol=maxclust)
@@ -132,7 +136,7 @@ bycluster <-  function(Lik, Lambda_dense, sparsemat,maxclust){
             wtMAT0[,i] <- wtmp
             #find all potential clusters that overlap that PC
             pcmax <- rep(0,length(wtmp)); pcmax[maxpc] <-1; pcmax <- matrix(pcmax,ncol=1)
-            pcpcmax <- t(t(sparsemat)%*%pcmax)%*%t(sparsemat); pcpcmax <- ifelse(pcpcmax!=0,1,0)
+            pcpcmax <- Matrix::t(Matrix::t(sparsemat)%*%pcmax)%*%Matrix::t(sparsemat); pcpcmax <- ifelse(pcpcmax!=0,1,0)
             ix <- which(pcpcmax!=0)
             wtmp[ix] <- likweights(Lik[ix]) 
             wtMAT[,i] <- wtmp
@@ -166,30 +170,32 @@ bycluster <-  function(Lik, Lambda_dense, sparsemat,maxclust){
 #'@param overdisp.est Overdispersion estimate.
 #'@return Returns a large list.
 #'@details The elements of the returned list: 1) the weighted relative risks for each cell; 2) the LRT statistic; 3) the selected number of clusters by (Q)BIC; 4) the selected number of clusters by (Q)AIC; 5) the selected number of clusters by (Q)AICc; 6) the selected number of clusters by (Q)BIC when forced to detect a cluster; 7) the selected number of clusters by (Q)AIC when forced to detect a cluster; 8) the selected number of clusters by (Q)AICc when forced to detect a cluster; 9) matrix of weights; 10) maximum potential cluster or location IDs identified; 11) large matrix of single-cluster relative risk estimates.
+#'@import Matrix
 #'@export
-detectclusters <- function(sparsemat, Ex, Yx,numCenters,Time, maxclust,byloc=FALSE, model=c("poisson", "binomial"),overdisp.est) {
+detectclusters <- function(sparsemat, Ex, Yx,numCenters,Time, maxclust,byloc=FALSE, model="poisson",overdisp.est) {
+    #browser()
     if(is.null(overdisp.est)){
-        quasi <- FALSE
+        isoverdisp <- FALSE
         message(paste0("Model specified: ", model))
-    } else{ quasi <- TRUE
+    } else{ isoverdisp <- TRUE
     message(paste0("Model specified: ", "quasi-",model))
     }
     tsparsemat <- Matrix::t(sparsemat) 
     if (model=="poisson"){
         out <- poisLik(Ex, Yx, tsparsemat)  
     }
-    else if (model=="binomial"){
-        out <- binomLik(Ex, Yx, tsparsemat) #in dev
-    }
+    # else if (model=="binomial"){
+    #     out <- binomLik(Ex, Yx, tsparsemat) #in dev
+    # }
     else {
-        stop("Model not specified. Please indicate `poisson` or `binomial`.")
+        stop("Model not specified. Please indicate `poisson`.")
     }
     Lik <- out$Lik
     Lambda_dense <- out$Lambda_dense
     if(byloc==FALSE){
         message("Cluster detection by potential cluster")
         res <- bycluster(Lik, Lambda_dense, tsparsemat, maxclust)
-        selection <- clusterselect(res[[1]], Yx, Ex, model,maxclust, numCenters, Time, quasi,overdisp.est)
+        selection <- clusterselect(res[[1]], Yx, Ex, model,maxclust, numCenters, Time, isoverdisp,overdisp.est)
         return(list(wLambda = res[[1]],
                     loglik = selection$loglik,
                     selection.bic = selection$select.bic,
@@ -204,8 +210,8 @@ detectclusters <- function(sparsemat, Ex, Yx,numCenters,Time, maxclust,byloc=FAL
     }
     else{
         message("Cluster detection by location")
-        res <- bylocation(Lik, Lambda_dense, tsparsemat, maxclust)
-        selection <- clusterselect(res[[1]], Yx, Ex, model,maxclust, numCenters, Time, quasi,overdisp.est)
+        res <- bylocation(Lik, Lambda_dense, tsparsemat, maxclust, numCenters, Time)
+        selection <- clusterselect(res[[1]], Yx, Ex, model,maxclust, numCenters, Time, isoverdisp,overdisp.est)
         return(list(wLambda = res[[1]],
                     loglik = selection$loglik,
                     selection.bic = selection$select.bic,
@@ -229,17 +235,18 @@ detectclusters <- function(sparsemat, Ex, Yx,numCenters,Time, maxclust,byloc=FAL
 #'@param maxclust Maximum number of clusters to consider.
 #'@param numCenters Number of polygon centroids (total number of locations).
 #'@param Time Number of time periods.
-#'@param quasi Boolean. \code{TRUE} indicates a quasi-Poisson or quasi-binomial model that accounts for overdispersion. \code{FALSE} indicates a Poisson or binomial model without adjustment for overdispersion or underdispersion.
+#'@param isoverdisp Boolean. \code{TRUE} indicates a quasi-Poisson or quasi-binomial model that accounts for overdispersion. \code{FALSE} indicates a Poisson or binomial model without adjustment for overdispersion or underdispersion.
 #'@param overdisp.est Overdispersion (or underdispersion) parameter estimate.
+#'@importFrom clusso dpoisson
 #'@return Returns a list with the loglikelihood, selection by (Q)BIC, selection by (Q)AIC, and selection by (Q)AICc.
-clusterselect <- function(wLambda,Yx, Ex, model,maxclust, numCenters, Time,quasi,overdisp.est){
+clusterselect <- function(wLambda,Yx, Ex, model,maxclust, numCenters, Time,isoverdisp,overdisp.est){
     remtab <- which(sapply(1:nrow(wLambda), function(k) all(is.nan(wLambda[k,])))==FALSE)
-    loglik <- sapply(1:length(remtab), function(i) dpoisson(Yx, wLambda[i,], Ex))
+    loglik <- sapply(1:length(remtab), function(i) clusso::dpoisson(Yx, wLambda[i,], Ex))
     if (model=="poisson"){
-        loglik <- c(dpoisson(Yx, rep(1,length(Yx)), Ex), loglik)    
-        if (quasi== TRUE){
+        loglik <- c(clusso::dpoisson(Yx, rep(1,length(Yx)), Ex), loglik)    
+        if (isoverdisp== TRUE){
             message(paste("Overdispersion estimate:", round(overdisp.est,4)))
-            if(quasi == TRUE & is.null(overdisp.est)) warning("No overdispersion for quasi-Poisson model. Please check.")
+            if(isoverdisp == TRUE & is.null(overdisp.est)) warning("No overdispersion for quasi-Poisson model. Please check.")
         } else {
             message("no overdispersion being estimated")
         }
@@ -247,7 +254,7 @@ clusterselect <- function(wLambda,Yx, Ex, model,maxclust, numCenters, Time,quasi
     #find K clusters
     K <- seq(from=0, to=nrow(wLambda))
     #calc
-    if (quasi== TRUE){
+    if (isoverdisp== TRUE){
         PLL.bic <- (-2*loglik/overdisp.est) + (K+1)*log(sum(Yx)) 
         PLL.aic <- 2*(K+1) - 2*(loglik/overdisp.est)
         PLL.aicc <- 2*(K+1) - 2*(loglik/overdisp.est) +
