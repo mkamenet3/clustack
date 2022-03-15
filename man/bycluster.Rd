@@ -7,8 +7,9 @@
 bycluster(Lik, Lambda_dense, sparsemat, maxclust)
 }
 \arguments{
-\item{Lik}{Likelihood for each potential cluster.
-#'@param Lambda_dense Initial estimates for relative risk for each potential cluster;\eqn{\Lambda}.}
+\item{Lik}{Likelihood for each potential cluster.}
+
+\item{Lambda_dense}{Initial estimates for relative risk for each potential cluster;\eqn{\Lambda}.}
 
 \item{sparsemat}{Large sparse matrix where rows are potential clusters and columns are space-time locations.}
 

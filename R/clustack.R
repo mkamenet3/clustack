@@ -16,9 +16,10 @@ likweights <- function(liki){
 #' @param offset_reg Object of class glm or lm.
 #' @param overdispfloor Boolean. When \code{TRUE}, overdispersion parameter (\eqn{\phi}) is limited to not be less than 1. If \code{FALSE}, underdispersion can be estimated. 
 #' @return An estimate of \eqn{\phi} (overdispersion or underdispersion)
+#' @importFrom stats deviance df.residual
 overdisp <- function(offset_reg, overdispfloor = TRUE) {
     stopifnot(inherits(offset_reg, c("glm", "lm")))
-    phi <- max(unlist(deviance(offset_reg)/df.residual(offset_reg)))
+    phi <- max(unlist(stats::deviance(offset_reg)/stats::df.residual(offset_reg)))
     if(overdispfloor == TRUE & phi < 1){
         message(paste("Underdispersion detected (", phi,"). Setting phi to 1"))
         phi <- 1
@@ -60,9 +61,11 @@ poisLik <-function(Ex, Yx, sparsemat){
 #'@param Lambda_dense Initial estimates for relative risk for each potential cluster;\eqn{\Lambda}.
 #'@param sparsemat Large sparse matrix where rows are potential clusters and columns are space-time locations.
 #'@param maxclust Maximum number of clusters to be detected.
+#'@param numCenters Number of centroids.
+#'@param Time Number of time periods.
 #'@return List. First element is a Weighted relative risks for identified locations; second element is a large matrix of weights for each iteration; third element are the maximum location IDs.
-#'
-bylocation <- function(Lik, Lambda_dense,sparsemat, maxclust){
+#'@import Matrix
+bylocation <- function(Lik, Lambda_dense,sparsemat, maxclust, numCenters, Time){
     wtMAT <- matrix(rep(NA, maxclust*nrow(sparsemat)), ncol=maxclust)
     wt0 <- likweights(Lik)
     ixall <- NULL
@@ -111,10 +114,11 @@ bylocation <- function(Lik, Lambda_dense,sparsemat, maxclust){
 #'@title bycluster
 #'@description Cluster detection based on maximum potential cluster.
 #'@param Lik Likelihood for each potential cluster.
-#'#'@param Lambda_dense Initial estimates for relative risk for each potential cluster;\eqn{\Lambda}.
+#'@param Lambda_dense Initial estimates for relative risk for each potential cluster;\eqn{\Lambda}.
 #'@param sparsemat Large sparse matrix where rows are potential clusters and columns are space-time locations.
 #'@param maxclust Maximum number of clusters to be detected.
 #'@return List. First element is a Weighted relative risks for identified locations; second element is a large matrix of weights for each iteration; third element are the maximum potential cluster IDs.
+#'@import Matrix
 bycluster <-  function(Lik, Lambda_dense, sparsemat,maxclust){
     wtMAT <- matrix(rep(NA, maxclust*nrow(sparsemat)), ncol=maxclust)
     wtMAT0 <- matrix(rep(NA, maxclust*nrow(sparsemat)), ncol=maxclust)
@@ -166,8 +170,9 @@ bycluster <-  function(Lik, Lambda_dense, sparsemat,maxclust){
 #'@param overdisp.est Overdispersion estimate.
 #'@return Returns a large list.
 #'@details The elements of the returned list: 1) the weighted relative risks for each cell; 2) the LRT statistic; 3) the selected number of clusters by (Q)BIC; 4) the selected number of clusters by (Q)AIC; 5) the selected number of clusters by (Q)AICc; 6) the selected number of clusters by (Q)BIC when forced to detect a cluster; 7) the selected number of clusters by (Q)AIC when forced to detect a cluster; 8) the selected number of clusters by (Q)AICc when forced to detect a cluster; 9) matrix of weights; 10) maximum potential cluster or location IDs identified; 11) large matrix of single-cluster relative risk estimates.
+#'@import Matrix
 #'@export
-detectclusters <- function(sparsemat, Ex, Yx,numCenters,Time, maxclust,byloc=FALSE, model=c("poisson", "binomial"),overdisp.est) {
+detectclusters <- function(sparsemat, Ex, Yx,numCenters,Time, maxclust,byloc=FALSE, model="poisson",overdisp.est) {
     #browser()
     if(is.null(overdisp.est)){
         isoverdisp <- FALSE
@@ -179,11 +184,11 @@ detectclusters <- function(sparsemat, Ex, Yx,numCenters,Time, maxclust,byloc=FAL
     if (model=="poisson"){
         out <- poisLik(Ex, Yx, tsparsemat)  
     }
-    else if (model=="binomial"){
-        out <- binomLik(Ex, Yx, tsparsemat) #in dev
-    }
+    # else if (model=="binomial"){
+    #     out <- binomLik(Ex, Yx, tsparsemat) #in dev
+    # }
     else {
-        stop("Model not specified. Please indicate `poisson` or `binomial`.")
+        stop("Model not specified. Please indicate `poisson`.")
     }
     Lik <- out$Lik
     Lambda_dense <- out$Lambda_dense
@@ -205,7 +210,7 @@ detectclusters <- function(sparsemat, Ex, Yx,numCenters,Time, maxclust,byloc=FAL
     }
     else{
         message("Cluster detection by location")
-        res <- bylocation(Lik, Lambda_dense, tsparsemat, maxclust)
+        res <- bylocation(Lik, Lambda_dense, tsparsemat, maxclust, numCenters, Time)
         selection <- clusterselect(res[[1]], Yx, Ex, model,maxclust, numCenters, Time, isoverdisp,overdisp.est)
         return(list(wLambda = res[[1]],
                     loglik = selection$loglik,
@@ -232,12 +237,13 @@ detectclusters <- function(sparsemat, Ex, Yx,numCenters,Time, maxclust,byloc=FAL
 #'@param Time Number of time periods.
 #'@param isoverdisp Boolean. \code{TRUE} indicates a quasi-Poisson or quasi-binomial model that accounts for overdispersion. \code{FALSE} indicates a Poisson or binomial model without adjustment for overdispersion or underdispersion.
 #'@param overdisp.est Overdispersion (or underdispersion) parameter estimate.
+#'@importFrom clusso dpoisson
 #'@return Returns a list with the loglikelihood, selection by (Q)BIC, selection by (Q)AIC, and selection by (Q)AICc.
 clusterselect <- function(wLambda,Yx, Ex, model,maxclust, numCenters, Time,isoverdisp,overdisp.est){
     remtab <- which(sapply(1:nrow(wLambda), function(k) all(is.nan(wLambda[k,])))==FALSE)
-    loglik <- sapply(1:length(remtab), function(i) dpoisson(Yx, wLambda[i,], Ex))
+    loglik <- sapply(1:length(remtab), function(i) clusso::dpoisson(Yx, wLambda[i,], Ex))
     if (model=="poisson"){
-        loglik <- c(dpoisson(Yx, rep(1,length(Yx)), Ex), loglik)    
+        loglik <- c(clusso::dpoisson(Yx, rep(1,length(Yx)), Ex), loglik)    
         if (isoverdisp== TRUE){
             message(paste("Overdispersion estimate:", round(overdisp.est,4)))
             if(isoverdisp == TRUE & is.null(overdisp.est)) warning("No overdispersion for quasi-Poisson model. Please check.")

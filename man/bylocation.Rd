@@ -4,7 +4,7 @@
 \alias{bylocation}
 \title{bylocation}
 \usage{
-bylocation(Lik, Lambda_dense, sparsemat, maxclust)
+bylocation(Lik, Lambda_dense, sparsemat, maxclust, numCenters, Time)
 }
 \arguments{
 \item{Lik}{Likelihood for each potential cluster.}
@@ -14,6 +14,10 @@ bylocation(Lik, Lambda_dense, sparsemat, maxclust)
 \item{sparsemat}{Large sparse matrix where rows are potential clusters and columns are space-time locations.}
 
 \item{maxclust}{Maximum number of clusters to be detected.}
+
+\item{numCenters}{Number of centroids.}
+
+\item{Time}{Number of time periods.}
 }
 \value{
 List. First element is a Weighted relative risks for identified locations; second element is a large matrix of weights for each iteration; third element are the maximum location IDs.

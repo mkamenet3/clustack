@@ -39,7 +39,7 @@ calcbounds(
 \item{overdisp.est}{Overdispersion estimate.}
 }
 \description{
-Calculates lower and upper confidence bounds.
+Calculates lower and upper confidence bounds for stacked relative risk estimates using Buckland, Burnham and Anderson, and MATA methods.
 }
 \details{
 The confidence bounds methods returned are:

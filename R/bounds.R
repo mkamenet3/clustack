@@ -13,7 +13,7 @@ selectuniq <- function(uniqRRs, background){
 }
 
 #'@title calcbounds
-#'@description Calculates lower and upper confidence bounds.
+#'@description Calculates lower and upper confidence bounds for stacked relative risk estimates using Buckland, Burnham and Anderson, and MATA methods.
 #'@param id_ic The number of clusters identified either by BIC (QBIC) or AIC (QAIC).
 #'@param IC Information criterion used. Currently available for BIC (QBIC) and AIC (QAIC). This should match \code{id_ic} argument.
 #'@param res Resultant object from \code{detectclusters()}.
@@ -31,6 +31,7 @@ selectuniq <- function(uniqRRs, background){
 #'\item \code{mataTlog}: Model-average tail area (MATA) intervals based on Turek et al.; natural log-transformed.
 #'
 #'}
+#'@import Matrix
 #'@export
 calcbounds <- function(id_ic, IC, res, byloc, Ex, Yx, cellsix=NULL, sparsemat, conf.level=0.95, overdisp.est=NULL){
     if(is.null(overdisp.est)){overdisp.est<-NULL}
@@ -48,7 +49,7 @@ calcbounds <- function(id_ic, IC, res, byloc, Ex, Yx, cellsix=NULL, sparsemat, c
         select.aic <- max(1, res$selection.aic)
         out <- vector(mode = "list", length = select.aic)
         if(id_ic==0){
-            out <- poisLik(Ex, Yx, t(sparsemat))
+            out <- poisLik(Ex, Yx, Matrix::t(sparsemat))
             Lik <- out$Lik
             w <- matrix(likweights(Lik),ncol=select.aic)
         } else{
@@ -63,7 +64,7 @@ calcbounds <- function(id_ic, IC, res, byloc, Ex, Yx, cellsix=NULL, sparsemat, c
         select.bic <- max(1, res$selection.bic)
         out <- vector(mode = "list", length = select.bic)
         if(id_ic==0){
-            out <- poisLik(Ex, Yx, t(sparsemat))
+            out <- poisLik(Ex, Yx, Matrix::t(sparsemat))
             Lik <- out$Lik
             w <- matrix(likweights(Lik), ncol=select.bic)
         }else{
@@ -93,11 +94,13 @@ calcbounds <- function(id_ic, IC, res, byloc, Ex, Yx, cellsix=NULL, sparsemat, c
 #'@param cellsix Indices of the cells to calculate bounds for. 
 #'@param conf.level Confidence level for the interval. Default is 0.95. 
 #'@param overdisp.est Overdispersion estimate.
+#'@import Matrix
+#'@importFrom stats qnorm
 #'@return Returns large list of confidence bounds and stacked estimates in addition to timings for each of the confidence bounds methods.    
 calcbounds.cells <- function(id_ic, IC, res, byloc=FALSE, Ex, Yx,w, thetaa,thetai, sparsemat, cellsix, conf.level=0.95, overdisp.est){
     #browser()
     if(is.null(conf.level)){conf.level <- 0.95}
-    critval <- qnorm(1-(1-conf.level)/2)
+    critval <- stats::qnorm(1-(1-conf.level)/2)
     alpha2 <-(1-conf.level)/2
     if(id_ic==0){
         return(list(
@@ -122,7 +125,7 @@ calcbounds.cells <- function(id_ic, IC, res, byloc=FALSE, Ex, Yx,w, thetaa,theta
         message("Extracted unique thetai's")
         
         thetaa <- res$wLambda[res$selection.bic,][cellsix]
-        Yx_pcloc <- t(sparsemat)%*%Yx 
+        Yx_pcloc <- Matrix::t(sparsemat)%*%Yx 
         
         if(!is.null(overdisp.est)){
             se_thetai <- sqrt(overdisp.est*(1/Yx_pcloc))
@@ -130,13 +133,13 @@ calcbounds.cells <- function(id_ic, IC, res, byloc=FALSE, Ex, Yx,w, thetaa,theta
             se_thetai <- sqrt(1/Yx_pcloc)
         }
         #replace Inf with 0
-        ixinf <- which(is.infinite(se_thetai))
+        ixinf <- which(is.infinite(as.vector(se_thetai)))
         se_thetai[ixinf] <-0
         
         
         withinvar <- sapply(1:length(cellsix), function(i) (log(thetai_uniq) - log(thetaa[i])))
         ses <- sapply(1:length(cellsix), function(i) (se_thetai)^2 + (withinvar[,i])^2)
-        var_est<- sapply(1:length(cellsix), function(i) sparsemat %*% Diagonal(length(as.vector(ses[[i]])),
+        var_est<- sapply(1:length(cellsix), function(i) sparsemat %*% Matrix::Diagonal(length(as.vector(ses[[i]])),
                                                                                as.vector(ses[[i]])))
         
         
@@ -229,8 +232,9 @@ ba2.cells <- function(thetaa, var_est, w, sparsemat,cellsix, critval){
 #'@param sesi Standard error for each cell.
 #'@param thetaii Model estimated relative risk for each cell.
 #'@param w Likelihood-weights for potential clusters.
+#'@importFrom stats pnorm
 mata_ZLB <- function(theta, sesi,thetaii,w){
-    resLB <-sum(w*(1-pnorm((log(thetaii)-theta)/(sesi+(log(thetaii)-theta==0)))))
+    resLB <-sum(w*(1-stats::pnorm((log(thetaii)-theta)/(sesi+(log(thetaii)-theta==0)))))
 }
 
 #'@title mata_ZUB
@@ -273,15 +277,16 @@ f_UB<-function(theta,sesi,thetaii,w,alpha2){
 #'@param w Likelihood-weights for potential clusters.
 #'@param cellsix Indices of the cells to calculate bounds for. 
 #'@param alpha2 Alpha value/2
+#'@importFrom stats uniroot
 matabounds_log.cells <- function(var_est,thetai, thetaa,w, cellsix,alpha2){
     #browser()
     se_est <- lapply(1:length(cellsix), function(i) sqrt(var_est[[i]]))
-    LBa <- sapply(1:length(cellsix), function(i) exp(uniroot(f_LB,c(-3,3),
+    LBa <- sapply(1:length(cellsix), function(i) exp(stats::uniroot(f_LB,c(-3,3),
                                                              sesi=se_est[[i]][cellsix[i],],
                                                              thetaii=thetai[,cellsix[i]],
                                                              w=w,
                                                              alpha2=alpha2)$root))
-    UBa <- sapply(1:length(cellsix), function(i) exp(uniroot(f_UB,c(-3,3),
+    UBa <- sapply(1:length(cellsix), function(i) exp(stats::uniroot(f_UB,c(-3,3),
                                                              sesi=se_est[[i]][cellsix[i],],
                                                              thetaii=thetai[,cellsix[i]],
                                                              w=w,

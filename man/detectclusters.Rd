@@ -12,7 +12,7 @@ detectclusters(
   Time,
   maxclust,
   byloc = FALSE,
-  model = c("poisson", "binomial"),
+  model = "poisson",
   overdisp.est
 )
 }
