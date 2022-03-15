@@ -54,4 +54,4 @@ devtools::install_github("mkamenet3/clustack")
 
 ## Vignettes
 
-1. [Introduction to `clustack`](../vignettes/introclustack.html)
+1. [Introduction to `clustack`](introclustack.html)
