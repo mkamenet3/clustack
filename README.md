@@ -51,6 +51,6 @@ library("devtools")
 devtools::install_github("mkamenet3/clustack")
 ```
 
-## Vignettes
+## Website
 
-1. [Introduction to `clustack`](vignettes/introclustack.html)
+For vignettes and more information, please visit the [clustack website](https://mkamenet3.github.io/clustack/)
