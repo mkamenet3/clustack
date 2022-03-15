@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<meta name="author" content="M.Kamenetsky" />
+
+
+<title>Introduction to clustack</title>
+
+<script src="data:application/javascript;base64,Ly8gUGFuZG9jIDIuOSBhZGRzIGF0dHJpYnV0ZXMgb24gYm90aCBoZWFkZXIgYW5kIGRpdi4gV2UgcmVtb3ZlIHRoZSBmb3JtZXIgKHRvCi8vIGJlIGNvbXBhdGlibGUgd2l0aCB0aGUgYmVoYXZpb3Igb2YgUGFuZG9jIDwgMi44KS4KZG9jdW1lbnQuYWRkRXZlbnRMaXN0ZW5lcignRE9NQ29udGVudExvYWRlZCcsIGZ1bmN0aW9uKGUpIHsKICB2YXIgaHMgPSBkb2N1bWVudC5xdWVyeVNlbGVjdG9yQWxsKCJkaXYuc2VjdGlvbltjbGFzcyo9J2xldmVsJ10gPiA6Zmlyc3QtY2hpbGQiKTsKICB2YXIgaSwgaCwgYTsKICBmb3IgKGkgPSAwOyBpIDwgaHMubGVuZ3RoOyBpKyspIHsKICAgIGggPSBoc1tpXTsKICAgIGlmICghL15oWzEtNl0kL2kudGVzdChoLnRhZ05hbWUpKSBjb250aW51ZTsgIC8vIGl0IHNob3VsZCBiZSBhIGhlYWRlciBoMS1oNgogICAgYSA9IGguYXR0cmlidXRlczsKICAgIHdoaWxlIChhLmxlbmd0aCA+IDApIGgucmVtb3ZlQXR0cmlidXRlKGFbMF0ubmFtZSk7CiAgfQp9KTsK"></script>
+<script src="data:application/javascript;base64,JChkb2N1bWVudCkucmVhZHkoZnVuY3Rpb24oKXsKICAgIGlmICh0eXBlb2YgJCgnW2RhdGEtdG9nZ2xlPSJ0b29sdGlwIl0nKS50b29sdGlwID09PSAnZnVuY3Rpb24nKSB7CiAgICAgICAgJCgnW2RhdGEtdG9nZ2xlPSJ0b29sdGlwIl0nKS50b29sdGlwKCk7CiAgICB9CiAgICBpZiAoJCgnW2RhdGEtdG9nZ2xlPSJwb3BvdmVyIl0nKS5wb3BvdmVyID09PSAnZnVuY3Rpb24nKSB7CiAgICAgICAgJCgnW2RhdGEtdG9nZ2xlPSJwb3BvdmVyIl0nKS5wb3BvdmVyKCk7CiAgICB9Cn0pOwo="></script>
+<link href="data:text/css,%0A%2Elightable%2Dminimal%20%7B%0Aborder%2Dcollapse%3A%20separate%3B%0Aborder%2Dspacing%3A%2016px%201px%3B%0Awidth%3A%20100%25%3B%0Amargin%2Dbottom%3A%2010px%3B%0A%7D%0A%2Elightable%2Dminimal%20td%20%7B%0Amargin%2Dleft%3A%205px%3B%0Amargin%2Dright%3A%205px%3B%0A%7D%0A%2Elightable%2Dminimal%20th%20%7B%0Amargin%2Dleft%3A%205px%3B%0Amargin%2Dright%3A%205px%3B%0A%7D%0A%2Elightable%2Dminimal%20thead%20tr%3Alast%2Dchild%20th%20%7B%0Aborder%2Dbottom%3A%202px%20solid%20%2300000050%3B%0Aempty%2Dcells%3A%20hide%3B%0A%7D%0A%2Elightable%2Dminimal%20tbody%20tr%3Afirst%2Dchild%20td%20%7B%0Apadding%2Dtop%3A%200%2E5em%3B%0A%7D%0A%2Elightable%2Dminimal%2Elightable%2Dhover%20tbody%20tr%3Ahover%20%7B%0Abackground%2Dcolor%3A%20%23f5f5f5%3B%0A%7D%0A%2Elightable%2Dminimal%2Elightable%2Dstriped%20tbody%20tr%3Anth%2Dchild%28even%29%20%7B%0Abackground%2Dcolor%3A%20%23f5f5f5%3B%0A%7D%0A%2Elightable%2Dclassic%20%7B%0Aborder%2Dtop%3A%200%2E16em%20solid%20%23111111%3B%0Aborder%2Dbottom%3A%200%2E16em%20solid%20%23111111%3B%0Awidth%3A%20100%25%3B%0Amargin%2Dbottom%3A%2010px%3B%0Amargin%3A%2010px%205px%3B%0A%7D%0A%2Elightable%2Dclassic%20tfoot%20tr%20td%20%7B%0Aborder%3A%200%3B%0A%7D%0A%2Elightable%2Dclassic%20tfoot%20tr%3Afirst%2Dchild%20td%20%7B%0Aborder%2Dtop%3A%200%2E14em%20solid%20%23111111%3B%0A%7D%0A%2Elightable%2Dclassic%20caption%20%7B%0Acolor%3A%20%23222222%3B%0A%7D%0A%2Elightable%2Dclassic%20td%20%7B%0Apadding%2Dleft%3A%205px%3B%0Apadding%2Dright%3A%205px%3B%0Acolor%3A%20%23222222%3B%0A%7D%0A%2Elightable%2Dclassic%20th%20%7B%0Apadding%2Dleft%3A%205px%3B%0Apadding%2Dright%3A%205px%3B%0Afont%2Dweight%3A%20normal%3B%0Acolor%3A%20%23222222%3B%0A%7D%0A%2Elightable%2Dclassic%20thead%20tr%3Alast%2Dchild%20th%20%7B%0Aborder%2Dbottom%3A%200%2E10em%20solid%20%23111111%3B%0A%7D%0A%2Elightable%2Dclassic%2Elightable%2Dhover%20tbody%20tr%3Ahover%20%7B%0Abackground%2Dcolor%3A%20%23F9EEC1%3B%0A%7D%0A%2Elightable%2Dclassic%2Elightable%2Dstriped%20tbody%20tr%3Anth%2Dchild%28even%29%20%7B%0Abackground%2Dcolor%3A%20%23f5f5f5%3B%0A%7D%0A%2Elightable%2Dclassic%2D2%20%7B%0Aborder%2Dtop%3A%203px%20double%20%23111111%3B%0Aborder%2Dbottom%3A%203px%20double%20%23111111%3B%0Awidth%3A%20100%25%3B%0Amargin%2Dbottom%3A%2010px%3B%0A%7D%0A%2Elightable%2Dclassic%2D2%20tfoot%20tr%20td%20%7B%0Aborder%3A%200%3B%0A%7D%0A%2Elightable%2Dclassic%2D2%20tfoot%20tr%3Afirst%2Dchild%20td%20%7B%0Aborder%2Dtop%3A%203px%20double%20%23111111%3B%0A%7D%0A%2Elightable%2Dclassic%2D2%20caption%20%7B%0Acolor%3A%20%23222222%3B%0A%7D%0A%2Elightable%2Dclassic%2D2%20td%20%7B%0Apadding%2Dleft%3A%205px%3B%0Apadding%2Dright%3A%205px%3B%0Acolor%3A%20%23222222%3B%0A%7D%0A%2Elightable%2Dclassic%2D2%20th%20%7B%0Apadding%2Dleft%3A%205px%3B%0Apadding%2Dright%3A%205px%3B%0Afont%2Dweight%3A%20normal%3B%0Acolor%3A%20%23222222%3B%0A%7D%0A%2Elightable%2Dclassic%2D2%20tbody%20tr%3Alast%2Dchild%20td%20%7B%0Aborder%2Dbottom%3A%203px%20double%20%23111111%3B%0A%7D%0A%2Elightable%2Dclassic%2D2%20thead%20tr%3Alast%2Dchild%20th%20%7B%0Aborder%2Dbottom%3A%201px%20solid%20%23111111%3B%0A%7D%0A%2Elightable%2Dclassic%2D2%2Elightable%2Dhover%20tbody%20tr%3Ahover%20%7B%0Abackground%2Dcolor%3A%20%23F9EEC1%3B%0A%7D%0A%2Elightable%2Dclassic%2D2%2Elightable%2Dstriped%20tbody%20tr%3Anth%2Dchild%28even%29%20%7B%0Abackground%2Dcolor%3A%20%23f5f5f5%3B%0A%7D%0A%2Elightable%2Dmaterial%20%7B%0Amin%2Dwidth%3A%20100%25%3B%0Awhite%2Dspace%3A%20nowrap%3B%0Atable%2Dlayout%3A%20fixed%3B%0Afont%2Dfamily%3A%20Roboto%2C%20sans%2Dserif%3B%0Aborder%3A%201px%20solid%20%23EEE%3B%0Aborder%2Dcollapse%3A%20collapse%3B%0Amargin%2Dbottom%3A%2010px%3B%0A%7D%0A%2Elightable%2Dmaterial%20tfoot%20tr%20td%20%7B%0Aborder%3A%200%3B%0A%7D%0A%2Elightable%2Dmaterial%20tfoot%20tr%3Afirst%2Dchild%20td%20%7B%0Aborder%2Dtop%3A%201px%20solid%20%23EEE%3B%0A%7D%0A%2Elightable%2Dmaterial%20th%20%7B%0Aheight%3A%2056px%3B%0Apadding%2Dleft%3A%2016px%3B%0Apadding%2Dright%3A%2016px%3B%0A%7D%0A%2Elightable%2Dmaterial%20td%20%7B%0Aheight%3A%2052px%3B%0Apadding%2Dleft%3A%2016px%3B%0Apadding%2Dright%3A%2016px%3B%0Aborder%2Dtop%3A%201px%20solid%20%23eeeeee%3B%0A%7D%0A%2Elightable%2Dmaterial%2Elightable%2Dhover%20tbody%20tr%3Ahover%20%7B%0Abackground%2Dcolor%3A%20%23f5f5f5%3B%0A%7D%0A%2Elightable%2Dmaterial%2Elightable%2Dstriped%20tbody%20tr%3Anth%2Dchild%28even%29%20%7B%0Abackground%2Dcolor%3A%20%23f5f5f5%3B%0A%7D%0A%2Elightable%2Dmaterial%2Elightable%2Dstriped%20tbody%20td%20%7B%0Aborder%3A%200%3B%0A%7D%0A%2Elightable%2Dmaterial%2Elightable%2Dstriped%20thead%20tr%3Alast%2Dchild%20th%20%7B%0Aborder%2Dbottom%3A%201px%20solid%20%23ddd%3B%0A%7D%0A%2Elightable%2Dmaterial%2Ddark%20%7B%0Amin%2Dwidth%3A%20100%25%3B%0Awhite%2Dspace%3A%20nowrap%3B%0Atable%2Dlayout%3A%20fixed%3B%0Afont%2Dfamily%3A%20Roboto%2C%20sans%2Dserif%3B%0Aborder%3A%201px%20solid%20%23FFFFFF12%3B%0Aborder%2Dcollapse%3A%20collapse%3B%0Amargin%2Dbottom%3A%2010px%3B%0Abackground%2Dcolor%3A%20%23363640%3B%0A%7D%0A%2Elightable%2Dmaterial%2Ddark%20tfoot%20tr%20td%20%7B%0Aborder%3A%200%3B%0A%7D%0A%2Elightable%2Dmaterial%2Ddark%20tfoot%20tr%3Afirst%2Dchild%20td%20%7B%0Aborder%2Dtop%3A%201px%20solid%20%23FFFFFF12%3B%0A%7D%0A%2Elightable%2Dmaterial%2Ddark%20th%20%7B%0Aheight%3A%2056px%3B%0Apadding%2Dleft%3A%2016px%3B%0Apadding%2Dright%3A%2016px%3B%0Acolor%3A%20%23FFFFFF60%3B%0A%7D%0A%2Elightable%2Dmaterial%2Ddark%20td%20%7B%0Aheight%3A%2052px%3B%0Apadding%2Dleft%3A%2016px%3B%0Apadding%2Dright%3A%2016px%3B%0Acolor%3A%20%23FFFFFF%3B%0Aborder%2Dtop%3A%201px%20solid%20%23FFFFFF12%3B%0A%7D%0A%2Elightable%2Dmaterial%2Ddark%2Elightable%2Dhover%20tbody%20tr%3Ahover%20%7B%0Abackground%2Dcolor%3A%20%23FFFFFF12%3B%0A%7D%0A%2Elightable%2Dmaterial%2Ddark%2Elightable%2Dstriped%20tbody%20tr%3Anth%2Dchild%28even%29%20%7B%0Abackground%2Dcolor%3A%20%23FFFFFF12%3B%0A%7D%0A%2Elightable%2Dmaterial%2Ddark%2Elightable%2Dstriped%20tbody%20td%20%7B%0Aborder%3A%200%3B%0A%7D%0A%2Elightable%2Dmaterial%2Ddark%2Elightable%2Dstriped%20thead%20tr%3Alast%2Dchild%20th%20%7B%0Aborder%2Dbottom%3A%201px%20solid%20%23FFFFFF12%3B%0A%7D%0A%2Elightable%2Dpaper%20%7B%0Awidth%3A%20100%25%3B%0Amargin%2Dbottom%3A%2010px%3B%0Acolor%3A%20%23444%3B%0A%7D%0A%2Elightable%2Dpaper%20tfoot%20tr%20td%20%7B%0Aborder%3A%200%3B%0A%7D%0A%2Elightable%2Dpaper%20tfoot%20tr%3Afirst%2Dchild%20td%20%7B%0Aborder%2Dtop%3A%201px%20solid%20%2300000020%3B%0A%7D%0A%2Elightable%2Dpaper%20thead%20tr%3Alast%2Dchild%20th%20%7B%0Acolor%3A%20%23666%3B%0Avertical%2Dalign%3A%20bottom%3B%0Aborder%2Dbottom%3A%201px%20solid%20%2300000020%3B%0Aline%2Dheight%3A%201%2E15em%3B%0Apadding%3A%2010px%205px%3B%0A%7D%0A%2Elightable%2Dpaper%20td%20%7B%0Avertical%2Dalign%3A%20middle%3B%0Aborder%2Dbottom%3A%201px%20solid%20%2300000010%3B%0Aline%2Dheight%3A%201%2E15em%3B%0Apadding%3A%207px%205px%3B%0A%7D%0A%2Elightable%2Dpaper%2Elightable%2Dhover%20tbody%20tr%3Ahover%20%7B%0Abackground%2Dcolor%3A%20%23F9EEC1%3B%0A%7D%0A%2Elightable%2Dpaper%2Elightable%2Dstriped%20tbody%20tr%3Anth%2Dchild%28even%29%20%7B%0Abackground%2Dcolor%3A%20%2300000008%3B%0A%7D%0A%2Elightable%2Dpaper%2Elightable%2Dstriped%20tbody%20td%20%7B%0Aborder%3A%200%3B%0A%7D%0A" rel="stylesheet" />
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
+
+
+<style type="text/css">
+  code {
+    white-space: pre;
+  }
+  .sourceCode {
+    overflow: visible;
+  }
+</style>
+<style type="text/css" data-origin="pandoc">
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    for (var j = 0; j < rules.length; j++) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") continue;
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') continue;
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<link rel="stylesheet" href="data:text/css,body%20%7B%0Abackground%2Dcolor%3A%20%23fff%3B%0Amargin%3A%201em%20auto%3B%0Amax%2Dwidth%3A%20700px%3B%0Aoverflow%3A%20visible%3B%0Apadding%2Dleft%3A%202em%3B%0Apadding%2Dright%3A%202em%3B%0Afont%2Dfamily%3A%20%22Open%20Sans%22%2C%20%22Helvetica%20Neue%22%2C%20Helvetica%2C%20Arial%2C%20sans%2Dserif%3B%0Afont%2Dsize%3A%2014px%3B%0Aline%2Dheight%3A%201%2E35%3B%0A%7D%0A%23TOC%20%7B%0Aclear%3A%20both%3B%0Amargin%3A%200%200%2010px%2010px%3B%0Apadding%3A%204px%3B%0Awidth%3A%20400px%3B%0Aborder%3A%201px%20solid%20%23CCCCCC%3B%0Aborder%2Dradius%3A%205px%3B%0Abackground%2Dcolor%3A%20%23f6f6f6%3B%0Afont%2Dsize%3A%2013px%3B%0Aline%2Dheight%3A%201%2E3%3B%0A%7D%0A%23TOC%20%2Etoctitle%20%7B%0Afont%2Dweight%3A%20bold%3B%0Afont%2Dsize%3A%2015px%3B%0Amargin%2Dleft%3A%205px%3B%0A%7D%0A%23TOC%20ul%20%7B%0Apadding%2Dleft%3A%2040px%3B%0Amargin%2Dleft%3A%20%2D1%2E5em%3B%0Amargin%2Dtop%3A%205px%3B%0Amargin%2Dbottom%3A%205px%3B%0A%7D%0A%23TOC%20ul%20ul%20%7B%0Amargin%2Dleft%3A%20%2D2em%3B%0A%7D%0A%23TOC%20li%20%7B%0Aline%2Dheight%3A%2016px%3B%0A%7D%0Atable%20%7B%0Amargin%3A%201em%20auto%3B%0Aborder%2Dwidth%3A%201px%3B%0Aborder%2Dcolor%3A%20%23DDDDDD%3B%0Aborder%2Dstyle%3A%20outset%3B%0Aborder%2Dcollapse%3A%20collapse%3B%0A%7D%0Atable%20th%20%7B%0Aborder%2Dwidth%3A%202px%3B%0Apadding%3A%205px%3B%0Aborder%2Dstyle%3A%20inset%3B%0A%7D%0Atable%20td%20%7B%0Aborder%2Dwidth%3A%201px%3B%0Aborder%2Dstyle%3A%20inset%3B%0Aline%2Dheight%3A%2018px%3B%0Apadding%3A%205px%205px%3B%0A%7D%0Atable%2C%20table%20th%2C%20table%20td%20%7B%0Aborder%2Dleft%2Dstyle%3A%20none%3B%0Aborder%2Dright%2Dstyle%3A%20none%3B%0A%7D%0Atable%20thead%2C%20table%20tr%2Eeven%20%7B%0Abackground%2Dcolor%3A%20%23f7f7f7%3B%0A%7D%0Ap%20%7B%0Amargin%3A%200%2E5em%200%3B%0A%7D%0Ablockquote%20%7B%0Abackground%2Dcolor%3A%20%23f6f6f6%3B%0Apadding%3A%200%2E25em%200%2E75em%3B%0A%7D%0Ahr%20%7B%0Aborder%2Dstyle%3A%20solid%3B%0Aborder%3A%20none%3B%0Aborder%2Dtop%3A%201px%20solid%20%23777%3B%0Amargin%3A%2028px%200%3B%0A%7D%0Adl%20%7B%0Amargin%2Dleft%3A%200%3B%0A%7D%0Adl%20dd%20%7B%0Amargin%2Dbottom%3A%2013px%3B%0Amargin%2Dleft%3A%2013px%3B%0A%7D%0Adl%20dt%20%7B%0Afont%2Dweight%3A%20bold%3B%0A%7D%0Aul%20%7B%0Amargin%2Dtop%3A%200%3B%0A%7D%0Aul%20li%20%7B%0Alist%2Dstyle%3A%20circle%20outside%3B%0A%7D%0Aul%20ul%20%7B%0Amargin%2Dbottom%3A%200%3B%0A%7D%0Apre%2C%20code%20%7B%0Abackground%2Dcolor%3A%20%23f7f7f7%3B%0Aborder%2Dradius%3A%203px%3B%0Acolor%3A%20%23333%3B%0Awhite%2Dspace%3A%20pre%2Dwrap%3B%20%0A%7D%0Apre%20%7B%0Aborder%2Dradius%3A%203px%3B%0Amargin%3A%205px%200px%2010px%200px%3B%0Apadding%3A%2010px%3B%0A%7D%0Apre%3Anot%28%5Bclass%5D%29%20%7B%0Abackground%2Dcolor%3A%20%23f7f7f7%3B%0A%7D%0Acode%20%7B%0Afont%2Dfamily%3A%20Consolas%2C%20Monaco%2C%20%27Courier%20New%27%2C%20monospace%3B%0Afont%2Dsize%3A%2085%25%3B%0A%7D%0Ap%20%3E%20code%2C%20li%20%3E%20code%20%7B%0Apadding%3A%202px%200px%3B%0A%7D%0Adiv%2Efigure%20%7B%0Atext%2Dalign%3A%20center%3B%0A%7D%0Aimg%20%7B%0Abackground%2Dcolor%3A%20%23FFFFFF%3B%0Apadding%3A%202px%3B%0Aborder%3A%201px%20solid%20%23DDDDDD%3B%0Aborder%2Dradius%3A%203px%3B%0Aborder%3A%201px%20solid%20%23CCCCCC%3B%0Amargin%3A%200%205px%3B%0A%7D%0Ah1%20%7B%0Amargin%2Dtop%3A%200%3B%0Afont%2Dsize%3A%2035px%3B%0Aline%2Dheight%3A%2040px%3B%0A%7D%0Ah2%20%7B%0Aborder%2Dbottom%3A%204px%20solid%20%23f7f7f7%3B%0Apadding%2Dtop%3A%2010px%3B%0Apadding%2Dbottom%3A%202px%3B%0Afont%2Dsize%3A%20145%25%3B%0A%7D%0Ah3%20%7B%0Aborder%2Dbottom%3A%202px%20solid%20%23f7f7f7%3B%0Apadding%2Dtop%3A%2010px%3B%0Afont%2Dsize%3A%20120%25%3B%0A%7D%0Ah4%20%7B%0Aborder%2Dbottom%3A%201px%20solid%20%23f7f7f7%3B%0Amargin%2Dleft%3A%208px%3B%0Afont%2Dsize%3A%20105%25%3B%0A%7D%0Ah5%2C%20h6%20%7B%0Aborder%2Dbottom%3A%201px%20solid%20%23ccc%3B%0Afont%2Dsize%3A%20105%25%3B%0A%7D%0Aa%20%7B%0Acolor%3A%20%230033dd%3B%0Atext%2Ddecoration%3A%20none%3B%0A%7D%0Aa%3Ahover%20%7B%0Acolor%3A%20%236666ff%3B%20%7D%0Aa%3Avisited%20%7B%0Acolor%3A%20%23800080%3B%20%7D%0Aa%3Avisited%3Ahover%20%7B%0Acolor%3A%20%23BB00BB%3B%20%7D%0Aa%5Bhref%5E%3D%22http%3A%22%5D%20%7B%0Atext%2Ddecoration%3A%20underline%3B%20%7D%0Aa%5Bhref%5E%3D%22https%3A%22%5D%20%7B%0Atext%2Ddecoration%3A%20underline%3B%20%7D%0A%0Acode%20%3E%20span%2Ekw%20%7B%20color%3A%20%23555%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%0Acode%20%3E%20span%2Edt%20%7B%20color%3A%20%23902000%3B%20%7D%20%0Acode%20%3E%20span%2Edv%20%7B%20color%3A%20%2340a070%3B%20%7D%20%0Acode%20%3E%20span%2Ebn%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Efl%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Ech%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Est%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Eco%20%7B%20color%3A%20%23888888%3B%20font%2Dstyle%3A%20italic%3B%20%7D%20%0Acode%20%3E%20span%2Eot%20%7B%20color%3A%20%23007020%3B%20%7D%20%0Acode%20%3E%20span%2Eal%20%7B%20color%3A%20%23ff0000%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%0Acode%20%3E%20span%2Efu%20%7B%20color%3A%20%23900%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%0Acode%20%3E%20span%2Eer%20%7B%20color%3A%20%23a61717%3B%20background%2Dcolor%3A%20%23e3d2d2%3B%20%7D%20%0A" type="text/css" />
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Introduction to clustack</h1>
+<h4 class="author">M.Kamenetsky</h4>
+
+
+
+<div id="introduction" class="section level1">
+<h1>Introduction</h1>
+<p>Please report any issues <a href="https://github.com/mkamenet3/clustack/issues">here</a>.</p>
+<p>First, we load the <code>R</code> packages we will be using. We will need <code>clustack</code>:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(clustack)</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Loading required package: Matrix</span></span></code></pre></div>
+<p>If you haven’t already, you can install <code>clustack</code> directly from GitHub:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(<span class="st">&quot;devtools&quot;</span>)</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>devtools<span class="sc">::</span><span class="fu">install_github</span>(<span class="st">&quot;mkamenet3/clustack&quot;</span>)</span></code></pre></div>
+<p>We will also need the <code>clusso</code>, <code>MASS</code>,<code>RColorBrewer</code>, and <code>dplyr</code> packages.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(clusso) <span class="co">#can also be installed with devtools::install_github(&quot;mkamenet3/clusso&quot;)</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Loading required package: glmnet</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Loaded glmnet 4.1-3</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Attaching package: &#39;clusso&#39;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; The following object is masked from &#39;package:base&#39;:</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;     scale</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(RColorBrewer)</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyr)</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Warning: package &#39;tidyr&#39; was built under R version 4.1.3</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Attaching package: &#39;tidyr&#39;</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; The following objects are masked from &#39;package:Matrix&#39;:</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;     expand, pack, unpack</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(dplyr)</span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Warning: package &#39;dplyr&#39; was built under R version 4.1.3</span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Attaching package: &#39;dplyr&#39;</span></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; The following objects are masked from &#39;package:stats&#39;:</span></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;     filter, lag</span></span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; The following objects are masked from &#39;package:base&#39;:</span></span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;     intersect, setdiff, setequal, union</span></span></code></pre></div>
+<div id="using-clustack" class="section level2">
+<h2>Using <code>clustack</code></h2>
+<p>In this example, we will use simulated data of breast cancer incidence counts across 208 prefects (municipalities) in Japan across 5 time periods. These data are based on original incidence counts, but we have added noise to these data.</p>
+<div id="prepare-data" class="section level3">
+<h3>Prepare Data</h3>
+<p>We load four data sets that come with the <code>clustack</code> package (these are the same data available from the <code>clusso</code> package):</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co">#load data</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="fu">data</span>(<span class="st">&quot;jbc2&quot;</span>)</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="fu">data</span>(<span class="st">&quot;utmJapan&quot;</span>)</span></code></pre></div>
+<p>To explore the 4 data sets, we apply the <code>head()</code> function to each of the data sets.</p>
+<ol style="list-style-type: decimal">
+<li><code>utmJapan</code>: data set containing a unique identifier for each prefect centroid (<em>id</em>), x-coordinate in UTM (<em>utmx</em>), and y-coordinate in UTM (<em>utmy</em>).</li>
+<li><code>jbc2</code>: data set containing observed counts for each cell <span class="math inline">\(i\)</span> at time <span class="math inline">\(t\)</span> (<em>Observed</em>), expected counts for each cell <span class="math inline">\(i\)</span> at time <span class="math inline">\(t\)</span> (<em>Expected</em>), and time period (<span class="math inline">\(t=1, \dots,T=5\)</span>). In this dataset, a fake cluster has been placed in center 150, with a radius of &lt; 15km, in periods 3 through 5. A relative risk of 2 was used to create this cluster.</li>
+</ol>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co">#inspect</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(utmJapan)</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;     id     utmx    utmy</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 1 9201 399786.6 4047756</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 2 9202 360917.0 4023885</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 3 9203 385175.1 4025749</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 4 9204 371603.4 4018172</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 5 9205 388154.2 4047900</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 6 9206 375023.3 4068053</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(jbc2)</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   Observed  Expected Time</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 1       25 38.034986    1</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 2       13 20.470095    2</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 3        7 10.525341    3</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 4        8  9.737306    4</span></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 5       10 10.713892    5</span></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 6        0  3.679222    6</span></span></code></pre></div>
+</div>
+<div id="set-global-parameters" class="section level3">
+<h3>Set Global Parameters</h3>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>cases <span class="ot">&lt;-</span> jbc2<span class="sc">$</span>death</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>expected <span class="ot">&lt;-</span> jbc2<span class="sc">$</span>expdeath</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>x <span class="ot">&lt;-</span> utmJapan<span class="sc">$</span>utmx<span class="sc">/</span><span class="dv">1000</span> <span class="co">#easting</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>y <span class="ot">&lt;-</span> utmJapan<span class="sc">$</span>utmy<span class="sc">/</span><span class="dv">1000</span> <span class="co">#northing</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>maxclust <span class="ot">&lt;-</span> <span class="dv">15</span> <span class="co">#maximum number of clusters in the study region</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>rMax <span class="ot">&lt;-</span> <span class="dv">20</span> <span class="co">#maximum radius for each potential cluster</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>Time <span class="ot">&lt;-</span> <span class="dv">5</span> <span class="co">#number of time periods in the data</span></span></code></pre></div>
+</div>
+</div>
+</div>
+<div id="stacking-by-potential-cluster" class="section level1">
+<h1>Stacking by Potential Cluster</h1>
+<div id="cluster-identification-and-estimation" class="section level2">
+<h2>Cluster Identification and Estimation</h2>
+<!-- The main function for cluster detection using stacking is `detectclusters()`. -->
+<p>We first need to set up several objects. First, we need to create the set of potential clusters using the <code>clusters2df()</code> function from <code>clusso</code>:</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>potentialclusters <span class="ot">&lt;-</span> clusso<span class="sc">::</span><span class="fu">clusters2df</span>(x,y,rMax, <span class="at">utm =</span> <span class="cn">TRUE</span>, <span class="fu">length</span>(x))</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Creating radius-based potential clusters</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="fu">str</span>(potentialclusters)</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; &#39;data.frame&#39;:    4458 obs. of  7 variables:</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  $ center  : num  1 1 1 1 1 1 1 1 1 1 ...</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  $ centerID: num  1 1 1 1 1 1 1 1 1 1 ...</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  $ x       : num  400 400 400 400 400 ...</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  $ y       : num  4048 4048 4048 4048 4048 ...</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  $ r       : num  0 8.37 11.15 11.63 12.33 ...</span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  $ n       : num  1 2 3 4 5 6 7 8 9 10 ...</span></span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  $ last    : num  1 16 37 5 15 36 26 13 17 24 ...</span></span></code></pre></div>
+<p><code>potentialclusters</code> is a data frame where each row is a potential cluster. <code>center</code> and <code>centerID</code> are equivalent and are the cell ID number in the dataset, <code>x</code> is the x-coordinate of the cell centroid (easting, in <span class="math inline">\(km\)</span>), <code>y</code> is the y-coordinate of the cell centroid (northing, in <span class="math inline">\(km\)</span>), <code>r</code> is the radius, <code>n</code> is the number of cells in the potential cluster, and <code>last</code> is the cell ID of the last cell inside the potential cluster for the given radius.</p>
+<p>Next we create <code>Ex</code>, which are the expected counts and <code>Yx</code> which are the observed counts.</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>Ex <span class="ot">&lt;-</span> <span class="fu">as.vector</span>(<span class="fu">matrix</span>(jbc2<span class="sc">$</span>Expected, <span class="at">ncol=</span>Time, <span class="at">byrow=</span><span class="cn">FALSE</span>))</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>Yx <span class="ot">&lt;-</span> <span class="fu">as.vector</span>(<span class="fu">matrix</span>(jbc2<span class="sc">$</span>Observed, <span class="at">ncol=</span>Time, <span class="at">byrow=</span><span class="cn">FALSE</span>))</span></code></pre></div>
+<p>Importantly, we create a large sparse matrix of single potential clusters (<code>sparseMAT</code>), which the rows are the space-time locations and columns are the respective potential clusters.</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co">#create giant sparse design matrix (single potential clusters)</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>(numCenters <span class="ot">&lt;-</span> <span class="fu">length</span>(<span class="fu">unique</span>(potentialclusters<span class="sc">$</span>center)))</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; [1] 208</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>sparseMAT <span class="ot">&lt;-</span> clusso<span class="sc">::</span><span class="fu">spacetimeMat</span>(potentialclusters, numCenters, Time) </span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="fu">dim</span>(sparseMAT)</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; [1]  1040 66870</span></span></code></pre></div>
+<p>In this example, we are going to assume overdispersion and estimate it separately:</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co">#calculate overdispersion estimate</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>offset_reg <span class="ot">&lt;-</span> <span class="fu">glm</span>(Yx <span class="sc">~</span> <span class="fu">as.factor</span>(<span class="fu">rep</span>(<span class="fu">c</span>(<span class="st">&quot;1&quot;</span>,<span class="st">&quot;2&quot;</span>,<span class="st">&quot;3&quot;</span>,<span class="st">&quot;4&quot;</span>,<span class="st">&quot;5&quot;</span>),  <span class="at">each=</span><span class="fu">length</span>(Ex)<span class="sc">/</span>Time)) <span class="sc">+</span> <span class="fu">offset</span>(<span class="fu">log</span>(Ex)),</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>                  <span class="at">family=</span>quasipoisson)</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>overdisp.est <span class="ot">&lt;-</span> clusso<span class="sc">::</span><span class="fu">overdisp</span>(offset_reg, <span class="at">sim=</span><span class="cn">FALSE</span>, <span class="at">overdispfloor =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>overdisp.est</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; [1] 1.538566</span></span></code></pre></div>
+<p>We are next ready to use <code>detectclusters()</code>. The arguments the function are: the large sparse matrix <code>sparseMAT</code>, expected counts <code>Ex</code>, observed counts <code>Yx</code>, the number of unique locations (<code>length(x)=208</code>), Time periods, and maximum number of clusters to be considered; <code>byloc=FALSE</code> gives us detection by potential cluster. To detect by location, set <code>byloc=TRUE</code>. We set <code>model=&quot;poisson&quot;</code> and <code>overdisp.est</code> equal to our overdispersion estimate calculated above.</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co">#run clustack by PC</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>clustack_pc <span class="ot">&lt;-</span><span class="fu">detectclusters</span>(sparseMAT, Ex, Yx, numCenters, Time, maxclust, </span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>                              <span class="at">byloc =</span> <span class="cn">FALSE</span>, <span class="at">model=</span><span class="st">&quot;poisson&quot;</span>, <span class="at">overdisp.est =</span> overdisp.est)</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Model specified: quasi-poisson</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Cluster detection by potential cluster</span></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Potential cluster identified: 51905</span></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Potential cluster identified: 49775</span></span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Potential cluster identified: 33640</span></span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Potential cluster identified: 51157</span></span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Potential cluster identified: 35841</span></span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Potential cluster identified: 35800</span></span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Potential cluster identified: 17028</span></span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Potential cluster identified: 52315</span></span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Potential cluster identified: 1126</span></span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Potential cluster identified: 23742</span></span>
+<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Potential cluster identified: 9451</span></span>
+<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Potential cluster identified: 25587</span></span>
+<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Potential cluster identified: 3892</span></span>
+<span id="cb11-19"><a href="#cb11-19" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Potential cluster identified: 227</span></span>
+<span id="cb11-20"><a href="#cb11-20" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Potential cluster identified: 15092</span></span>
+<span id="cb11-21"><a href="#cb11-21" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Overdispersion estimate: 1.5386</span></span>
+<span id="cb11-22"><a href="#cb11-22" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  Num. selected clusters by BIC: 1</span></span>
+<span id="cb11-23"><a href="#cb11-23" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  Num. selected clusters by AIC: 1</span></span>
+<span id="cb11-24"><a href="#cb11-24" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  Num. selected clusters by AICc: 1</span></span></code></pre></div>
+<p>The output of <code>detectclusters()</code> prints out the type of model specified. If <code>overdisp.est=NULL</code>, then this would correspond to a Poisson model. The cluster IDs (which correspond to the columns of <code>sparseMAT</code>) are then printed in the order that they are detected, followed by the overdispersion estimate. Finally, the number of clusters selected by BIC, AIC, and AICc are printed.</p>
+<p>The object <code>clustack_pc</code> is a large list of 11 elements:</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="fu">str</span>(clustack_pc)</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; List of 11</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  $ wLambda               : num [1:15, 1:1040] 1 1.01 1.01 1.92 1.28 ...</span></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  $ loglik                : num [1:16] 9580 9728 9604 9600 7923 ...</span></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  $ selection.bic         : num 1</span></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  $ selection.aic         : num 1</span></span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  $ selection.aicc        : num 1</span></span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  $ selection.bic_forceid : num 1</span></span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  $ selection.aic_forceid : num 1</span></span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  $ selection.aicc_forceid: num 1</span></span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  $ wtMAT                 : num [1:66870, 1:15] 7.81e-64 4.94e-64 1.78e-64 1.64e-64 1.16e-64 ...</span></span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  $ maxid                 : int [1:15] 51905 49775 33640 51157 35841 35800 17028 52315 1126 23742 ...</span></span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  $ Lambda_dense          : num [1:66870, 1:1040] 0.657 0.696 0.786 0.816 0.852 ...</span></span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   ..- attr(*, &quot;dimnames&quot;)=List of 2</span></span>
+<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   .. ..$ : NULL</span></span>
+<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   .. ..$ : NULL</span></span></code></pre></div>
+<p>The elements for <code>clustack_pc</code> are:</p>
+<ul>
+<li><code>wLambda</code>: a matrix of stacked relative risk estimates. Rows correspond to each 1 through <code>maxclust</code> cluster and columns are each space-time location.</li>
+<li><code>LRT</code>: is a vector of loglikelihoods starting with the null model (first element) followed by each cluster up to <code>maxclust</code>.</li>
+<li><code>selection.bic</code>, <code>selection.aic</code>,<code>selection.aicc</code>: the number of clusters identified by each respective selection criterion.</li>
+<li><code>selection.bic_forceid</code>, <code>selection.aic_forceid</code>,<code>selection.aicc_forcid</code>: the number of clusters identified by each respective selection criterion when clustack is forced to identify a cluster.</li>
+<li><code>wtMAT</code>: a matrix of likelihood-based weights. Rows correspond to each potential cluster and columns correspond to each cluster identified from 1 to <code>maxclust</code>.</li>
+<li><code>maxid</code>: The ID of either the potential cluster (if using detection by potential cluster) or location (if using detection by location).</li>
+<li><code>Lambda_dense</code>: Large matrix of single cluster estimates. Rows correspond to each potential cluster and columns correspond to each space-time location.</li>
+</ul>
+<div id="plotting" class="section level3">
+<h3>Plotting</h3>
+<p>There are several ways to visualize our results. Because we already have the boundary and map data, we create a quick function called <code>plotmap()</code>:</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>plotmap <span class="ot">&lt;-</span> <span class="cf">function</span>(res, <span class="at">pdfname=</span><span class="cn">NULL</span>, <span class="at">genpdf=</span><span class="cn">TRUE</span>, <span class="at">maxrr=</span><span class="dv">2</span>){</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span>(<span class="sc">!</span><span class="fu">is.null</span>(maxrr)){</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>        maxrr<span class="ot">=</span>maxrr</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span>{</span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>        maxrr<span class="ot">=</span><span class="dv">2</span></span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>    cluster_ix <span class="ot">&lt;-</span> <span class="fu">redblue</span>(<span class="fu">log</span>(maxrr <span class="sc">*</span>  <span class="fu">pmax</span>(<span class="dv">1</span><span class="sc">/</span>maxrr, <span class="fu">pmin</span>(res, maxrr)))<span class="sc">/</span><span class="fu">log</span>(maxrr<span class="sc">^</span><span class="dv">2</span>))</span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>    colors_0 <span class="ot">&lt;-</span> <span class="fu">matrix</span>(cluster_ix, <span class="at">ncol=</span><span class="dv">5</span>, <span class="at">byrow =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span>(genpdf<span class="sc">==</span><span class="cn">TRUE</span>){</span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a>        <span class="fu">pdf</span>(pdfname, <span class="at">height=</span><span class="dv">11</span>, <span class="at">width=</span><span class="dv">10</span>)    </span>
+<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a>    <span class="co">#Time 1</span></span>
+<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a>    <span class="fu">par</span>(<span class="at">fig=</span><span class="fu">c</span>(<span class="dv">0</span>,.<span class="dv">2</span>,.<span class="dv">6</span>,<span class="dv">1</span>), <span class="at">mar=</span><span class="fu">c</span>(.<span class="dv">5</span>,<span class="fl">0.5</span>,<span class="fl">0.5</span>,<span class="dv">0</span>))</span>
+<span id="cb13-15"><a href="#cb13-15" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plot</span>(japan.poly2,<span class="at">type=</span><span class="st">&#39;n&#39;</span>,<span class="at">asp=</span><span class="dv">1</span>,<span class="at">axes=</span>F,<span class="at">xlab=</span><span class="st">&#39;&#39;</span>,<span class="at">ylab=</span><span class="st">&#39;&#39;</span>)</span>
+<span id="cb13-16"><a href="#cb13-16" aria-hidden="true" tabindex="-1"></a>    <span class="fu">polygon</span>(japan.poly2,<span class="at">col=</span>colors_0[,<span class="dv">1</span>] ,<span class="at">border=</span>F)</span>
+<span id="cb13-17"><a href="#cb13-17" aria-hidden="true" tabindex="-1"></a>    <span class="fu">segments</span>(japan.prefect2<span class="sc">$</span>x1,japan.prefect2<span class="sc">$</span>y1,japan.prefect2<span class="sc">$</span>x2,japan.prefect2<span class="sc">$</span>y2)</span>
+<span id="cb13-18"><a href="#cb13-18" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb13-19"><a href="#cb13-19" aria-hidden="true" tabindex="-1"></a>    <span class="co">#Time 2</span></span>
+<span id="cb13-20"><a href="#cb13-20" aria-hidden="true" tabindex="-1"></a>    <span class="fu">par</span>(<span class="at">fig=</span><span class="fu">c</span>(<span class="fl">0.2</span>,.<span class="dv">4</span>,.<span class="dv">6</span>,<span class="dv">1</span>), <span class="at">mar=</span><span class="fu">c</span>(.<span class="dv">5</span>,<span class="fl">0.5</span>,<span class="fl">0.5</span>,<span class="dv">0</span>), <span class="at">new=</span>T)</span>
+<span id="cb13-21"><a href="#cb13-21" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plot</span>(japan.poly2,<span class="at">type=</span><span class="st">&#39;n&#39;</span>,<span class="at">asp=</span><span class="dv">1</span>,<span class="at">axes=</span>F,<span class="at">xlab=</span><span class="st">&#39;&#39;</span>,<span class="at">ylab=</span><span class="st">&#39;&#39;</span>)</span>
+<span id="cb13-22"><a href="#cb13-22" aria-hidden="true" tabindex="-1"></a>    <span class="fu">polygon</span>(japan.poly2,<span class="at">col=</span>colors_0[,<span class="dv">2</span>] ,<span class="at">border=</span>F)</span>
+<span id="cb13-23"><a href="#cb13-23" aria-hidden="true" tabindex="-1"></a>    <span class="fu">segments</span>(japan.prefect2<span class="sc">$</span>x1,japan.prefect2<span class="sc">$</span>y1,japan.prefect2<span class="sc">$</span>x2,japan.prefect2<span class="sc">$</span>y2)</span>
+<span id="cb13-24"><a href="#cb13-24" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb13-25"><a href="#cb13-25" aria-hidden="true" tabindex="-1"></a>    <span class="co">#Time 3</span></span>
+<span id="cb13-26"><a href="#cb13-26" aria-hidden="true" tabindex="-1"></a>    <span class="fu">par</span>(<span class="at">fig=</span><span class="fu">c</span>(<span class="fl">0.4</span>,.<span class="dv">6</span>,.<span class="dv">6</span>,<span class="dv">1</span>), <span class="at">mar=</span><span class="fu">c</span>(.<span class="dv">5</span>,<span class="fl">0.5</span>,<span class="fl">0.5</span>,<span class="dv">0</span>), <span class="at">new=</span>T)</span>
+<span id="cb13-27"><a href="#cb13-27" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plot</span>(japan.poly2,<span class="at">type=</span><span class="st">&#39;n&#39;</span>,<span class="at">asp=</span><span class="dv">1</span>,<span class="at">axes=</span>F,<span class="at">xlab=</span><span class="st">&#39;&#39;</span>,<span class="at">ylab=</span><span class="st">&#39;&#39;</span>)</span>
+<span id="cb13-28"><a href="#cb13-28" aria-hidden="true" tabindex="-1"></a>    <span class="fu">polygon</span>(japan.poly2,<span class="at">col=</span>colors_0[,<span class="dv">3</span>] ,<span class="at">border=</span>F)</span>
+<span id="cb13-29"><a href="#cb13-29" aria-hidden="true" tabindex="-1"></a>    <span class="fu">segments</span>(japan.prefect2<span class="sc">$</span>x1,japan.prefect2<span class="sc">$</span>y1,japan.prefect2<span class="sc">$</span>x2,japan.prefect2<span class="sc">$</span>y2)</span>
+<span id="cb13-30"><a href="#cb13-30" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb13-31"><a href="#cb13-31" aria-hidden="true" tabindex="-1"></a>    <span class="co">#Time 4</span></span>
+<span id="cb13-32"><a href="#cb13-32" aria-hidden="true" tabindex="-1"></a>    <span class="fu">par</span>(<span class="at">fig=</span><span class="fu">c</span>(<span class="fl">0.6</span>,.<span class="dv">8</span>,.<span class="dv">6</span>,<span class="dv">1</span>), <span class="at">mar=</span><span class="fu">c</span>(.<span class="dv">5</span>,<span class="fl">0.5</span>,<span class="fl">0.5</span>,<span class="dv">0</span>), <span class="at">new=</span>T)</span>
+<span id="cb13-33"><a href="#cb13-33" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plot</span>(japan.poly2,<span class="at">type=</span><span class="st">&#39;n&#39;</span>,<span class="at">asp=</span><span class="dv">1</span>,<span class="at">axes=</span>F,<span class="at">xlab=</span><span class="st">&#39;&#39;</span>,<span class="at">ylab=</span><span class="st">&#39;&#39;</span>)</span>
+<span id="cb13-34"><a href="#cb13-34" aria-hidden="true" tabindex="-1"></a>    <span class="fu">polygon</span>(japan.poly2,<span class="at">col=</span>colors_0[,<span class="dv">4</span>] ,<span class="at">border=</span>F)</span>
+<span id="cb13-35"><a href="#cb13-35" aria-hidden="true" tabindex="-1"></a>    <span class="fu">segments</span>(japan.prefect2<span class="sc">$</span>x1,japan.prefect2<span class="sc">$</span>y1,japan.prefect2<span class="sc">$</span>x2,japan.prefect2<span class="sc">$</span>y2)</span>
+<span id="cb13-36"><a href="#cb13-36" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb13-37"><a href="#cb13-37" aria-hidden="true" tabindex="-1"></a>    <span class="co">#Time 5</span></span>
+<span id="cb13-38"><a href="#cb13-38" aria-hidden="true" tabindex="-1"></a>    <span class="fu">par</span>(<span class="at">fig=</span><span class="fu">c</span>(<span class="fl">0.8</span>,<span class="dv">1</span>,.<span class="dv">6</span>,<span class="dv">1</span>), <span class="at">mar=</span><span class="fu">c</span>(.<span class="dv">5</span>,<span class="fl">0.5</span>,<span class="fl">0.5</span>,<span class="dv">0</span>), <span class="at">new=</span>T)</span>
+<span id="cb13-39"><a href="#cb13-39" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plot</span>(japan.poly2,<span class="at">type=</span><span class="st">&#39;n&#39;</span>,<span class="at">asp=</span><span class="dv">1</span>,<span class="at">axes=</span>F,<span class="at">xlab=</span><span class="st">&#39;&#39;</span>,<span class="at">ylab=</span><span class="st">&#39;&#39;</span>)</span>
+<span id="cb13-40"><a href="#cb13-40" aria-hidden="true" tabindex="-1"></a>    <span class="fu">polygon</span>(japan.poly2,<span class="at">col=</span>colors_0[,<span class="dv">5</span>] ,<span class="at">border=</span>F)</span>
+<span id="cb13-41"><a href="#cb13-41" aria-hidden="true" tabindex="-1"></a>    <span class="fu">segments</span>(japan.prefect2<span class="sc">$</span>x1,japan.prefect2<span class="sc">$</span>y1,japan.prefect2<span class="sc">$</span>x2,japan.prefect2<span class="sc">$</span>y2)</span>
+<span id="cb13-42"><a href="#cb13-42" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb13-43"><a href="#cb13-43" aria-hidden="true" tabindex="-1"></a>    <span class="co">#legend</span></span>
+<span id="cb13-44"><a href="#cb13-44" aria-hidden="true" tabindex="-1"></a>    <span class="fu">par</span>(<span class="at">fig=</span><span class="fu">c</span>(.<span class="dv">35</span>,.<span class="dv">75</span>,<span class="dv">0</span>,.<span class="dv">1</span>), <span class="at">new=</span>T)</span>
+<span id="cb13-45"><a href="#cb13-45" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plot</span>(<span class="dv">1</span>, <span class="at">xlim=</span><span class="fu">c</span>(<span class="fl">0.6</span>,<span class="fl">1.5</span>), <span class="at">ylim=</span><span class="fu">c</span>(<span class="fl">0.2</span>,<span class="dv">1</span>), <span class="at">axes=</span>F, <span class="at">type=</span><span class="st">&#39;n&#39;</span>,  <span class="at">xlab=</span><span class="st">&quot;&quot;</span>, <span class="at">ylab=</span><span class="st">&quot;&quot;</span>)</span>
+<span id="cb13-46"><a href="#cb13-46" aria-hidden="true" tabindex="-1"></a>    len <span class="ot">&lt;-</span> <span class="fu">length</span>(<span class="fu">redblue</span>(<span class="dv">15</span><span class="sc">:</span><span class="dv">50</span><span class="sc">/</span><span class="dv">50</span>))</span>
+<span id="cb13-47"><a href="#cb13-47" aria-hidden="true" tabindex="-1"></a>    <span class="fu">rect</span>(<span class="fu">seq</span>(.<span class="dv">6</span>,<span class="fl">1.4</span>,<span class="at">length=</span>len)[<span class="sc">-</span>len],.<span class="dv">5</span>,<span class="fu">seq</span>(.<span class="dv">65</span>,<span class="fl">1.4</span>,<span class="at">length=</span>len)[<span class="sc">-</span><span class="dv">1</span>],.<span class="dv">62</span>,<span class="at">col=</span><span class="fu">redblue</span>(<span class="dv">15</span><span class="sc">:</span><span class="dv">50</span><span class="sc">/</span><span class="dv">50</span>),<span class="at">border=</span>F)</span>
+<span id="cb13-48"><a href="#cb13-48" aria-hidden="true" tabindex="-1"></a>    <span class="fu">text</span>(<span class="fu">seq</span>(.<span class="dv">6</span>,<span class="fl">1.4</span>,<span class="at">length=</span><span class="dv">7</span>),<span class="fu">rep</span>(.<span class="dv">45</span>,<span class="dv">5</span>),<span class="fu">seq</span>(<span class="dv">1</span><span class="sc">/</span>maxrr,maxrr,<span class="at">length.out=</span><span class="dv">7</span>),<span class="at">srt=</span><span class="dv">330</span>,<span class="at">adj=</span><span class="dv">0</span>)   </span>
+<span id="cb13-49"><a href="#cb13-49" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span>(genpdf<span class="sc">==</span><span class="cn">TRUE</span>){</span>
+<span id="cb13-50"><a href="#cb13-50" aria-hidden="true" tabindex="-1"></a>        <span class="fu">dev.off</span>()    </span>
+<span id="cb13-51"><a href="#cb13-51" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb13-52"><a href="#cb13-52" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>We visualize the detection by (Q)BIC by plotting the stacked relative risk estimates (<code>wLambda</code>) for the number of selected clusters. We set <code>genpdf=FALSE</code> to not generate a pdf and set the maximum relative risk on the map to be 1.5 and the minimum relative risk to be 0.5:</p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Detection by (Q)BIC</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="fu">plotmap</span>(clustack_pc<span class="sc">$</span>wLambda[clustack_pc<span class="sc">$</span>selection.bic,],<span class="at">genpdf =</span> <span class="cn">FALSE</span>, <span class="at">maxrr=</span><span class="dv">2</span>)</span></code></pre></div>
+<p><img src="data:image/png;base64,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" /><!-- --></p>
+<p>We can extract summaries of the stacked relative risk estimates for detection by (Q)BIC:</p>
+<div class="sourceCode" id="cb15"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="fu">table</span>(<span class="fu">round</span>(clustack_pc<span class="sc">$</span>wLambda[clustack_pc<span class="sc">$</span>selection.bic,],<span class="dv">2</span>))</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;    1 1.68 1.69  1.7 </span></span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  977    3    9   51</span></span></code></pre></div>
+<p>Next, we create a table of the stacked relative risk estimates as detected by (Q)BIC and (Q)AIC:</p>
+<div class="sourceCode" id="cb16"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="do">### Make table ----</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>bicsum_pc <span class="ot">&lt;-</span> <span class="fu">as.data.frame</span>(<span class="fu">round</span>(clustack_pc<span class="sc">$</span>wLambda[clustack_pc<span class="sc">$</span>selection.bic,],<span class="dv">2</span>)) <span class="sc">%&gt;%</span> </span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">bic=</span><span class="st">`</span><span class="at">round(clustack_pc$wLambda[clustack_pc$selection.bic, ], 2)</span><span class="st">`</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(<span class="fu">round</span>(bic,<span class="dv">2</span>) <span class="sc">!=</span><span class="dv">1</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">summarize</span>(<span class="at">min =</span> <span class="fu">min</span>(bic),</span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>              <span class="at">max =</span> <span class="fu">max</span>(bic),</span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>              <span class="at">Q1 =</span> <span class="fu">round</span>(<span class="fu">quantile</span>(bic, <span class="at">probs=</span><span class="fl">0.25</span>),<span class="dv">2</span>),</span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>              <span class="at">median=</span> <span class="fu">median</span>(bic),</span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>              <span class="at">Q3 =</span> <span class="fu">round</span>(<span class="fu">quantile</span>(bic, <span class="at">probs=</span><span class="fl">0.75</span>),<span class="dv">2</span>),</span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a>              <span class="at">mean=</span><span class="fu">round</span>(<span class="fu">mean</span>(bic),<span class="dv">2</span>))</span>
+<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-12"><a href="#cb16-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-13"><a href="#cb16-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-14"><a href="#cb16-14" aria-hidden="true" tabindex="-1"></a>bicsum_pc <span class="sc">%&gt;%</span></span>
+<span id="cb16-15"><a href="#cb16-15" aria-hidden="true" tabindex="-1"></a>    tibble<span class="sc">::</span><span class="fu">rownames_to_column</span>(<span class="st">&#39;IC&#39;</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb16-16"><a href="#cb16-16" aria-hidden="true" tabindex="-1"></a>    kableExtra<span class="sc">::</span><span class="fu">kbl</span>(<span class="at">caption=</span><span class="st">&quot;Clustack - by Potential Cluster: Stacked Relative Risk Estimates&quot;</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb16-17"><a href="#cb16-17" aria-hidden="true" tabindex="-1"></a>    kableExtra<span class="sc">::</span><span class="fu">kable_paper</span>(<span class="st">&quot;hover&quot;</span>, <span class="at">full_width =</span> F) </span></code></pre></div>
+<table class=" lightable-paper lightable-hover" style="font-family: &quot;Arial Narrow&quot;, arial, helvetica, sans-serif; width: auto !important; margin-left: auto; margin-right: auto;">
+<caption>
+Clustack - by Potential Cluster: Stacked Relative Risk Estimates
+</caption>
+<thead>
+<tr>
+<th style="text-align:left;">
+IC
+</th>
+<th style="text-align:right;">
+min
+</th>
+<th style="text-align:right;">
+max
+</th>
+<th style="text-align:right;">
+Q1
+</th>
+<th style="text-align:right;">
+median
+</th>
+<th style="text-align:right;">
+Q3
+</th>
+<th style="text-align:right;">
+mean
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+1
+</td>
+<td style="text-align:right;">
+1.68
+</td>
+<td style="text-align:right;">
+1.7
+</td>
+<td style="text-align:right;">
+1.7
+</td>
+<td style="text-align:right;">
+1.7
+</td>
+<td style="text-align:right;">
+1.7
+</td>
+<td style="text-align:right;">
+1.7
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<div id="estimate-cell-specific-bounds" class="section level1">
+<h1>Estimate cell-specific bounds</h1>
+<p>With <code>clustack</code>, we are also able to calculate confidence bounds for specific cells using 5 methods:</p>
+<ul>
+<li><code>outnonstack</code>: Confidence bounds that do not take into consideration the model selection uncertainty from stacking. Wald-type bounds.</li>
+<li><code>outnonstack_asymp</code>: Confidence bounds that do not take into consideration the model selection uncertainty from stacking, assuming asymptotic Wald-type bounds.</li>
+<li><code>outbuck</code>: Confidence bounds based on Buckland et al.</li>
+<li><code>outmaw2</code>: Confidence bounds based on Burnham and Anderson.</li>
+<li><code>outMATA</code>: Confidence bounds based on model-averaged tail intervals (Turek et al.)</li>
+</ul>
+<p>For each of these methods, natural-log transformed and non-transformed bounds and estimates are available, as well as timings.</p>
+<p>For this example, we will explore confidence bounds for 5 cells in periods 1 and 3: the cluster center cell (time period 1: cell 150, time period 3: cell 566), the near center cell (time period 1: cell 138, time period 3: cell 554), the border inside cell (time period 1: cell 139, time period 3: cell 555), the border outside cell (time period 1: cell 123, time period 3: cell 539), and the far outside cell (time period 1: cell 55, time period 3: cell 471).</p>
+<div class="sourceCode" id="cb17"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="co">#take period 3 only</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>p3 <span class="ot">&lt;-</span> <span class="fu">matrix</span>(clustack_pc<span class="sc">$</span>wLambda[clustack_pc<span class="sc">$</span>selection.bic,], <span class="at">ncol=</span><span class="dv">5</span>)[,<span class="dv">3</span>]</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a><span class="co">#150=center; 138 = near-center; 139 = border-inside; 123=border-outside; 55= far-outside</span></span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>cellsT1 <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">150</span>, <span class="dv">138</span>, <span class="dv">139</span>, <span class="dv">123</span>,<span class="dv">55</span>)</span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>cellsT3 <span class="ot">&lt;-</span> cellsT1 <span class="sc">+</span> (<span class="dv">208</span><span class="sc">*</span><span class="dv">2</span>)</span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>cells <span class="ot">&lt;-</span> <span class="fu">c</span>(cellsT1, cellsT3)</span></code></pre></div>
+<p>First, we visualize these cells in the study region in period 3:</p>
+<div class="sourceCode" id="cb18"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>colors2 <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="st">&quot;white&quot;</span>, <span class="dv">208</span>)</span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>colors2[cells] <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="fu">brewer.pal</span>(<span class="dv">4</span>, <span class="st">&quot;Dark2&quot;</span>), <span class="st">&quot;goldenrod&quot;</span>) <span class="co">#select colors</span></span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a><span class="co">#extract stacked RR estimates</span></span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>a <span class="ot">&lt;-</span> <span class="fu">as.data.frame</span>(<span class="fu">round</span>(clustack_pc<span class="sc">$</span>wLambda[clustack_pc<span class="sc">$</span>selection.bic,],<span class="dv">2</span>)) <span class="sc">%&gt;%</span> </span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">bic=</span><span class="st">`</span><span class="at">round(clustack_pc$wLambda[clustack_pc$selection.bic, ], 2)</span><span class="st">`</span>)</span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>ix <span class="ot">&lt;-</span> <span class="fu">which</span>(a<span class="sc">$</span>bic[<span class="dv">417</span><span class="sc">:</span><span class="dv">624</span>]<span class="sc">!=</span><span class="dv">1</span>) <span class="co">#identify cells in cluster in period 3 (spans 417:624)</span></span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>colors <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="st">&quot;white&quot;</span>, <span class="dv">208</span>) <span class="co">#all other cells in the study region are white</span></span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a>colors[ix] <span class="ot">&lt;-</span> <span class="st">&quot;grey60&quot;</span> <span class="co">#other cells in cluster are grey</span></span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(japan.poly2,<span class="at">type=</span><span class="st">&#39;n&#39;</span>,<span class="at">asp=</span><span class="dv">1</span>,<span class="at">axes=</span>F,<span class="at">xlab=</span><span class="st">&#39;&#39;</span>,<span class="at">ylab=</span><span class="st">&#39;&#39;</span>, <span class="at">main=</span><span class="st">&quot;Cells Selected for Confidence Bounds&quot;</span>)</span>
+<span id="cb18-14"><a href="#cb18-14" aria-hidden="true" tabindex="-1"></a><span class="fu">polygon</span>(japan.poly2,<span class="at">col=</span><span class="fu">adjustcolor</span>(colors2,<span class="at">alpha.f=</span><span class="dv">1</span>)  ,<span class="at">border=</span><span class="st">&quot;white&quot;</span>)</span>
+<span id="cb18-15"><a href="#cb18-15" aria-hidden="true" tabindex="-1"></a><span class="fu">polygon</span>(japan.poly2,<span class="at">col=</span><span class="fu">adjustcolor</span>(colors,<span class="at">alpha.f=</span><span class="fl">0.5</span>)  ,<span class="at">border=</span><span class="st">&quot;white&quot;</span>)</span>
+<span id="cb18-16"><a href="#cb18-16" aria-hidden="true" tabindex="-1"></a><span class="fu">segments</span>(japan.prefect2<span class="sc">$</span>x1,japan.prefect2<span class="sc">$</span>y1,japan.prefect2<span class="sc">$</span>x2,japan.prefect2<span class="sc">$</span>y2)</span>
+<span id="cb18-17"><a href="#cb18-17" aria-hidden="true" tabindex="-1"></a><span class="fu">legend</span>(<span class="st">&quot;bottomright&quot;</span>, <span class="at">inset=</span><span class="sc">-</span><span class="fl">0.01</span>,<span class="fu">c</span>(<span class="st">&quot;Center&quot;</span>, <span class="st">&quot;Near-Center&quot;</span>, <span class="st">&quot;Border-Inside&quot;</span>,</span>
+<span id="cb18-18"><a href="#cb18-18" aria-hidden="true" tabindex="-1"></a>                                    <span class="st">&quot;Border-Outside&quot;</span>, <span class="st">&quot;Far-Outside&quot;</span>, <span class="st">&quot;Cluster Cells&quot;</span>),</span>
+<span id="cb18-19"><a href="#cb18-19" aria-hidden="true" tabindex="-1"></a>       <span class="at">fill=</span><span class="fu">c</span>(<span class="fu">brewer.pal</span>(<span class="dv">4</span>, <span class="st">&quot;Dark2&quot;</span>), <span class="st">&quot;goldenrod&quot;</span>, <span class="st">&quot;grey60&quot;</span>), <span class="at">box.lty=</span><span class="dv">0</span>)</span></code></pre></div>
+<p><img src="data:image/png;base64,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" /><!-- --></p>
+<p>We are ready to calculate confidence bounds for our selected cells in time period 3. First, we create the object <code>id.bic_pc</code>, which is the number of clusters selected:</p>
+<div class="sourceCode" id="cb19"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>(id.bic_pc <span class="ot">&lt;-</span> <span class="fu">as.vector</span>(<span class="fu">unlist</span>(clustack_pc<span class="sc">$</span>selection.bic)))</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; [1] 1</span></span></code></pre></div>
+<p>Next, we use the function <code>calcbounds()</code> and specify the following arguments: we set <code>id_ic</code> to <code>id.bic_pc</code>, which is the number of clusters identified by (Q)BIC with stacking by potential cluster; <code>IC = &quot;bic&quot;</code> specifies the information criterion used and should correspond to <code>id_ic</code>; <code>res</code> corresponds to the object created by the stacking step, <code>clustack_pc</code>; <code>byloc</code> should be set to <code>FALSE</code> if stacking by potential cluster and to <code>TRUE</code> if stacking by location; <code>Ex</code> are the expected counts, <code>Yx</code> are the observed counts; <code>cellsix</code> is set to <code>cells</code> which are the indices of the selected cells for which we want to calculate confidence bounds; <code>sparsemat</code> is set to the large sparse matrix, <code>sparseMAT</code>.</p>
+<div class="sourceCode" id="cb20"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>outcells.pc.bic <span class="ot">&lt;-</span> <span class="fu">calcbounds</span>(<span class="at">id_ic =</span> id.bic_pc, </span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>                              <span class="at">IC=</span><span class="st">&quot;bic&quot;</span>,</span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>                              <span class="at">res =</span> clustack_pc, </span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>                              <span class="at">byloc =</span> <span class="cn">FALSE</span>,</span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>                              <span class="at">Ex =</span> Ex, </span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>                              <span class="at">Yx =</span> Yx,</span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a>                              <span class="at">cellsix =</span> cells,</span>
+<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a>                              <span class="at">sparsemat =</span> sparseMAT)</span>
+<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Extracted unique thetai&#39;s</span></span>
+<span id="cb20-10"><a href="#cb20-10" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Finished calculating SEs</span></span>
+<span id="cb20-11"><a href="#cb20-11" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Buckland bounds finished</span></span>
+<span id="cb20-12"><a href="#cb20-12" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Burnham &amp; Anderson bounds finished</span></span>
+<span id="cb20-13"><a href="#cb20-13" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; MATA bounds finished</span></span></code></pre></div>
+<p>All calculations for confidence bounds are performed on the natural log scale. If multiple clusters are identified, then there will be multiple elements to the list, corresponding to each identified cluster. Since in this example only one cluster as identified, we can extract the bounds and other information for this one cluster with <code>outcells.pc.bic[[1]]</code>:</p>
+<p>We use the <code>tidyr</code> and <code>dplyr</code> packages to create the data frame and <code>kableExtra</code> to format the table.</p>
+<div class="sourceCode" id="cb21"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>    <span class="co">#Buckland bounds:</span></span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>outbuck <span class="ot">&lt;-</span> <span class="fu">cbind</span>(outcells.pc.bic[[<span class="dv">1</span>]]<span class="sc">$</span>outbuckTlog.theta<span class="sc">$</span>buckland.LB,</span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>      outcells.pc.bic[[<span class="dv">1</span>]]<span class="sc">$</span>outbuckTlog.theta<span class="sc">$</span>clusterstack,</span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>      outcells.pc.bic[[<span class="dv">1</span>]]<span class="sc">$</span>outbuckTlog.theta<span class="sc">$</span>buckland.UB) <span class="sc">%&gt;%</span></span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">as.data.frame</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">method=</span><span class="st">&quot;Buckland&quot;</span>,</span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>           <span class="at">timeperiod =</span> <span class="fu">rep</span>(<span class="fu">c</span>(<span class="st">&quot;Time 1&quot;</span>, <span class="st">&quot;Time 3&quot;</span>), <span class="at">each=</span><span class="dv">5</span>),</span>
+<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a>           <span class="at">cellid =</span> <span class="fu">rep</span>(cellsT1, <span class="at">times=</span><span class="dv">2</span>))</span>
+<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a><span class="co">#burnham and anderson bounds:</span></span>
+<span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a>outba <span class="ot">&lt;-</span> <span class="fu">cbind</span>(outcells.pc.bic[[<span class="dv">1</span>]]<span class="sc">$</span>outba2Tlog.theta<span class="sc">$</span>ba2.LB,</span>
+<span id="cb21-11"><a href="#cb21-11" aria-hidden="true" tabindex="-1"></a>      outcells.pc.bic[[<span class="dv">1</span>]]<span class="sc">$</span>outba2Tlog.theta<span class="sc">$</span>clusterstack,</span>
+<span id="cb21-12"><a href="#cb21-12" aria-hidden="true" tabindex="-1"></a>      outcells.pc.bic[[<span class="dv">1</span>]]<span class="sc">$</span>outba2Tlog.theta<span class="sc">$</span>ba2.UB) <span class="sc">%&gt;%</span></span>
+<span id="cb21-13"><a href="#cb21-13" aria-hidden="true" tabindex="-1"></a>    <span class="fu">as.data.frame</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb21-14"><a href="#cb21-14" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">method=</span><span class="st">&quot;BurnhamAnderson&quot;</span>,</span>
+<span id="cb21-15"><a href="#cb21-15" aria-hidden="true" tabindex="-1"></a>           <span class="at">timeperiod =</span> <span class="fu">rep</span>(<span class="fu">c</span>(<span class="st">&quot;Time 1&quot;</span>, <span class="st">&quot;Time 3&quot;</span>), <span class="at">each=</span><span class="dv">5</span>),</span>
+<span id="cb21-16"><a href="#cb21-16" aria-hidden="true" tabindex="-1"></a>           <span class="at">cellid =</span> <span class="fu">rep</span>(cellsT1, <span class="at">times=</span><span class="dv">2</span>))</span>
+<span id="cb21-17"><a href="#cb21-17" aria-hidden="true" tabindex="-1"></a><span class="co">#MATA bounds:</span></span>
+<span id="cb21-18"><a href="#cb21-18" aria-hidden="true" tabindex="-1"></a>outmata <span class="ot">&lt;-</span> <span class="fu">cbind</span>(outcells.pc.bic[[<span class="dv">1</span>]]<span class="sc">$</span>outmataTlog.theta<span class="sc">$</span>mata.LB,</span>
+<span id="cb21-19"><a href="#cb21-19" aria-hidden="true" tabindex="-1"></a>      outcells.pc.bic[[<span class="dv">1</span>]]<span class="sc">$</span>outmataTlog.theta<span class="sc">$</span>clusterstack,</span>
+<span id="cb21-20"><a href="#cb21-20" aria-hidden="true" tabindex="-1"></a>      outcells.pc.bic[[<span class="dv">1</span>]]<span class="sc">$</span>outmataTlog.theta<span class="sc">$</span>mata.UB) <span class="sc">%&gt;%</span></span>
+<span id="cb21-21"><a href="#cb21-21" aria-hidden="true" tabindex="-1"></a>    <span class="fu">as.data.frame</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb21-22"><a href="#cb21-22" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">method=</span><span class="st">&quot;MATA&quot;</span>,</span>
+<span id="cb21-23"><a href="#cb21-23" aria-hidden="true" tabindex="-1"></a>           <span class="at">timeperiod =</span> <span class="fu">rep</span>(<span class="fu">c</span>(<span class="st">&quot;Time 1&quot;</span>, <span class="st">&quot;Time 3&quot;</span>), <span class="at">each=</span><span class="dv">5</span>),</span>
+<span id="cb21-24"><a href="#cb21-24" aria-hidden="true" tabindex="-1"></a>           <span class="at">cellid =</span> <span class="fu">rep</span>(cellsT1, <span class="at">times=</span><span class="dv">2</span>))</span>
+<span id="cb21-25"><a href="#cb21-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-26"><a href="#cb21-26" aria-hidden="true" tabindex="-1"></a>out <span class="ot">&lt;-</span> <span class="fu">rbind.data.frame</span>(outbuck, outba, outmata)</span>
+<span id="cb21-27"><a href="#cb21-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-28"><a href="#cb21-28" aria-hidden="true" tabindex="-1"></a><span class="co">#create table</span></span>
+<span id="cb21-29"><a href="#cb21-29" aria-hidden="true" tabindex="-1"></a>out <span class="sc">%&gt;%</span></span>
+<span id="cb21-30"><a href="#cb21-30" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="fu">across</span>(V1<span class="sc">:</span>V3, round,<span class="dv">2</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb21-31"><a href="#cb21-31" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">RRstack =</span> V2) <span class="sc">%&gt;%</span></span>
+<span id="cb21-32"><a href="#cb21-32" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">CB =</span> <span class="fu">paste0</span>(<span class="st">&quot;(&quot;</span>,V1,<span class="st">&quot;,&quot;</span>, V3,<span class="st">&quot;)&quot;</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb21-33"><a href="#cb21-33" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">cellidname =</span> <span class="fu">case_when</span>(</span>
+<span id="cb21-34"><a href="#cb21-34" aria-hidden="true" tabindex="-1"></a>        cellid<span class="sc">==</span><span class="dv">150</span> <span class="sc">~</span> <span class="st">&quot;center&quot;</span>,</span>
+<span id="cb21-35"><a href="#cb21-35" aria-hidden="true" tabindex="-1"></a>        cellid<span class="sc">==</span><span class="dv">138</span> <span class="sc">~</span> <span class="st">&quot;near-center&quot;</span>,</span>
+<span id="cb21-36"><a href="#cb21-36" aria-hidden="true" tabindex="-1"></a>        cellid<span class="sc">==</span><span class="dv">139</span> <span class="sc">~</span> <span class="st">&quot;border-inside&quot;</span>,</span>
+<span id="cb21-37"><a href="#cb21-37" aria-hidden="true" tabindex="-1"></a>        cellid<span class="sc">==</span><span class="dv">123</span> <span class="sc">~</span> <span class="st">&quot;border-outside&quot;</span>,</span>
+<span id="cb21-38"><a href="#cb21-38" aria-hidden="true" tabindex="-1"></a>        cellid<span class="sc">==</span><span class="dv">55</span> <span class="sc">~</span> <span class="st">&quot;far-outside&quot;</span>,</span>
+<span id="cb21-39"><a href="#cb21-39" aria-hidden="true" tabindex="-1"></a>    )) <span class="sc">%&gt;%</span></span>
+<span id="cb21-40"><a href="#cb21-40" aria-hidden="true" tabindex="-1"></a>    dplyr<span class="sc">::</span><span class="fu">select</span>(<span class="sc">-</span><span class="fu">c</span>(V1,V3,V2, cellid)) <span class="sc">%&gt;%</span></span>
+<span id="cb21-41"><a href="#cb21-41" aria-hidden="true" tabindex="-1"></a>    <span class="fu">relocate</span>(method,cellidname, timeperiod, method, RRstack, CB ) <span class="sc">%&gt;%</span></span>
+<span id="cb21-42"><a href="#cb21-42" aria-hidden="true" tabindex="-1"></a>    <span class="fu">pivot_wider</span>(<span class="at">names_from=</span><span class="fu">c</span>(method), <span class="at">values_from =</span> <span class="fu">c</span>(RRstack, CB), <span class="at">id_cols =</span> <span class="fu">c</span>(cellidname, timeperiod)) <span class="sc">%&gt;%</span></span>
+<span id="cb21-43"><a href="#cb21-43" aria-hidden="true" tabindex="-1"></a>    dplyr<span class="sc">::</span><span class="fu">select</span>(<span class="sc">-</span><span class="fu">c</span>(RRstack_BurnhamAnderson, RRstack_MATA)) <span class="sc">%&gt;%</span></span>
+<span id="cb21-44"><a href="#cb21-44" aria-hidden="true" tabindex="-1"></a>    <span class="fu">rename</span>(<span class="at">RRstack =</span>  RRstack_Buckland) <span class="sc">%&gt;%</span></span>
+<span id="cb21-45"><a href="#cb21-45" aria-hidden="true" tabindex="-1"></a>    kableExtra<span class="sc">::</span><span class="fu">kbl</span>(<span class="at">caption=</span><span class="st">&quot;Clustack Cell-Wise 95 Percent Confidence Bounds (CB) and Stacked Relative Risk Estimates&quot;</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb21-46"><a href="#cb21-46" aria-hidden="true" tabindex="-1"></a>    kableExtra<span class="sc">::</span><span class="fu">kable_paper</span>(<span class="st">&quot;hover&quot;</span>, <span class="at">full_width=</span><span class="cn">FALSE</span>)</span></code></pre></div>
+<table class=" lightable-paper lightable-hover" style="font-family: &quot;Arial Narrow&quot;, arial, helvetica, sans-serif; width: auto !important; margin-left: auto; margin-right: auto;">
+<caption>
+Clustack Cell-Wise 95 Percent Confidence Bounds (CB) and Stacked Relative Risk Estimates
+</caption>
+<thead>
+<tr>
+<th style="text-align:left;">
+cellidname
+</th>
+<th style="text-align:left;">
+timeperiod
+</th>
+<th style="text-align:right;">
+RRstack
+</th>
+<th style="text-align:left;">
+CB_Buckland
+</th>
+<th style="text-align:left;">
+CB_BurnhamAnderson
+</th>
+<th style="text-align:left;">
+CB_MATA
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+center
+</td>
+<td style="text-align:left;">
+Time 1
+</td>
+<td style="text-align:right;">
+1.0
+</td>
+<td style="text-align:left;">
+(1,1)
+</td>
+<td style="text-align:left;">
+(1,1)
+</td>
+<td style="text-align:left;">
+(1,1)
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+near-center
+</td>
+<td style="text-align:left;">
+Time 1
+</td>
+<td style="text-align:right;">
+1.0
+</td>
+<td style="text-align:left;">
+(1,1)
+</td>
+<td style="text-align:left;">
+(1,1)
+</td>
+<td style="text-align:left;">
+(1,1)
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+border-inside
+</td>
+<td style="text-align:left;">
+Time 1
+</td>
+<td style="text-align:right;">
+1.0
+</td>
+<td style="text-align:left;">
+(1,1)
+</td>
+<td style="text-align:left;">
+(1,1)
+</td>
+<td style="text-align:left;">
+(1,1)
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+border-outside
+</td>
+<td style="text-align:left;">
+Time 1
+</td>
+<td style="text-align:right;">
+1.0
+</td>
+<td style="text-align:left;">
+(1,1)
+</td>
+<td style="text-align:left;">
+(1,1)
+</td>
+<td style="text-align:left;">
+(1,1)
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+far-outside
+</td>
+<td style="text-align:left;">
+Time 1
+</td>
+<td style="text-align:right;">
+1.0
+</td>
+<td style="text-align:left;">
+(1,1)
+</td>
+<td style="text-align:left;">
+(1,1)
+</td>
+<td style="text-align:left;">
+(1,1)
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+center
+</td>
+<td style="text-align:left;">
+Time 3
+</td>
+<td style="text-align:right;">
+1.7
+</td>
+<td style="text-align:left;">
+(1.61,1.8)
+</td>
+<td style="text-align:left;">
+(1.61,1.8)
+</td>
+<td style="text-align:left;">
+(1.61,1.8)
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+near-center
+</td>
+<td style="text-align:left;">
+Time 3
+</td>
+<td style="text-align:right;">
+1.7
+</td>
+<td style="text-align:left;">
+(1.61,1.8)
+</td>
+<td style="text-align:left;">
+(1.61,1.8)
+</td>
+<td style="text-align:left;">
+(1.61,1.8)
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+border-inside
+</td>
+<td style="text-align:left;">
+Time 3
+</td>
+<td style="text-align:right;">
+1.7
+</td>
+<td style="text-align:left;">
+(1.61,1.8)
+</td>
+<td style="text-align:left;">
+(1.61,1.8)
+</td>
+<td style="text-align:left;">
+(1.61,1.8)
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+border-outside
+</td>
+<td style="text-align:left;">
+Time 3
+</td>
+<td style="text-align:right;">
+1.0
+</td>
+<td style="text-align:left;">
+(1,1)
+</td>
+<td style="text-align:left;">
+(1,1)
+</td>
+<td style="text-align:left;">
+(1,1)
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+far-outside
+</td>
+<td style="text-align:left;">
+Time 3
+</td>
+<td style="text-align:right;">
+1.0
+</td>
+<td style="text-align:left;">
+(1,1)
+</td>
+<td style="text-align:left;">
+(1,1)
+</td>
+<td style="text-align:left;">
+(1,1)
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

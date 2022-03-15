@@ -237,7 +237,7 @@ plotmap <- function(res, pdfname=NULL, genpdf=TRUE, maxrr=2){
 We visualize the detection by (Q)BIC by plotting the stacked relative risk estimates (`wLambda`) for the number of selected clusters. We set `genpdf=FALSE` to not generate a pdf and set the maximum relative risk on the map to be 1.5 and the minimum relative risk to be 0.5:
 
 
-```{r}
+```{r, fig.height=5, fig.width=10}
 #Detection by (Q)BIC
 plotmap(clustack_pc$wLambda[clustack_pc$selection.bic,],genpdf = FALSE, maxrr=2)
 ```
@@ -301,7 +301,7 @@ cells <- c(cellsT1, cellsT3)
 
 First, we visualize these cells in the study region in period 3:
 
-```{r}
+```{r, fig.height=5, fig.width=8}
 colors2 <- rep("white", 208)
 colors2[cells] <- c(brewer.pal(4, "Dark2"), "goldenrod") #select colors
 
